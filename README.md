@@ -1,6 +1,34 @@
 # ELMA – Energie Lokal Miteinander Austauschen
 
-ELMA zeigt einem Empfänger live den Stromüberschuss eines Erzeugers.
+**Wenn die Sonne scheint, produziert eine PV-Anlage oft mehr Strom, als der Haushalt gerade braucht.**
+Dieser Überschuss wird meist für wenige Cent ins Netz eingespeist.
+Gleich nebenan zahlen Nachbarn, Familie oder Freunde für ihren Strom den vollen Preis.
+Sie wissen aber nicht, *wann* es sich lohnen würde, die Waschmaschine einzuschalten.
+
+ELMA schließt diese Lücke:
+- Der **Erzeuger** teilt seinen aktuellen Stromüberschuss.
+- Die **Empfänger** sehen ihn live am Handy und können ihren Verbrauch in diese Zeit legen.
+  Das gilt zum Beispiel in einer Energiegemeinschaft (EEG) oder einfach unter Nachbarn.
+- So bleibt mehr Sonnenstrom lokal, und das Netz wird entlastet.
+
+### Was die App kann
+
+- **Live-Anzeige des Überschusses:** eine große Zahl mit Ampel (viel / etwas / kein Überschuss) und dem Verlauf der letzten 24 Stunden.
+- **Geräte statt Watt:** Viele können mit „1,4 kW“ wenig anfangen.
+  Deshalb zeigt ELMA mit Symbolen, was gerade möglich ist, z. B. „✓ 🧺 Waschmaschine“ oder „noch 650 W bis 🫖 Wasserkocher“.
+  Jeder wählt seine eigenen Geräte aus und kann auch eigene anlegen, z. B. eine Poolpumpe mit 800 W.
+- **Push-Nachricht:** z. B. „Jetzt reicht's für 🧺 Waschmaschine“, sobald eines der eigenen Geräte mit dem Überschuss laufen kann.
+  Das passiert erst nach 2 Minuten stabilem Überschuss, damit kurze Wolken keinen Fehlalarm auslösen.
+- **Einladung per Link:** Der Erzeuger lädt Empfänger mit einem Link ein, z. B. über WhatsApp.
+  Ohne Einladung kann sich niemand registrieren, die Daten bleiben also im kleinen Kreis.
+- **Wie eine App am Handy:** Die App lässt sich auf Android und iPhone über „Zum Startbildschirm hinzufügen“ installieren.
+  Kein App Store ist nötig.
+- **Läuft zuhause:** Die Daten kommen direkt vom eigenen Energiemanager, z. B. Smartfox über MQTT.
+  ELMA läuft auf einem Raspberry Pi im Heimnetz und ist über einen Cloudflare Tunnel erreichbar.
+  Es fallen keine Cloud-Kosten an, und es müssen keine Ports geöffnet werden.
+
+## Aufbau
+
 Der Überschuss wird aus einem MQTT-Topic des lokalen Brokers `mysmarthome` gelesen.
 
 ```
