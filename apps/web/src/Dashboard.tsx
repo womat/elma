@@ -6,6 +6,7 @@ import { ProducerCard, type View } from "./ProducerCard.tsx";
 import { ApplianceEditor } from "./ApplianceEditor.tsx";
 import { defaultSettings, resolveAppliances } from "./appliances.ts";
 import { syncPushSubscription } from "./push.ts";
+import { Footer } from "./Footer.tsx";
 
 const VIEW_KEY = "elma.view";
 
@@ -102,6 +103,8 @@ export function Dashboard({ token, me, notice, onSignOut }: Props) {
           onEditAppliances={() => setEditing(true)}
         />
       ))}
+
+      <Footer />
 
       {editing && <ApplianceEditor initial={applianceSettings} onSave={saveAppliances} onClose={() => setEditing(false)} />}
     </main>

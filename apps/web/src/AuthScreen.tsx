@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { MeDto } from "@elma/shared";
 import { api } from "./api.ts";
+import { Footer } from "./Footer.tsx";
 
 interface Props {
   inviteCode: string | null;
@@ -62,6 +63,7 @@ export function AuthScreen({ inviteCode, onSignedIn }: Props) {
           </button>
         )}
       </form>
+      <Footer />
     </main>
   );
 }

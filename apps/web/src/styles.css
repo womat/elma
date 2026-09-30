@@ -175,3 +175,6 @@ button.secondary {
   background: var(--bg); color: var(--muted);
 }
 .chip.on { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--text); box-shadow: inset 0 0 0 1.5px var(--accent); }
+
+.footer { text-align: center; margin-top: 32px; }
+.footer a { color: inherit; }
