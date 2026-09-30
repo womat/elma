@@ -5,11 +5,36 @@ Dieser Überschuss wird meist für wenige Cent ins Netz eingespeist.
 Gleich nebenan zahlen Nachbarn, Familie oder Freunde für ihren Strom den vollen Preis.
 Sie wissen aber nicht, *wann* es sich lohnen würde, die Waschmaschine einzuschalten.
 
+### Die Idee: Strom im Peer-to-Peer-Netz teilen
+
+Auslöser für ELMA ist das **Peer-to-Peer-Teilen von Strom**.
+Haushalte sind dabei nicht mehr nur Kunden eines Energieversorgers.
+Sie geben ihren Strom direkt untereinander weiter, *von Nachbar zu Nachbar*.
+Der Strom fließt weiter über das öffentliche Netz, verbraucht und verrechnet wird er aber zwischen den Teilnehmern selbst.
+
+In Österreich gibt es dafür seit 1. Oktober 2026 die **[Peer-to-Peer-Verträge (P2P)](https://energiegemeinschaften.gv.at/peer-to-peer-vertraege/)** nach dem neuen Elektrizitätswirtschaftsgesetz (ElWG).
+- Zwei oder mehr Personen schließen sich zusammen, um ihren selbst erzeugten Strom gemeinsam zu nutzen.
+- Dafür reicht ein **Vertrag**. Anders als bei einer Energiegemeinschaft muss kein Verein und keine Genossenschaft gegründet werden.
+- Es gibt Mustervorlagen für einen Erzeuger mit einem oder mehreren Abnehmern (1:1 / 1:n). Das ist genau der Fall, für den ELMA gebaut ist.
+
+Laut der Seite ist die Umsetzung vorerst nur zwischen Zählpunkten beim selben Netzbetreiber möglich.
+Vergünstigte Netzentgelte sollen ab 2027 gelten.
+Der aktuelle Stand steht auf [energiegemeinschaften.gv.at](https://energiegemeinschaften.gv.at/peer-to-peer-vertraege/).
+Dasselbe Prinzip gilt auch für Energiegemeinschaften (EEG/BEG).
+
+Dabei fehlt eine Kleinigkeit: **Das Teilen funktioniert nur, wenn der Empfänger den Strom genau dann verbraucht, wenn er erzeugt wird.**
+Strom lässt sich im Netz nicht „aufheben“.
+Der Überschuss der PV-Anlage am Mittag ist nur dann geteilter Strom, wenn nebenan in diesem Moment die Waschmaschine läuft.
+Ohne Information darüber wird dem Zufall überlassen, was man sich teilt.
+
 ELMA schließt diese Lücke:
 - Der **Erzeuger** teilt seinen aktuellen Stromüberschuss.
-- Die **Empfänger** sehen ihn live am Handy und können ihren Verbrauch in diese Zeit legen.
-  Das gilt zum Beispiel in einer Energiegemeinschaft (EEG) oder einfach unter Nachbarn.
-- So bleibt mehr Sonnenstrom lokal, und das Netz wird entlastet.
+- Die **Empfänger** im Peer-to-Peer-Netz sehen ihn live am Handy und legen ihren Verbrauch gezielt in diese Zeit.
+- So wird aus dem Teilen auf dem Papier tatsächlich geteilter Sonnenstrom.
+  Mehr Strom bleibt lokal, das Netz wird entlastet, und beide Seiten profitieren.
+
+ELMA übernimmt dabei nicht die Verrechnung. Die läuft wie bisher über die Energiegemeinschaft bzw. den Netzbetreiber.
+ELMA liefert die Information, *wann* sich das Teilen lohnt.
 
 ### Was die App kann
 
