@@ -1,0 +1,20 @@
+{
+  "name": "@elma/bridge",
+  "version": "0.1.0",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "Wolfgang Mathe",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.ts",
+    "start": "node src/index.ts"
+  },
+  "dependencies": {
+    "@elma/shared": "workspace:*",
+    "mqtt": "^5.14.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.0"
+  }
+}

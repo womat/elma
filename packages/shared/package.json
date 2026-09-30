@@ -1,0 +1,12 @@
+{
+  "name": "@elma/shared",
+  "version": "0.1.0",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "Wolfgang Mathe",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "zod": "^4.1.0"
+  }
+}

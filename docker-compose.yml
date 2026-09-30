@@ -1,0 +1,43 @@
+# Produktiv-Stack für das Gerät im LAN (z. B. Raspberry Pi):
+#   docker compose up -d --build
+# Werte kommen aus .env (Vorlage: .env.example)
+services:
+  backend:
+    build: { context: ., target: backend }
+    restart: unless-stopped
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET in .env setzen}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:elma@example.com}
+    volumes:
+      - elma-data:/data
+    ports:
+      - "3000:3000" # nur fürs LAN; von außen kommt der Zugriff über den Tunnel
+
+  bridge:
+    build: { context: ., target: bridge }
+    restart: unless-stopped
+    depends_on: [backend]
+    environment:
+      MQTT_URL: ${MQTT_URL:-mqtt://mysmarthome:1883}
+      MQTT_TOPIC: ${MQTT_TOPIC:?MQTT_TOPIC in .env setzen}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      PAYLOAD_PATH: ${PAYLOAD_PATH:-}
+      PAYLOAD_UNIT: ${PAYLOAD_UNIT:-W}
+      PAYLOAD_INVERT: ${PAYLOAD_INVERT:-false}
+      BACKEND_URL: ws://backend:3000
+      DEVICE_TOKEN: ${DEVICE_TOKEN:-}
+    profiles: [bridge] # erst starten, wenn DEVICE_TOKEN gesetzt ist
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on: [backend]
+    profiles: [tunnel]
+
+volumes:
+  elma-data:

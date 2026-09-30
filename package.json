@@ -1,0 +1,22 @@
+{
+  "name": "elma",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "Wolfgang Mathe",
+  "description": "ELMA – Energie Lokal Miteinander Austauschen",
+  "packageManager": "pnpm@10.18.0",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p apps/backend && tsc -p apps/bridge && tsc -p apps/web --noEmit",
+    "dev:backend": "pnpm --filter @elma/backend dev",
+    "dev:bridge": "pnpm --filter @elma/bridge dev",
+    "dev:web": "pnpm --filter @elma/web dev",
+    "build:web": "pnpm --filter @elma/web build"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

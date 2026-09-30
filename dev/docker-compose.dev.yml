@@ -1,0 +1,36 @@
+# Lokale Test-Umgebung ohne echten Broker:
+#   docker compose -f dev/docker-compose.dev.yml up --build
+# Testwert senden:
+#   docker compose -f dev/docker-compose.dev.yml exec mosquitto mosquitto_pub -t elma/test/surplus -m 2300
+# Echte Smartfox-Werte vom Heimnetz-Broker durchreichen (am Mac, da Docker Desktop 192.168.65.x selbst belegt):
+#   mosquitto_sub -h mysmarthome -t myhome/smartfox/summary | mosquitto_pub -h localhost -t myhome/smartfox/summary -l
+#   MQTT_TOPIC=myhome/smartfox/summary PAYLOAD_PATH=P PAYLOAD_INVERT=true DEVICE_TOKEN=... docker compose -f dev/docker-compose.dev.yml up -d bridge
+name: elma-dev
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    command: mosquitto -c /mosquitto-no-auth.conf
+    ports: ["1883:1883"]
+
+  backend:
+    build: { context: .., target: backend }
+    environment:
+      JWT_SECRET: dev-secret-dev-secret-dev-secret-dev
+      PUBLIC_URL: http://localhost:3000
+    volumes: ["elma-dev-data:/data"]
+    ports: ["3000:3000"]
+
+  bridge:
+    build: { context: .., target: bridge }
+    depends_on: [backend, mosquitto]
+    environment:
+      MQTT_URL: mqtt://mosquitto:1883
+      MQTT_TOPIC: ${MQTT_TOPIC:-elma/test/surplus}
+      PAYLOAD_PATH: ${PAYLOAD_PATH:-}
+      PAYLOAD_INVERT: ${PAYLOAD_INVERT:-false}
+      BACKEND_URL: ws://backend:3000
+      DEVICE_TOKEN: ${DEVICE_TOKEN:-noch-nicht-gesetzt}
+      MIN_INTERVAL_MS: "1000"
+
+volumes:
+  elma-dev-data:
