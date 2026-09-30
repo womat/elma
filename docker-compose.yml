@@ -12,12 +12,15 @@ services:
     volumes:
       - elma-data:/data
     ports:
-      - "3000:3000" # nur fürs LAN; von außen kommt der Zugriff über den Tunnel
+      - "${ELMA_PORT:-3000}:3000" # nur fürs LAN; von außen kommt der Zugriff über den Tunnel
 
   bridge:
     build: { context: ., target: bridge }
     restart: unless-stopped
     depends_on: [backend]
+    extra_hosts:
+      # erlaubt MQTT_URL=mqtt://host.docker.internal:1883, wenn der Broker auf demselben Gerät läuft
+      - "host.docker.internal:host-gateway"
     environment:
       MQTT_URL: ${MQTT_URL:-mqtt://mysmarthome:1883}
       MQTT_TOPIC: ${MQTT_TOPIC:?MQTT_TOPIC in .env setzen}
