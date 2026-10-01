@@ -155,7 +155,7 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
 
         <h3>🔔 Benachrichtigungen</h3>
         <div className="custom-form">
-          <PushToggle />
+          <PushToggle notifyCount={chosen.filter((a) => notify.has(a.id)).length} />
           <p className="muted small">
             Benachrichtige mich, wenn eines dieser Geräte mit dem Überschuss laufen kann (mindestens 2 Minuten lang):
           </p>

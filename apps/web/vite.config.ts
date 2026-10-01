@@ -1,8 +1,13 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 const backend = process.env.BACKEND_DEV_URL ?? "http://localhost:3000";
+
+// Version für den Footer: beim Docker-Build aus git describe (ELMA_VERSION), sonst "<package.json>-dev"
+const rootPackage = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string };
+process.env.VITE_APP_VERSION = process.env.ELMA_VERSION || `v${rootPackage.version}-dev`;
 
 export default defineConfig({
   plugins: [

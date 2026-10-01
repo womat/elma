@@ -178,3 +178,33 @@ button.secondary {
 
 .footer { text-align: center; margin-top: 32px; }
 .footer a { color: inherit; }
+
+/* Geräte-Verlauf: Stunden-Balken nix / ein wenig / viel */
+.timeline { margin: 18px 0 0; }
+.timeline-summary { font-weight: 600; margin-bottom: 10px; }
+.timeline-bars { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; height: 72px; align-items: end; }
+.timeline-bars .bar {
+  height: 100%; padding: 0; border-radius: 3px; background: none;
+  display: flex; align-items: flex-end;
+}
+.timeline-bars .bar span { display: block; width: 100%; border-radius: 3px; }
+.timeline-bars .bar.empty span { height: 2px; background: color-mix(in srgb, var(--muted) 20%, transparent); }
+.timeline-bars .bar.none span { height: 12%; background: var(--none); }
+.timeline-bars .bar.some span { height: 50%; background: var(--some); }
+.timeline-bars .bar.lots span { height: 100%; background: var(--good); }
+.timeline-bars .bar.selected { box-shadow: 0 0 0 2px var(--text); }
+.timeline-axis { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+.timeline-axis span { white-space: nowrap; overflow: visible; }
+.timeline-detail { font-size: 0.85rem; margin: 10px 0 0; min-height: 1.4em; }
+.timeline-legend { display: flex; gap: 14px; font-size: 0.8rem; color: var(--muted); margin-top: 8px; }
+.timeline-legend span::before {
+  content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px;
+}
+.timeline-legend .none::before { background: var(--none); }
+.timeline-legend .some::before { background: var(--some); }
+.timeline-legend .lots::before { background: var(--good); }
+
+.rename { padding: 0 0 0 6px; font-size: 0.9rem; vertical-align: 1px; }
+.push-warning { margin: 0 0 10px; color: var(--some); }
+.push-toggle .push-warning { margin: 0; }
+button.link.inline { padding: 0; color: inherit; text-decoration: underline; font-size: inherit; }

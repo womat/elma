@@ -3,7 +3,7 @@
 # Werte kommen aus .env (Vorlage: .env.example)
 services:
   backend:
-    build: { context: ., target: backend }
+    build: { context: ., target: backend, args: { ELMA_VERSION: "${ELMA_VERSION:-dev}" } }
     restart: unless-stopped
     environment:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET in .env setzen}
@@ -15,7 +15,7 @@ services:
       - "${ELMA_PORT:-3000}:3000" # nur fürs LAN; von außen kommt der Zugriff über den Tunnel
 
   bridge:
-    build: { context: ., target: bridge }
+    build: { context: ., target: bridge, args: { ELMA_VERSION: "${ELMA_VERSION:-dev}" } }
     restart: unless-stopped
     depends_on: [backend]
     extra_hosts:

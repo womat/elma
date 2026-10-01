@@ -35,6 +35,10 @@ export interface AppOptions {
   /** Für Tests: eigener Sender statt echtem Web-Push */
   pushSender?: PushSender;
   pushOptions?: NotifierOptions;
+  /** Glättungsfenster für angezeigte Werte; 0 = ungeglättet */
+  smoothWindowMs?: number;
+  /** Angezeigte Version (aus dem Build), z. B. v0.2.0 */
+  version?: string;
 }
 
 declare module "@fastify/jwt" {
@@ -51,7 +55,7 @@ export async function buildApp(
   opts: AppOptions,
 ): Promise<{ app: FastifyInstance; hub: LiveHub; repo: Repo; notifier: PushNotifier }> {
   const repo = new Repo(opts.db);
-  const hub = new LiveHub(repo);
+  const hub = new LiveHub(repo, opts.smoothWindowMs);
   const vapid = loadVapidKeys(repo);
   const notifier = new PushNotifier(
     repo,
@@ -166,6 +170,15 @@ export async function buildApp(
     },
   );
 
+  app.patch<{ Params: { id: string } }>("/api/producers/:id", { preHandler: authenticate }, async (req, reply) => {
+    if (!repo.canView(req.user.sub, req.params.id)) return reply.code(404).send({ error: "Nicht gefunden" });
+    if (!repo.isOwner(req.user.sub, req.params.id)) return reply.code(403).send({ error: "Nur der Erzeuger kann umbenennen" });
+    const body = z.object({ name: z.string().trim().min(1, "Name darf nicht leer sein").max(60) }).safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: body.error.issues[0]?.message ?? "Ungültiger Name" });
+    repo.renameProducer(req.params.id, body.data.name);
+    return { id: req.params.id, name: body.data.name };
+  });
+
   app.post<{ Params: { id: string } }>("/api/producers/:id/invites", { preHandler: authenticate }, async (req, reply) => {
     if (!repo.isOwner(req.user.sub, req.params.id)) return reply.code(403).send({ error: "Nur der Erzeuger kann einladen" });
     const invite = repo.createInvite(req.params.id);
@@ -178,7 +191,7 @@ export async function buildApp(
     return { producerId };
   });
 
-  app.get("/api/health", async () => ({ ok: true }));
+  app.get("/api/health", async () => ({ ok: true, version: opts.version ?? "dev" }));
 
   // ---------- WebSocket: Bridge -> Backend ----------
 

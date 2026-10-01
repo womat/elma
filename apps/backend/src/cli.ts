@@ -36,6 +36,7 @@ function usage(): never {
   console.log(`Befehle:
   create-user <email> [passwort]         -> ohne Passwort wird es verdeckt abgefragt
   create-producer <name> <owner-email>   -> gibt das DEVICE_TOKEN für die Bridge aus
+  rename-producer <producerId> <name>    -> Erzeuger umbenennen
   invite <producerId>                    -> Einladungslink für einen Empfänger
   list <email>                           -> sichtbare Erzeuger eines Users`);
   process.exit(1);
@@ -65,6 +66,14 @@ switch (command) {
     console.log(`Erzeuger angelegt: ${producer.name} (${producer.id})`);
     console.log(`DEVICE_TOKEN=${deviceToken}`);
     console.log("Das Token wird nur jetzt angezeigt – in die .env der Bridge eintragen.");
+    break;
+  }
+  case "rename-producer": {
+    const [producerId, name] = args;
+    if (!producerId || !name?.trim()) usage();
+    if (!repo.producerById(producerId)) throw new Error(`Erzeuger ${producerId} nicht gefunden`);
+    repo.renameProducer(producerId, name.trim());
+    console.log(`Erzeuger umbenannt: ${name.trim()}`);
     break;
   }
   case "invite": {

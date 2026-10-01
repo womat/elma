@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react";
-import { STALE_AFTER_MS, type HistoryPoint, type ProducerDto, type SurplusReading } from "@elma/shared";
+import {
+  LEVEL_LOTS_WATTS,
+  LEVEL_SOME_WATTS,
+  STALE_AFTER_MS,
+  type HistoryPoint,
+  type ProducerDto,
+  type SurplusReading,
+} from "@elma/shared";
 import { api } from "./api.ts";
 import { formatAgo, formatPower } from "./format.ts";
 import { HistoryChart } from "./HistoryChart.tsx";
 import { ApplianceGrid } from "./ApplianceGrid.tsx";
+import { ApplianceTimeline } from "./ApplianceTimeline.tsx";
 import { biggestFitting, type Appliance } from "./appliances.ts";
 
 export type View = "power" | "appliances";
@@ -15,6 +23,7 @@ interface Props {
   view: View;
   appliances: Appliance[];
   notify: string[];
+  pushOn: boolean;
   onEditAppliances: () => void;
 }
 
@@ -22,8 +31,8 @@ type Level = "offline" | "none" | "some" | "lots";
 
 function levelOf(reading: SurplusReading | null, now: number): Level {
   if (!reading || now - reading.timestamp > STALE_AFTER_MS) return "offline";
-  if (reading.watts >= 1000) return "lots";
-  if (reading.watts > 50) return "some";
+  if (reading.watts >= LEVEL_LOTS_WATTS) return "lots";
+  if (reading.watts > LEVEL_SOME_WATTS) return "some";
   return "none";
 }
 
@@ -34,9 +43,10 @@ const LABELS: Record<Level, string> = {
   lots: "Viel Überschuss – jetzt verbrauchen!",
 };
 
-export function ProducerCard({ producer, reading, now, view, appliances, notify, onEditAppliances }: Props) {
+export function ProducerCard({ producer, reading, now, view, appliances, notify, pushOn, onEditAppliances }: Props) {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [invite, setInvite] = useState<string | null>(null);
+  const [name, setName] = useState(producer.name);
   const level = levelOf(reading, now);
   const liveWatts = reading && level !== "offline" ? Math.max(0, reading.watts) : null;
   const hint = liveWatts !== null ? biggestFitting(liveWatts, appliances) : null;
@@ -48,6 +58,16 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
     return () => clearInterval(id);
   }, [producer.id]);
 
+  const rename = async () => {
+    const next = prompt("Name des Erzeugers", name)?.trim();
+    if (!next || next === name) return;
+    try {
+      setName((await api.renameProducer(producer.id, next)).name);
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  };
+
   const createInvite = async () => {
     const { url } = await api.createInvite(producer.id);
     setInvite(url);
@@ -57,7 +77,14 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
   return (
     <section className={`card producer level-${level}`}>
       <div className="producer-head">
-        <h2>{producer.name}</h2>
+        <h2>
+          {name}
+          {producer.isOwner && (
+            <button className="link small rename" onClick={rename} aria-label="Erzeuger umbenennen" title="Umbenennen">
+              ✏️
+            </button>
+          )}
+        </h2>
         {reading && <span className="muted">{formatAgo(now - reading.timestamp)}</span>}
       </div>
 
@@ -74,10 +101,13 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
           )}
         </>
       ) : (
-        <ApplianceGrid watts={liveWatts} appliances={appliances} notify={notify} onEdit={onEditAppliances} />
+        <>
+          <ApplianceGrid watts={liveWatts} appliances={appliances} notify={notify} pushOn={pushOn} onEdit={onEditAppliances} />
+          <ApplianceTimeline points={history} appliances={appliances} now={now} />
+        </>
       )}
 
-      <HistoryChart points={history} />
+      {view === "power" && <HistoryChart points={history} />}
 
       {producer.isOwner && (
         <div className="owner">

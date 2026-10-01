@@ -139,6 +139,30 @@ Dann http://localhost:3000 öffnen und anmelden.
    docker run --rm --network elma_default cloudflare/cloudflared tunnel --url http://backend:3000
    ```
 
+## Neue Version ausrollen
+
+Die Version steht in der Root-`package.json` (SemVer). Zu jedem Release gehört ein Git-Tag.
+
+1. In `package.json` (und den Paketen unter `apps/*`, `packages/*`) die Version erhöhen und `CHANGELOG.md` ergänzen.
+2. Committen und taggen:
+   ```bash
+   git tag v0.3.0
+   ```
+3. Pushen:
+   ```bash
+   git push --follow-tags
+   ```
+4. Auf den Pi ausrollen:
+   ```bash
+   scripts/deploy.sh
+   ```
+
+Das Skript bricht ab, wenn es nicht committete oder nicht gepushte Änderungen gibt.
+Es vergibt die Version aus `git describe` (z. B. `v0.3.0`, oder `v0.3.0-2-gabc1234` für Zwischenstände) und ersetzt den Code auf dem Pi.
+Die `.env` und die Daten bleiben dabei erhalten.
+Danach baut es die Container neu und prüft über `https://my-elma.net/api/health`, dass die neue Version läuft.
+Die laufende Version steht in der App ganz unten.
+
 ## Payload-Format einstellen
 
 | Payload im Topic                | `.env`                                  |

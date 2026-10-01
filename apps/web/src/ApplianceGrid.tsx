@@ -7,11 +7,13 @@ interface Props {
   appliances: Appliance[];
   /** IDs der Geräte mit Push-Nachricht */
   notify: string[];
+  /** Push ist auf diesem Gerät aktiv */
+  pushOn: boolean;
   onEdit: () => void;
 }
 
 /** Zeigt anhand der eigenen Geräte, was mit dem Überschuss gerade betrieben werden kann. */
-export function ApplianceGrid({ watts, appliances, notify, onEdit }: Props) {
+export function ApplianceGrid({ watts, appliances, notify, pushOn, onEdit }: Props) {
   const surplus = Math.max(0, watts ?? 0);
   const fitting = appliances.filter((a) => a.watts <= surplus).length;
 
@@ -33,6 +35,14 @@ export function ApplianceGrid({ watts, appliances, notify, onEdit }: Props) {
           ⚙️ Meine Geräte
         </button>
       </div>
+      {pushOn && notify.length === 0 && appliances.length > 0 && (
+        <p className="push-warning small">
+          ⚠️ Benachrichtigungen sind aktiv, aber kein Gerät hat 🔔.{" "}
+          <button className="link small inline" onClick={onEdit}>
+            Jetzt auswählen
+          </button>
+        </p>
+      )}
       {appliances.length === 0 ? (
         <button className="secondary" onClick={onEdit}>
           Geräte auswählen

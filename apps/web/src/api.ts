@@ -53,6 +53,9 @@ export const api = {
     request<AuthResponse>("/api/auth/register", { method: "POST", body: JSON.stringify({ email, password, inviteCode }) }),
   me: () => request<MeDto>("/api/me"),
   producers: () => request<ProducerDto[]>("/api/producers"),
+  renameProducer: (id: string, name: string) =>
+    request<{ id: string; name: string }>(`/api/producers/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  health: () => request<{ ok: boolean; version: string }>("/api/health"),
   history: (id: string, range = "24h") => request<HistoryPoint[]>(`/api/producers/${id}/history?range=${range}`),
   createInvite: (id: string) => request<{ code: string; url: string; expiresAt: number }>(`/api/producers/${id}/invites`, { method: "POST" }),
   appliances: () => request<{ settings: ApplianceSettings | null }>("/api/me/appliances"),

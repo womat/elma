@@ -146,6 +146,35 @@ describe("Live-Daten", () => {
   });
 });
 
+describe("Erzeuger umbenennen", () => {
+  it("nur der Eigentümer darf umbenennen", async () => {
+    const { producer } = await setup();
+    const recipient = await repo.createUser("empfaenger@elma.test", "passwort123");
+    repo.acceptInvite(repo.createInvite(producer.id).code, recipient.id);
+    await repo.createUser("fremd@elma.test", "passwort123");
+    const auth = async (email: string) => ({ authorization: `Bearer ${await login(email, "passwort123")}` });
+    const rename = async (email: string, name: string) =>
+      app.inject({ method: "PATCH", url: `/api/producers/${producer.id}`, headers: await auth(email), payload: { name } });
+
+    expect((await rename("empfaenger@elma.test", "Hack")).statusCode).toBe(403);
+    expect((await rename("fremd@elma.test", "Hack")).statusCode).toBe(404);
+    expect((await rename("erzeuger@elma.test", "   ")).statusCode).toBe(400);
+
+    const ok = await rename("erzeuger@elma.test", "  Haus Wullersdorf ");
+    expect(ok.json()).toEqual({ id: producer.id, name: "Haus Wullersdorf" });
+    const list = await app.inject({ url: "/api/producers", headers: await auth("empfaenger@elma.test") });
+    expect(list.json()[0].name).toBe("Haus Wullersdorf");
+  });
+});
+
+describe("Version", () => {
+  it("/api/health liefert die Version", async () => {
+    const built = await buildApp({ db: openDb(":memory:"), jwtSecret: "x".repeat(32), publicUrl: "", version: "v0.2.0" });
+    expect((await built.app.inject({ url: "/api/health" })).json()).toEqual({ ok: true, version: "v0.2.0" });
+    expect((await app.inject({ url: "/api/health" })).json()).toEqual({ ok: true, version: "dev" });
+  });
+});
+
 describe("Geräteauswahl", () => {
   it("ist anfangs leer, lässt sich speichern und ist pro User getrennt", async () => {
     await repo.createUser("a@elma.test", "passwort123");

@@ -5,6 +5,7 @@ import { Throttle } from "./throttle.ts";
 import { BackendLink } from "./backend-link.ts";
 
 const config = loadConfig();
+console.log(`[elma] Bridge ${process.env.ELMA_VERSION ?? "dev"} startet`);
 const throttle = new Throttle(config.minIntervalMs, config.deltaWatts);
 const backend = new BackendLink(`${config.backendUrl.replace(/\/$/, "")}/ingest`, config.deviceToken);
 backend.start();

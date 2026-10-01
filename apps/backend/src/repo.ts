@@ -130,6 +130,10 @@ export class Repo {
       .run(userId, JSON.stringify(settings));
   }
 
+  renameProducer(id: string, name: string): void {
+    this.db.prepare("UPDATE producers SET name = ? WHERE id = ?").run(name, id);
+  }
+
   producerById(id: string): ProducerRow | undefined {
     return this.db.prepare("SELECT id, name, owner_id FROM producers WHERE id = ?").get(id) as ProducerRow | undefined;
   }

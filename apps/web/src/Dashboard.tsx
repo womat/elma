@@ -5,7 +5,7 @@ import { useLive } from "./useLive.ts";
 import { ProducerCard, type View } from "./ProducerCard.tsx";
 import { ApplianceEditor } from "./ApplianceEditor.tsx";
 import { defaultSettings, resolveAppliances } from "./appliances.ts";
-import { syncPushSubscription } from "./push.ts";
+import { getPushState, syncPushSubscription } from "./push.ts";
 import { Footer } from "./Footer.tsx";
 
 const VIEW_KEY = "elma.view";
@@ -40,12 +40,14 @@ export function Dashboard({ token, me, notice, onSignOut }: Props) {
 
   const [applianceSettings, setApplianceSettings] = useState<ApplianceSettings>(defaultSettings);
   const [editing, setEditing] = useState(false);
+  const [pushOn, setPushOn] = useState(false);
   const appliances = useMemo(() => resolveAppliances(applianceSettings), [applianceSettings]);
 
   useEffect(() => {
     api.producers().then(setProducers, (err: Error) => setError(err.message));
     api.appliances().then(({ settings }) => settings && setApplianceSettings(settings), () => undefined);
     void syncPushSubscription();
+    getPushState().then((s) => setPushOn(s === "on"), () => undefined);
   }, []);
 
   const saveAppliances = async (settings: ApplianceSettings) => {
@@ -100,13 +102,24 @@ export function Dashboard({ token, me, notice, onSignOut }: Props) {
           view={view}
           appliances={appliances}
           notify={applianceSettings.notify}
+          pushOn={pushOn}
           onEditAppliances={() => setEditing(true)}
         />
       ))}
 
       <Footer />
 
-      {editing && <ApplianceEditor initial={applianceSettings} onSave={saveAppliances} onClose={() => setEditing(false)} />}
+      {editing && (
+        <ApplianceEditor
+          initial={applianceSettings}
+          onSave={saveAppliances}
+          onClose={() => {
+            setEditing(false);
+            // Push kann im Editor ein- oder ausgeschaltet worden sein
+            getPushState().then((s) => setPushOn(s === "on"), () => undefined);
+          }}
+        />
+      )}
     </main>
   );
 }

@@ -12,9 +12,13 @@ COPY packages packages
 COPY apps apps
 
 FROM deps AS web-build
-RUN pnpm --filter @elma/web build
+# Version aus git describe, gesetzt von scripts/deploy.sh bzw. docker compose
+ARG ELMA_VERSION=dev
+RUN ELMA_VERSION=${ELMA_VERSION} pnpm --filter @elma/web build
 
 FROM deps AS backend
+ARG ELMA_VERSION=dev
+ENV ELMA_VERSION=${ELMA_VERSION}
 ENV NODE_ENV=production DB_PATH=/data/elma.db WEB_DIR=/app/apps/web/dist PORT=3000
 COPY --from=web-build /app/apps/web/dist apps/web/dist
 RUN mkdir -p /data && chown node:node /data
@@ -25,6 +29,8 @@ USER node
 CMD ["node", "src/server.ts"]
 
 FROM deps AS bridge
+ARG ELMA_VERSION=dev
+ENV ELMA_VERSION=${ELMA_VERSION}
 ENV NODE_ENV=production
 WORKDIR /app/apps/bridge
 USER node

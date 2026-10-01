@@ -53,6 +53,11 @@ export const RegisterBody = Credentials.extend({
   inviteCode: z.string().min(1),
 });
 
+/** Ab dieser Leistung gilt es als "etwas Überschuss" (Ampel gelb, Balken "ein wenig"). */
+export const LEVEL_SOME_WATTS = 50;
+/** Ab dieser Leistung gilt es als "viel Überschuss" (Ampel grün, Balken "viel"). */
+export const LEVEL_LOTS_WATTS = 1000;
+
 /** Nach so vielen Millisekunden ohne neuen Wert gilt ein Erzeuger als "offline". */
 export const STALE_AFTER_MS = 60_000;
 

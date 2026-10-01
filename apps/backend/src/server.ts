@@ -18,7 +18,10 @@ const { app, hub, repo } = await buildApp({
   webDir: process.env.WEB_DIR ?? resolve(import.meta.dirname, "../../web/dist"),
   logger: true,
   vapidSubject: process.env.VAPID_SUBJECT,
+  smoothWindowMs: process.env.SMOOTH_WINDOW_MS ? Number(process.env.SMOOTH_WINDOW_MS) : undefined,
+  version: process.env.ELMA_VERSION,
 });
+app.log.info({ version: process.env.ELMA_VERSION ?? "dev" }, "ELMA Backend gestartet");
 
 const timer = setInterval(() => {
   hub.flushCompleted(Date.now());

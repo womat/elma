@@ -9,7 +9,8 @@ const HINTS: Partial<Record<PushState, string>> = {
 };
 
 /** Push auf diesem Gerät ein-/ausschalten und testen. */
-export function PushToggle() {
+/** notifyCount = Anzahl der Geräte mit 🔔 (für den Hinweis, wenn keines markiert ist) */
+export function PushToggle({ notifyCount }: { notifyCount: number }) {
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -45,6 +46,9 @@ export function PushToggle() {
       {state === "on" && (
         <>
           <p className="push-on">✓ Auf diesem Gerät aktiv</p>
+          {notifyCount === 0 && (
+            <p className="push-warning small">⚠️ Markiere unten Geräte mit 🔔 – sonst kommen keine automatischen Nachrichten.</p>
+          )}
           <div className="push-actions">
             <button type="button" className="secondary" disabled={busy} onClick={() => run(async () => void (await api.pushTest()), "Testnachricht verschickt")}>
               Testnachricht
