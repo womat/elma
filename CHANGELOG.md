@@ -2,15 +2,15 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
-## Unveröffentlicht
+## 0.5.0 – 2026-10-01
 
 - **Anmeldung nur mit Passkey:** per Fingerabdruck, Gesicht oder Geräte-PIN. Die Anmeldung mit E-Mail und Passwort entfällt.
   - Neue Konten gibt es weiterhin nur per Einladungslink. Man gibt die E-Mail ein und legt den Passkey an.
   - Wer noch angemeldet ist, aber keinen Passkey hat, sieht in der App den Hinweis „Passkey einrichten“.
   - Über das Schlüssel-Symbol in der Kopfzeile lassen sich die eigenen Passkeys ansehen, hinzufügen und löschen.
     Den letzten kann man nicht löschen.
-  - Gespeichert wird nur der öffentliche Schlüssel. Die alten Passwort-Hashes bleiben bis zum Release unbenutzt in der Datenbank,
-    damit ein Zurücksteigen auf 0.4.1 ohne Datenverlust möglich ist.
+  - Gespeichert wird nur der öffentliche Schlüssel. Die alten Passwort-Hashes werden beim ersten Start gelöscht.
+  - Wer noch keinen Passkey hat, bekommt vom Betreiber einen Einrichtungslink (`setup-link <email>`).
 - **CLI:**
   - `create-user <email>` gibt einen Einrichtungslink für den Passkey aus, statt ein Passwort abzufragen.
   - Neu `setup-link <email>` (neues Handy, Passkey verloren) und `list-users` (wer hat schon einen Passkey).

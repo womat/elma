@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../src/app.ts";
@@ -210,6 +213,21 @@ describe("Eigene Passkeys verwalten", () => {
 });
 
 describe("Hilfsfunktionen", () => {
+  it("alte Passwort-Hashes werden beim Start gelöscht", () => {
+    const dir = mkdtempSync(join(tmpdir(), "elma-"));
+    try {
+      const path = join(dir, "elma.db");
+      const before = openDb(path);
+      before.prepare("INSERT INTO users (id, email, password_hash, created_at) VALUES ('u1', 'alt@elma.test', 'scrypt:aa:bb', 0)").run();
+      before.close();
+      const after = openDb(path);
+      expect(after.prepare("SELECT password_hash FROM users WHERE id = 'u1'").get()).toEqual({ password_hash: "passkey-only" });
+      after.close();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("ChallengeStore: einmal verwendbar, läuft nach 5 Minuten ab", () => {
     const store = new ChallengeStore();
     const id = store.add("c1", { kind: "login" }, 0);

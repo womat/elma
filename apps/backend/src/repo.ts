@@ -24,8 +24,8 @@ export interface ProducerRow {
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SETUP_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /**
- * Platzhalter für die alte Spalte password_hash (NOT NULL). Ältere Versionen erkennen das Format nicht
- * und lehnen jede Passwort-Anmeldung ab, d. h. auch nach einem Zurücksteigen gibt es kein leeres Passwort.
+ * Platzhalter für die alte Spalte password_hash (NOT NULL). Versionen vor 0.5.0 erkennen das Format nicht
+ * und lehnen jede Passwort-Anmeldung ab.
  */
 const NO_PASSWORD = "passkey-only";
 

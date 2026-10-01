@@ -90,5 +90,7 @@ export function openDb(path: string): Db {
       PRIMARY KEY (producer_id, minute)
     );
   `);
+  // Seit 0.5.0 nur Passkeys: alte Passwort-Hashes löschen (Platzhalter wie in Repo.createUser, Spalte ist NOT NULL)
+  db.exec("UPDATE users SET password_hash = 'passkey-only' WHERE password_hash LIKE 'scrypt:%'");
   return db;
 }
