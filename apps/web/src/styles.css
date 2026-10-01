@@ -77,10 +77,17 @@ input {
 .level-offline .value { color: var(--muted); }
 
 .chart { margin: 18px 0 0; }
-.chart svg { width: 100%; height: 80px; display: block; }
+.chart-body { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; row-gap: 4px; }
+.chart-y {
+  display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end;
+  height: 96px; font-size: 0.7rem; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.chart-y span { line-height: 1; }
+.chart svg { width: 100%; height: 96px; display: block; overflow: visible; }
+.chart .grid { stroke: var(--muted); stroke-opacity: 0.25; stroke-dasharray: 3 3; stroke-width: 1; }
 .chart .area { fill: color-mix(in srgb, var(--good) 22%, transparent); }
 .chart .line { fill: none; stroke: var(--good); stroke-width: 2; }
-.chart figcaption { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+.chart-x { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); }
 .chart-empty { font-size: 0.9rem; margin: 18px 0 0; }
 
 .owner { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }

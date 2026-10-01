@@ -2,6 +2,12 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.4.1 – 2026-10-01
+
+- **Verlauf im Reiter Leistung** mit beschrifteter Y-Achse (z. B. 0 W / 1,5 kW / 3 kW) und dezenten Hilfslinien.
+  Die Skala rundet auf glatte Werte auf.
+- Widmung im README.
+
 ## 0.4.0 – 2026-10-01
 
 - **Bunte Geräte-Icons:** Jedes Gerät zeigt sein Icon weiß auf einem Kreis in der Farbe seiner Gruppe.

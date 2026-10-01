@@ -1,5 +1,7 @@
 # ELMA – Energie Lokal Miteinander Austauschen
 
+> *Dieses Projekt ist meiner Tochter Elisa gewidmet.* 
+
 **Wenn die Sonne scheint, produziert eine PV-Anlage oft mehr Strom, als der Haushalt gerade braucht.**
 Dieser Überschuss wird meist für wenige Cent ins Netz eingespeist.
 Gleich nebenan zahlen Nachbarn, Familie oder Freunde für ihren Strom den vollen Preis.
