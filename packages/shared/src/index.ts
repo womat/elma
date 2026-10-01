@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isPushHost } from "./push.ts";
 
 /** Ein normalisierter Messwert: aktueller Überschuss eines Erzeugers in Watt (>= 0 heißt Überschuss). */
 export const SurplusReading = z.object({
@@ -93,7 +94,20 @@ export type ApplianceSettings = z.infer<typeof ApplianceSettings>;
 
 /** Web-Push-Abo, wie es der Browser liefert (PushSubscription.toJSON()). */
 export const PushSubscriptionBody = z.object({
-  endpoint: z.string().url().max(1000),
+  // nur echte Push-Dienste, sonst könnte man das Backend Anfragen an beliebige Adressen (z. B. im LAN) schicken lassen
+  endpoint: z
+    .string()
+    .url()
+    .max(1000)
+    .refine((u) => {
+      // läuft auch, wenn url() schon fehlgeschlagen ist; URL.parse kennen ältere iPhones noch nicht
+      try {
+        const url = new URL(u);
+        return url.protocol === "https:" && isPushHost(url.hostname);
+      } catch {
+        return false;
+      }
+    }, "Unbekannter Push-Dienst"),
   keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
 });
 export type PushSubscriptionBody = z.infer<typeof PushSubscriptionBody>;
@@ -109,3 +123,5 @@ export interface PushPayload {
 export * from "./appliances.ts";
 
 export { Throttle } from "./throttle.ts";
+
+export { isPushHost, PUSH_HOST_SUFFIXES } from "./push.ts";

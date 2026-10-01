@@ -1,4 +1,4 @@
-# Ein Dockerfile, zwei Ziele: --target backend / --target bridge
+# Ein Dockerfile, drei Ziele: --target backend / --target bridge / --target push-proxy
 FROM node:24-alpine AS deps
 WORKDIR /app
 RUN corepack enable
@@ -6,6 +6,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/backend/package.json apps/backend/
 COPY apps/bridge/package.json apps/bridge/
+COPY apps/push-proxy/package.json apps/push-proxy/
 COPY apps/web/package.json apps/web/
 RUN pnpm install --frozen-lockfile
 COPY packages packages
@@ -33,5 +34,12 @@ ARG ELMA_VERSION=dev
 ENV ELMA_VERSION=${ELMA_VERSION}
 ENV NODE_ENV=production
 WORKDIR /app/apps/bridge
+USER node
+CMD ["node", "src/index.ts"]
+
+FROM deps AS push-proxy
+ENV NODE_ENV=production PORT=3128
+WORKDIR /app/apps/push-proxy
+EXPOSE 3128
 USER node
 CMD ["node", "src/index.ts"]

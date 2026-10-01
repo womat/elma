@@ -76,6 +76,16 @@ Der Überschuss wird aus einem MQTT-Topic des lokalen Brokers `mysmarthome` gele
 
 Im Heimnetz müssen keine Ports geöffnet werden: Der Cloudflare Tunnel baut die Verbindung von innen nach außen auf.
 
+**Abgeschottetes Backend:** Das Backend hängt nur in einem internen Docker-Netz.
+Es erreicht weder das Heimnetz (z. B. andere Dienste auf dem Pi) noch das Internet, und am Gerät ist kein Port für ELMA offen.
+Falls jemand über die Anmeldung eindringt, kommt er so nicht weiter ins Heimnetz.
+
+- **cloudflared** (Tunnel) und die **Bridge** (MQTT) hängen zusätzlich im normalen Netz.
+- **push-proxy** (`apps/push-proxy`): ein kleiner Ausgangs-Proxy für Push-Nachrichten.
+  Er lässt nur verschlüsselte Verbindungen zu den Push-Diensten von Google, Apple, Mozilla und Microsoft durch.
+  Push-Abos mit anderen Adressen nimmt das Backend gar nicht erst an.
+- Die Verwaltung per CLI geht weiterhin mit `docker compose exec backend …`.
+
 ## Lokal testen (ohne echten Broker)
 
 Voraussetzung ist nur Docker.

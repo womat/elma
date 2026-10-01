@@ -1,6 +1,6 @@
 {
   "name": "elma",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "license": "PolyForm-Noncommercial-1.0.0",
   "author": "Wolfgang Mathe",
@@ -9,7 +9,7 @@
   "engines": { "node": ">=24" },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc -p apps/backend && tsc -p apps/bridge && tsc -p apps/web --noEmit",
+    "typecheck": "tsc -p apps/backend && tsc -p apps/bridge && tsc -p apps/push-proxy && tsc -p apps/web --noEmit",
     "dev:backend": "pnpm --filter @elma/backend dev",
     "dev:bridge": "pnpm --filter @elma/bridge dev",
     "dev:web": "pnpm --filter @elma/web dev",

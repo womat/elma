@@ -33,6 +33,8 @@ export interface AppOptions {
   logger?: boolean;
   /** Kontakt für Push-Dienste (mailto: oder https:), Pflicht laut Web-Push-Standard */
   vapidSubject?: string;
+  /** Ausgangs-Proxy für Web-Push, z. B. http://push-proxy:3128 (ohne: direkt) */
+  pushProxy?: string;
   /** Für Tests: eigener Sender statt echtem Web-Push */
   pushSender?: PushSender;
   pushOptions?: NotifierOptions;
@@ -77,7 +79,7 @@ export async function buildApp(
   const vapid = loadVapidKeys(repo);
   const notifier = new PushNotifier(
     repo,
-    opts.pushSender ?? webPushSender(vapid, opts.vapidSubject ?? "mailto:elma@example.com"),
+    opts.pushSender ?? webPushSender(vapid, opts.vapidSubject ?? "mailto:elma@example.com", opts.pushProxy),
     opts.pushOptions,
   );
   hub.subscribe((producerId, reading) => void notifier.onReading(producerId, reading));

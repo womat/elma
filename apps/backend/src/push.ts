@@ -126,12 +126,14 @@ export function loadVapidKeys(repo: Repo): { publicKey: string; privateKey: stri
   return keys;
 }
 
-export function webPushSender(keys: { publicKey: string; privateKey: string }, subject: string): PushSender {
+/** proxy: z. B. http://push-proxy:3128, wenn das Backend nur über den Push-Proxy ins Internet darf */
+export function webPushSender(keys: { publicKey: string; privateKey: string }, subject: string, proxy?: string): PushSender {
   return async (sub, payload) => {
     await webpush.sendNotification(sub, JSON.stringify(payload), {
       vapidDetails: { subject, publicKey: keys.publicKey, privateKey: keys.privateKey },
       TTL: 15 * 60, // nach 15 min ist die Info veraltet
       urgency: "normal",
+      ...(proxy ? { proxy } : {}),
     });
   };
 }

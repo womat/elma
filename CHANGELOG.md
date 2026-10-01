@@ -2,6 +2,16 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.6.0 – 2026-10-01
+
+- **Abgeschottetes Backend:** Das Backend hängt nur noch in einem internen Docker-Netz.
+  Es erreicht weder das Heimnetz noch das Internet, ein Eindringling käme also nicht an andere Dienste im LAN
+  (z. B. InfluxDB, Node-RED-Dashboard, MQTT).
+  - Neuer **Push-Proxy** (`apps/push-proxy`): lässt nur Verbindungen zu den Push-Diensten der Browser durch.
+  - Push-Abos werden nur noch mit Adressen dieser Push-Dienste angenommen. Vorher konnte ein angemeldeter User
+    das Backend Anfragen an beliebige Adressen schicken lassen.
+  - ELMA hat keinen Port mehr am Gerät (`ELMA_PORT` entfällt), erreichbar ist es nur über den Tunnel.
+
 ## 0.5.1 – 2026-10-01
 
 - **Anmeldung besser gegen Fluten geschützt:**

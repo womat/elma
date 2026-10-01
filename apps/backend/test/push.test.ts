@@ -16,7 +16,7 @@ let producerId: string;
 let recipientId: string;
 
 const sub = (n: number): PushSubscriptionBody => ({
-  endpoint: `https://push.example/${n}`,
+  endpoint: `https://fcm.googleapis.com/fcm/send/${n}`,
   keys: { p256dh: "p256dh", auth: "auth" },
 });
 
@@ -108,7 +108,7 @@ describe("Push-Benachrichtigungen", () => {
 
     await reading(600, T0);
     await reading(600, T0 + 2 * MIN);
-    expect(sent.map((s) => s.sub.endpoint).sort()).toEqual(["https://push.example/1", "https://push.example/2"]);
+    expect(sent.map((s) => s.sub.endpoint).sort()).toEqual(["https://fcm.googleapis.com/fcm/send/1", "https://fcm.googleapis.com/fcm/send/2"]);
   });
 
   it("räumt abgelaufene Abos (410) auf", async () => {

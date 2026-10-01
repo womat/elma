@@ -78,9 +78,9 @@ Im Tunnel unter **Public Hostname → Add a public hostname**:
 | Service Type | `HTTP` |
 | URL | `backend:3000` |
 
-**Warum `backend:3000`** und nicht `localhost` oder die IP des Pi mit Port 3080?
+**Warum `backend:3000`** und nicht `localhost` oder die IP des Pi?
 `cloudflared` läuft als Container im selben Docker-Netz wie das Backend, und dort heißt das Backend einfach `backend`.
-Die Port-Freigabe 3080 am Pi ist dafür nicht nötig.
+Einen Port am Pi gibt es für ELMA gar nicht: Das Backend hängt nur in einem internen Docker-Netz.
 
 Beim Speichern legt Cloudflare automatisch den passenden DNS-Eintrag an, einen CNAME auf `<tunnel-id>.cfargotunnel.com`.
 

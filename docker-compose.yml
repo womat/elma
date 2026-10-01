@@ -1,6 +1,10 @@
 # Produktiv-Stack für das Gerät im LAN (z. B. Raspberry Pi):
 #   docker compose up -d --build
 # Werte kommen aus .env (Vorlage: .env.example)
+#
+# Netze: Das Backend hängt nur im internen Netz und erreicht weder das LAN noch das Internet.
+# Falls jemand über die Anmeldung eindringt, kommt er so nicht an andere Dienste im Heimnetz.
+# Hinaus dürfen nur cloudflared (Tunnel), die Bridge (MQTT) und der Push-Proxy (nur Push-Dienste).
 services:
   backend:
     build: { context: ., target: backend, args: { ELMA_VERSION: "${ELMA_VERSION:-dev}" } }
@@ -9,15 +13,23 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET in .env setzen}
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:elma@example.com}
+      PUSH_PROXY: http://push-proxy:3128
     volumes:
       - elma-data:/data
-    ports:
-      - "${ELMA_PORT:-3000}:3000" # nur fürs LAN; von außen kommt der Zugriff über den Tunnel
+    depends_on: [push-proxy]
+    # kein Port am Gerät: erreichbar nur über den Tunnel (Passkeys brauchen ohnehin HTTPS)
+    networks: [intern]
+
+  push-proxy:
+    build: { context: ., target: push-proxy }
+    restart: unless-stopped
+    networks: [intern, extern]
 
   bridge:
     build: { context: ., target: bridge, args: { ELMA_VERSION: "${ELMA_VERSION:-dev}" } }
     restart: unless-stopped
     depends_on: [backend]
+    networks: [intern, extern]
     extra_hosts:
       # erlaubt MQTT_URL=mqtt://host.docker.internal:1883, wenn der Broker auf demselben Gerät läuft
       - "host.docker.internal:host-gateway"
@@ -40,7 +52,13 @@ services:
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
     depends_on: [backend]
+    networks: [intern, extern]
     profiles: [tunnel]
+
+networks:
+  intern:
+    internal: true
+  extern:
 
 volumes:
   elma-data:

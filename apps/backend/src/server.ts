@@ -18,6 +18,7 @@ const { app, hub, repo } = await buildApp({
   webDir: process.env.WEB_DIR ?? resolve(import.meta.dirname, "../../web/dist"),
   logger: true,
   vapidSubject: process.env.VAPID_SUBJECT,
+  pushProxy: process.env.PUSH_PROXY || undefined,
   smoothWindowMs: process.env.SMOOTH_WINDOW_MS ? Number(process.env.SMOOTH_WINDOW_MS) : undefined,
   version: process.env.ELMA_VERSION,
 });

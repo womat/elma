@@ -74,6 +74,12 @@ importers:
         specifier: ^8.18.0
         version: 8.18.2
 
+  apps/push-proxy:
+    dependencies:
+      '@elma/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+
   apps/web:
     dependencies:
       '@elma/shared':
