@@ -6,6 +6,12 @@ Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jed
 
 - **Release-Workflow:** GitHub-Bausteine auf die ersten Versionen mit Node 24 gehoben (checkout/setup-node v5, Docker-Actions v4/v6/v7).
   Die Warnung „Node.js 20 is deprecated“ entfällt; getestet wird das beim nächsten Release-Lauf.
+- **Repo öffentlich vorbereitet:**
+  - README mit Screenshots, Badges und Schnellstart, dazu eine englische Kurzfassung (`README.en.md`).
+  - `CONTRIBUTING.md`, `SECURITY.md` und Issue-Vorlagen.
+  - Neuer Workflow `ci`: Tests und Typprüfung bei jedem Push und Pull Request.
+  - Beispiele verwenden neutrale Adressen (`elma.example.com`, `192.168.1.10`) statt der eigenen.
+  - `scripts/deploy.sh` liest die Adresse für die Prüfung am Ende aus `PUBLIC_URL` in der `.env` auf dem Ziel. `DEPLOY_URL` überschreibt sie weiterhin.
 
 ## 0.6.2 – 2026-10-01
 

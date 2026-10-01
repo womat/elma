@@ -1,14 +1,14 @@
 # Cloudflare Tunnel einrichten
 
-Mit dem Cloudflare Tunnel ist ELMA aus dem Internet erreichbar (z. B. unter `https://my-elma.net`), ohne dass am Router ein Port geöffnet wird.
+Mit dem Cloudflare Tunnel ist ELMA aus dem Internet erreichbar (z. B. unter `https://elma.example.com`), ohne dass am Router ein Port geöffnet wird.
 Diese Anleitung beschreibt die Einrichtung von Grund auf, etwa nach einer Neuinstallation oder für einen zweiten Pi.
 
 ## Das Prinzip
 
-1. **Domain:** Cloudflare verwaltet die Domain (`my-elma.net`) und darf deshalb entscheiden, wohin Anfragen gehen.
+1. **Domain:** Cloudflare verwaltet die Domain (`elma.example.com`) und darf deshalb entscheiden, wohin Anfragen gehen.
 2. **Tunnel:** Ein Tunnel ist bei Cloudflare ein benannter Eingang mit einem geheimen **Token**.
    Wer das Token hat, darf sich als dieser Tunnel anmelden. Bei uns ist das der Container `cloudflared` auf dem Pi.
-3. **Weiterleitungsregel (Public Hostname):** „Anfragen an `my-elma.net` → durch diesen Tunnel → dort an `http://backend:3000`.“
+3. **Weiterleitungsregel (Public Hostname):** „Anfragen an `elma.example.com` → durch diesen Tunnel → dort an `http://backend:3000`.“
 
 ```
 Handy ──HTTPS/WSS──▶ Cloudflare ══Tunnel══▶ cloudflared ──HTTP──▶ backend:3000
@@ -54,7 +54,7 @@ In `~/elma/.env` auf dem Pi eintragen:
 
 ```
 CLOUDFLARE_TUNNEL_TOKEN=eyJhIjoi…
-PUBLIC_URL=https://my-elma.net
+PUBLIC_URL=https://elma.example.com
 ```
 
 `PUBLIC_URL` braucht ELMA für die Einladungslinks.
@@ -74,7 +74,7 @@ Im Tunnel unter **Public Hostname → Add a public hostname**:
 | Feld | Wert |
 |---|---|
 | Subdomain | leer, oder z. B. `elma` für `elma.deine-domain.at` |
-| Domain | `my-elma.net` |
+| Domain | `elma.example.com` |
 | Service Type | `HTTP` |
 | URL | `backend:3000` |
 
@@ -86,7 +86,7 @@ Beim Speichern legt Cloudflare automatisch den passenden DNS-Eintrag an, einen C
 
 ### 5. Testen
 
-https://my-elma.net/api/health aufrufen. Dort muss `{"ok":true,"version":"…"}` erscheinen.
+https://elma.example.com/api/health aufrufen. Dort muss `{"ok":true,"version":"…"}` erscheinen.
 
 ## Stolperfallen
 

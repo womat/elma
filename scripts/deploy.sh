@@ -4,12 +4,11 @@
 #   scripts/deploy.sh
 #
 # Voraussetzungen: sauberes Arbeitsverzeichnis, HEAD ist gepusht, auf dem Ziel liegt ~/elma/.env.
-# Einstellbar über DEPLOY_HOST (Standard mysmarthome), DEPLOY_DIR (elma), DEPLOY_URL (https://my-elma.net).
+# Einstellbar über DEPLOY_HOST (Standard mysmarthome), DEPLOY_DIR (elma), DEPLOY_URL (Standard: PUBLIC_URL aus ~/elma/.env auf dem Ziel).
 set -euo pipefail
 
 HOST="${DEPLOY_HOST:-mysmarthome}"
 DIR="${DEPLOY_DIR:-elma}"
-URL="${DEPLOY_URL:-https://my-elma.net}"
 BACKUP_DIR="${DEPLOY_BACKUP_DIR:-elma-backups}"
 KEEP_BACKUPS=10
 
@@ -32,6 +31,14 @@ echo "==> Rolle ELMA $VERSION auf $HOST:~/$DIR aus"
 
 if ! ssh "$HOST" "test -f ~/$DIR/.env"; then
   echo "Abbruch: ~/$DIR/.env fehlt auf $HOST (siehe README, Abschnitt 'Produktiv im Heimnetz')." >&2
+  exit 1
+fi
+
+# Adresse für die Prüfung am Ende: dieselbe, unter der die App läuft
+URL="${DEPLOY_URL:-$(ssh "$HOST" "sed -n 's/^PUBLIC_URL=//p' ~/$DIR/.env" | tail -n 1 | tr -d "\"' \r")}"
+URL="${URL%/}"
+if [ -z "$URL" ]; then
+  echo "Abbruch: PUBLIC_URL fehlt in ~/$DIR/.env auf $HOST (oder DEPLOY_URL setzen)." >&2
   exit 1
 fi
 

@@ -5,7 +5,7 @@ Auch andere Haushalte können als **Erzeuger** mitmachen, und zwar auf zwei Arte
 
 | | **Modell 1: Zentral gehostet** | **Modell 2: Eigene Instanz** |
 |---|---|---|
-| Wer betreibt den Server? | du, auf deinem Pi (z. B. `my-elma.net`) | die Gemeinschaft selbst, auf ihrem eigenen Pi |
+| Wer betreibt den Server? | du, auf deinem Pi (z. B. `elma.example.com`) | die Gemeinschaft selbst, auf ihrem eigenen Pi |
 | Was braucht der Erzeuger? | nur einen Shelly Pro 3EM und WLAN | Pi + Shelly + eigene Domain und eigenen Tunnel |
 | Wer sieht die Daten? | du als Betreiber und die eingeladenen Empfänger | nur die Gemeinschaft |
 | Aufwand für den Erzeuger | sehr gering | mittel, mit Einrichtungsskript |
@@ -202,7 +202,7 @@ sequenceDiagram
    Die Firmware sollte aktuell sein.
 3. In der Web-Oberfläche des Shelly unter **Settings → Outbound WebSocket**:
    - **Enable** einschalten
-   - **Server:** die URL aus `create-producer`, z. B. `wss://my-elma.net/ingest/shelly/<token>`
+   - **Server:** die URL aus `create-producer`, z. B. `wss://elma.example.com/ingest/shelly/<token>`
    - **TLS:** „Default CA bundle“ verwenden (`ssl_ca: "ca.pem"`)
 4. Speichern. In der ELMA-App erscheint der Wert nach wenigen Sekunden.
 5. Bei falschem Vorzeichen sind die Wandler vermutlich verkehrt herum montiert.
@@ -211,7 +211,7 @@ sequenceDiagram
 Dasselbe per RPC, z. B. aus dem LAN:
 
 ```bash
-curl -s -X POST http://<shelly-ip>/rpc/Ws.SetConfig -d '{"config":{"enable":true,"server":"wss://my-elma.net/ingest/shelly/<token>","ssl_ca":"ca.pem"}}'
+curl -s -X POST http://<shelly-ip>/rpc/Ws.SetConfig -d '{"config":{"enable":true,"server":"wss://elma.example.com/ingest/shelly/<token>","ssl_ca":"ca.pem"}}'
 ```
 
 ## Modell 2: Eigene Instanz (ELMA-Box)

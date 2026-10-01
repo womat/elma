@@ -61,7 +61,7 @@ export function deviceName(userAgent: string | undefined): string {
 
 interface Options {
   repo: Repo;
-  /** Öffentliche Adresse, z. B. https://my-elma.net – daraus ergeben sich RP-ID und erwartete Origin */
+  /** Öffentliche Adresse, z. B. https://elma.example.com – daraus ergeben sich RP-ID und erwartete Origin */
   publicUrl: string;
   authenticate: (req: FastifyRequest, reply: FastifyReply) => Promise<unknown>;
   loginResponse: (user: UserRow) => { token: string; user: MeDto };

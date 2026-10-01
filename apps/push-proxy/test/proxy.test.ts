@@ -60,7 +60,7 @@ describe("Push-Proxy", () => {
   it.each([
     ["anderer Host", "example.com:443"],
     ["Suffix-Trick", "fcm.googleapis.com.evil.example:443"],
-    ["LAN-Adresse", "192.168.65.42:8086"],
+    ["LAN-Adresse", "192.168.1.10:8086"],
     ["falscher Port", "fcm.googleapis.com:80"],
   ])("lehnt %s ab", async (_, target) => {
     const port = await start();
@@ -71,7 +71,7 @@ describe("Push-Proxy", () => {
 
   it("normale HTTP-Anfragen werden nicht weitergeleitet", async () => {
     const port = await start();
-    const { text } = await raw(port, "GET http://192.168.65.42:8086/query HTTP/1.1\r\nHost: 192.168.65.42\r\nConnection: close\r\n\r\n");
+    const { text } = await raw(port, "GET http://192.168.1.10:8086/query HTTP/1.1\r\nHost: 192.168.1.10\r\nConnection: close\r\n\r\n");
     expect(text).toMatch(/^HTTP\/1\.1 405/);
     expect(dialed).toEqual([]);
   });

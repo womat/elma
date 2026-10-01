@@ -1,6 +1,23 @@
 # ELMA – Energie Lokal Miteinander Austauschen
 
+[![CI](https://github.com/womat/elma/actions/workflows/ci.yml/badge.svg)](https://github.com/womat/elma/actions/workflows/ci.yml)
+[![Lizenz: PolyForm Noncommercial](https://img.shields.io/badge/Lizenz-PolyForm%20Noncommercial-blue)](LICENSE.md)
+![Node ≥ 24](https://img.shields.io/badge/Node-%E2%89%A5%2024-339933)
+![Raspberry Pi](https://img.shields.io/badge/l%C3%A4uft%20auf-Raspberry%20Pi-C51A4A)
+
+🇬🇧 [English summary](README.en.md)
+
 > *Dieses Projekt ist meiner Tochter Elisa gewidmet.*
+
+<p align="center">
+  <img src="docs/screenshots/leistung.png" width="250" alt="Live-Anzeige: 1,6 kW Überschuss mit Verlauf der letzten 24 Stunden">
+  &nbsp;
+  <img src="docs/screenshots/geraete.png" width="250" alt="Geräteansicht: 9 von 10 Geräten gehen jetzt, dem Wasserkocher fehlen noch 246 W">
+  &nbsp;
+  <img src="docs/screenshots/leistung-dunkel.png" width="250" alt="Live-Anzeige im dunklen Modus">
+</p>
+
+> **Gleich ausprobieren?** Mit Docker läuft ELMA in wenigen Minuten lokal, ganz ohne Energiemanager: siehe [Lokal testen](#lokal-testen-ohne-echten-broker).
 
 **Wenn die Sonne scheint, produziert eine PV-Anlage oft mehr Strom, als der Haushalt gerade braucht.**
 Dieser Überschuss wird meist für wenige Cent ins Netz eingespeist.
@@ -179,7 +196,8 @@ Die Version steht in der Root-`package.json` (SemVer). Zu jedem Release gehört 
 Das Skript bricht ab, wenn es nicht committete oder nicht gepushte Änderungen gibt.
 Es vergibt die Version aus `git describe` (z. B. `v0.3.0`, oder `v0.3.0-2-gabc1234` für Zwischenstände) und ersetzt den Code auf dem Pi.
 Die `.env` und die Daten bleiben dabei erhalten.
-Danach baut es die Container neu und prüft über `https://my-elma.net/api/health`, dass die neue Version läuft.
+Danach baut es die Container neu und prüft über `<PUBLIC_URL>/api/health`, dass die neue Version läuft.
+Die Adresse kommt aus `PUBLIC_URL` in der `.env` auf dem Ziel; mit `DEPLOY_URL=…` lässt sie sich überschreiben.
 Die laufende Version steht in der App ganz unten.
 
 ## Payload-Format einstellen
@@ -226,7 +244,7 @@ und man bestätigt per Fingerabdruck, Gesicht oder Geräte-PIN. Auf dem Server l
 - **Weitere Geräte:** Über das Schlüssel-Symbol oben in der App lassen sich Passkeys ansehen, hinzufügen und löschen.
   Über das Google- bzw. Apple-Konto sind sie meist ohnehin auf allen eigenen Geräten.
   Am PC kann man sich auch anmelden, indem man den angezeigten QR-Code mit dem Handy scannt.
-- Passkeys sind an die Domain gebunden (z. B. `my-elma.net`). Bei einem Umzug auf eine andere Domain müssen alle neu angelegt werden.
+- Passkeys sind an die Domain gebunden (z. B. `elma.example.com`). Bei einem Umzug auf eine andere Domain müssen alle neu angelegt werden.
   Über die LAN-Adresse (`http://192.168.…`) funktionieren sie nicht, nur über HTTPS oder `localhost`.
 
 ## Datenbank sichern und wiederherstellen
@@ -302,6 +320,12 @@ Konzept, Diagramme und Checkliste stehen in **[docs/hosting.md](docs/hosting.md)
 
 - Android-App im Play Store über Capacitor (gleicher Code)
 - Mehrere Erzeuger/Empfänger (Energiegemeinschaft); das Datenmodell ist dafür schon vorbereitet
+
+## Mitmachen
+
+Ideen, Fehlerberichte und Fragen sind als [Issue](https://github.com/womat/elma/issues) willkommen.
+Wie Beiträge ablaufen, steht in [CONTRIBUTING.md](CONTRIBUTING.md).
+Sicherheitslücken bitte nicht öffentlich melden, sondern wie in [SECURITY.md](SECURITY.md) beschrieben.
 
 ## Lizenz
 
