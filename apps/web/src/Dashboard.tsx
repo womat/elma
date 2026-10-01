@@ -58,10 +58,10 @@ export function Dashboard({ token, me, notice, onSignOut }: Props) {
   const initial = useMemo(() => Object.fromEntries((producers ?? []).map((p) => [p.id, p.current])), [producers]);
   const { readings, status } = useLive(token, initial);
 
-  // Tick für "vor x s" und Offline-Erkennung
+  // Tick für die Offline-Erkennung (keine neuen Werte mehr)
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setNow(Date.now()), 10_000);
     return () => clearInterval(id);
   }, []);
 

@@ -8,7 +8,7 @@ import {
   type SurplusReading,
 } from "@elma/shared";
 import { api } from "./api.ts";
-import { formatAgo, formatPower } from "./format.ts";
+import { formatPower } from "./format.ts";
 import { HistoryChart } from "./HistoryChart.tsx";
 import { ApplianceGrid } from "./ApplianceGrid.tsx";
 import { ApplianceTimeline } from "./ApplianceTimeline.tsx";
@@ -85,7 +85,6 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
             </button>
           )}
         </h2>
-        {reading && <span className="muted">{formatAgo(now - reading.timestamp)}</span>}
       </div>
 
       {view === "power" ? (

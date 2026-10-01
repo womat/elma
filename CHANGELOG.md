@@ -2,6 +2,11 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.2.1 – 2026-10-01
+
+- Die Anzeige „vor x s“ in der Karte des Erzeugers ist entfernt.
+  Die Offline-Erkennung prüft nur noch alle 10 s statt jede Sekunde.
+
 ## 0.2.0 – 2026-10-01
 
 - **Geglättete Anzeige:** Der Überschuss wird über 2 Minuten zeitgewichtet gemittelt (`SMOOTH_WINDOW_MS`).
