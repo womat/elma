@@ -1,6 +1,6 @@
 # ELMA – Energie Lokal Miteinander Austauschen
 
-> *Dieses Projekt ist meiner Tochter Elisa gewidmet.* 
+> *Dieses Projekt ist meiner Tochter Elisa gewidmet.*
 
 **Wenn die Sonne scheint, produziert eine PV-Anlage oft mehr Strom, als der Haushalt gerade braucht.**
 Dieser Überschuss wird meist für wenige Cent ins Netz eingespeist.
@@ -127,7 +127,8 @@ Dann http://localhost:3000 öffnen und anmelden.
    ```bash
    docker compose logs -f bridge
    ```
-4. **Cloudflare Tunnel** einrichten (kostenlos, braucht eine Domain bei Cloudflare):
+4. **Cloudflare Tunnel** einrichten (kostenlos, braucht eine Domain bei Cloudflare).
+   Ausführliche Anleitung mit Stolperfallen: [docs/cloudflare.md](docs/cloudflare.md).
    - Im Cloudflare-Dashboard unter *Zero Trust → Networks → Tunnels* einen Tunnel anlegen (Typ *Cloudflared*).
      Das Token kommt als `CLOUDFLARE_TUNNEL_TOKEN` in die `.env`.
    - Einen *Public Hostname* anlegen, z. B. `elma.deine-domain.at` → Service `http://backend:3000`.
