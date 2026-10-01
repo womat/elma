@@ -6,6 +6,8 @@ Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jed
 
 - **Release-Workflow:** GitHub-Bausteine auf die ersten Versionen mit Node 24 gehoben (checkout/setup-node v5, Docker-Actions v4/v6/v7).
   Die Warnung „Node.js 20 is deprecated“ entfällt; getestet wird das beim nächsten Release-Lauf.
+- **Release-Workflow testen ohne Veröffentlichen:** Beim Start lässt sich das Häkchen „Images hochladen“ entfernen.
+  Dann wird alles getestet und gebaut, aber nichts auf ghcr.io hochgeladen.
 - **Repo öffentlich vorbereitet:**
   - README mit Screenshots, Badges und Schnellstart, dazu eine englische Kurzfassung (`README.en.md`).
   - `CONTRIBUTING.md`, `SECURITY.md` und Issue-Vorlagen.
