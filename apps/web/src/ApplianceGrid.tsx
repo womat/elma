@@ -1,3 +1,4 @@
+import { Bell, Check, SlidersHorizontal, TriangleAlert } from "lucide-react";
 import type { Appliance } from "./appliances.ts";
 import { formatPower } from "./format.ts";
 import { ApplianceIcon } from "./icons.tsx";
@@ -32,13 +33,14 @@ export function ApplianceGrid({ watts, appliances, notify, pushOn, onEdit }: Pro
                   ? "Alles geht – jetzt ist die beste Zeit!"
                   : `${fitting} von ${appliances.length} Geräten gehen jetzt`}
         </p>
-        <button className="link small" onClick={onEdit}>
-          ⚙️ Meine Geräte
+        <button className="secondary small edit-devices" onClick={onEdit}>
+          <SlidersHorizontal size={16} className="ui-icon" aria-hidden /> Meine Geräte
         </button>
       </div>
       {pushOn && notify.length === 0 && appliances.length > 0 && (
         <p className="push-warning small">
-          ⚠️ Benachrichtigungen sind aktiv, aber kein Gerät hat 🔔.{" "}
+          <TriangleAlert size={15} className="ui-icon" aria-hidden /> Benachrichtigungen sind aktiv, aber kein Gerät hat{" "}
+          <Bell size={14} className="ui-icon" aria-label="Glocke" />.{" "}
           <button className="link small inline" onClick={onEdit}>
             Jetzt auswählen
           </button>
@@ -57,18 +59,26 @@ export function ApplianceGrid({ watts, appliances, notify, pushOn, onEdit }: Pro
               <li key={a.id} className={ok ? "ok" : "no"} title={`${a.name}: ca. ${formatPower(a.watts)}`}>
                 {notify.includes(a.id) && (
                   <span className="bell" title="Benachrichtigung aktiv">
-                    🔔
+                    <Bell size={13} aria-hidden />
                   </span>
                 )}
                 <span className="appliance-icon">
-                  <ApplianceIcon icon={a.icon} size={32} />
+                  <ApplianceIcon icon={a.icon} size={44} muted={!ok} />
                 </span>
                 <span className="appliance-name">{a.name}</span>
                 <span className="appliance-meter" aria-hidden>
                   <span style={{ width: `${ratio * 100}%` }} />
                 </span>
                 <span className="appliance-state">
-                  {ok ? "✓ geht" : watts === null ? "–" : `noch ${formatPower(a.watts - surplus)}`}
+                  {ok ? (
+                    <>
+                      <Check size={13} strokeWidth={3} className="ui-icon" aria-hidden /> geht
+                    </>
+                  ) : watts === null ? (
+                    "–"
+                  ) : (
+                    `noch ${formatPower(a.watts - surplus)}`
+                  )}
                 </span>
               </li>
             );

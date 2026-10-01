@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import {
   AirVent,
   Axe,
@@ -75,13 +74,16 @@ interface IconInfo {
 }
 
 /** Gruppen für die Icon-Auswahl im Editor; die Schlüssel sind Lucide-Namen und werden so gespeichert. */
-export const ICON_GROUPS: { title: string; icons: string[] }[] = [
-  { title: "Küche", icons: ["refrigerator", "thermometer-snowflake", "microwave", "cooking-pot", "chef-hat", "coffee", "blender", "sandwich", "utensils"] },
-  { title: "Haushalt & Wäsche", icons: ["washing-machine", "shirt", "robot-vacuum", "bubbles", "spray-can", "wind", "lamp", "lamp-ceiling", "lamp-floor", "lightbulb"] },
-  { title: "Heizen, Kühlen & Wasser", icons: ["heater", "flame", "thermometer", "air-vent", "fan", "snowflake", "shower-head", "bath", "droplets", "waves-ladder"] },
-  { title: "Unterhaltung & Büro", icons: ["tv", "monitor", "laptop", "smartphone", "tablet-smartphone", "printer", "router", "server", "gamepad-2", "speaker", "radio", "headphones", "music", "projector", "cctv"] },
-  { title: "Werkstatt & Garten", icons: ["drill", "hammer", "wrench", "paint-roller", "axe", "sprout", "trees", "fish-symbol", "dumbbell"] },
-  { title: "Mobilität & Energie", icons: ["car", "ev-charger", "bike", "scooter", "caravan", "battery-charging", "solar-panel", "plug", "plug-zap", "zap", "power"] },
+/** Farbton einer Gerätegruppe; die Farben stehen als --tone-* in styles.css. */
+export type Tone = "kitchen" | "home" | "climate" | "media" | "garden" | "energy" | "neutral";
+
+export const ICON_GROUPS: { title: string; tone: Tone; icons: string[] }[] = [
+  { title: "Küche", tone: "kitchen", icons: ["refrigerator", "thermometer-snowflake", "microwave", "cooking-pot", "chef-hat", "coffee", "blender", "sandwich", "utensils"] },
+  { title: "Haushalt & Wäsche", tone: "home", icons: ["washing-machine", "shirt", "robot-vacuum", "bubbles", "spray-can", "wind", "lamp", "lamp-ceiling", "lamp-floor", "lightbulb"] },
+  { title: "Heizen, Kühlen & Wasser", tone: "climate", icons: ["heater", "flame", "thermometer", "air-vent", "fan", "snowflake", "shower-head", "bath", "droplets", "waves-ladder"] },
+  { title: "Unterhaltung & Büro", tone: "media", icons: ["tv", "monitor", "laptop", "smartphone", "tablet-smartphone", "printer", "router", "server", "gamepad-2", "speaker", "radio", "headphones", "music", "projector", "cctv"] },
+  { title: "Werkstatt & Garten", tone: "garden", icons: ["drill", "hammer", "wrench", "paint-roller", "axe", "sprout", "trees", "fish-symbol", "dumbbell"] },
+  { title: "Mobilität & Energie", tone: "energy", icons: ["car", "ev-charger", "bike", "scooter", "caravan", "battery-charging", "solar-panel", "plug", "plug-zap", "zap", "power"] },
 ];
 
 export const ICONS: Record<string, IconInfo> = {
@@ -182,16 +184,33 @@ export function iconLabel(icon: string): string {
   return name ? ICONS[name]!.label : icon;
 }
 
-/** Zeichnet das Icon eines Geräts; unbekannte Werte (z. B. ein Emoji) werden als Text gezeigt. */
-export function ApplianceIcon({ icon, size = 24, style }: { icon: string; size?: number; style?: CSSProperties }) {
+const TONE_BY_ICON: Record<string, Tone> = Object.fromEntries(
+  ICON_GROUPS.flatMap((g) => g.icons.map((i) => [i, g.tone])),
+);
+
+/** Farbton zu einem gespeicherten Icon-Wert (Gruppe des Icons), sonst "neutral". */
+export function iconTone(icon: string): Tone {
   const name = resolveIcon(icon);
-  if (!name) {
-    return (
-      <span className="appliance-icon-text" style={{ fontSize: size * 0.9, ...style }} aria-hidden>
-        {icon}
-      </span>
-    );
-  }
-  const { Icon } = ICONS[name]!;
-  return <Icon size={size} strokeWidth={1.75} aria-hidden style={style} className="appliance-svg" />;
+  return (name && TONE_BY_ICON[name]) || "neutral";
+}
+
+interface ApplianceIconProps {
+  icon: string;
+  /** Durchmesser des Farbkreises in px */
+  size?: number;
+  /** grau statt Gruppenfarbe, z. B. wenn das Gerät gerade nicht geht */
+  muted?: boolean;
+}
+
+/** Weißes Geräte-Icon auf einem Kreis in der Farbe seiner Gruppe; unbekannte Werte (z. B. ein Emoji) im neutralen Kreis. */
+export function ApplianceIcon({ icon, size = 24, muted = false }: ApplianceIconProps) {
+  const name = resolveIcon(icon);
+  const tone = muted ? "muted" : iconTone(icon);
+  const glyph = Math.round(size * 0.55);
+  const Glyph = name ? ICONS[name]!.Icon : null;
+  return (
+    <span className={`icon-badge tone-${tone}`} style={{ width: size, height: size }} aria-hidden>
+      {Glyph ? <Glyph size={glyph} strokeWidth={2} /> : <span style={{ fontSize: glyph }}>{icon}</span>}
+    </span>
+  );
 }

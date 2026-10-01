@@ -1,3 +1,4 @@
+import { House, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ApplianceSettings, MeDto, ProducerDto } from "@elma/shared";
 import { api } from "./api.ts";
@@ -80,10 +81,10 @@ export function Dashboard({ token, me, notice, onSignOut }: Props) {
 
       <div className="view-switch" role="tablist" aria-label="Ansicht">
         <button role="tab" aria-selected={view === "power"} onClick={() => changeView("power")}>
-          ⚡ Leistung
+          <Zap size={17} className="ui-icon" aria-hidden /> Leistung
         </button>
         <button role="tab" aria-selected={view === "appliances"} onClick={() => changeView("appliances")}>
-          🏠 Geräte
+          <House size={17} className="ui-icon" aria-hidden /> Geräte
         </button>
       </div>
 

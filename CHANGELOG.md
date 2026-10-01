@@ -2,8 +2,13 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
-## Unveröffentlicht
+## 0.4.0 – 2026-10-01
 
+- **Bunte Geräte-Icons:** Jedes Gerät zeigt sein Icon weiß auf einem Kreis in der Farbe seiner Gruppe.
+  Küche ist orange, Haushalt blau, Heizen und Wasser rot, Unterhaltung lila, Werkstatt und Garten grün, Mobilität und Energie bernsteinfarben.
+  Geht ein Gerät gerade nicht, ist der Kreis grau.
+- **Einheitliche Oberfläche:** Die restlichen Emojis sind durch Linien-Icons ersetzt: Reiter, Glocke, Häkchen, Warnhinweise, Stift und Schließen.
+  „Meine Geräte“ ist jetzt ein richtiger Button.
 - **Andere Erzeuger hosten:** Das Konzept dafür steht in [docs/hosting.md](docs/hosting.md), mit Diagrammen und Checklisten.
   Es gibt zwei Modelle: zentral auf der eigenen Instanz oder als eigene ELMA-Box einer Gemeinschaft.
 - **Shelly direkt anbinden:** Neuer Endpunkt `/ingest/shelly/<token>` für Shelly Gen2+ (z. B. Pro 3EM) über Outbound WebSocket.

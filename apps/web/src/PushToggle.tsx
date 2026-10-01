@@ -1,3 +1,4 @@
+import { BellRing, Check, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "./api.ts";
 import { disablePush, enablePush, getPushState, type PushState } from "./push.ts";
@@ -9,7 +10,7 @@ const HINTS: Partial<Record<PushState, string>> = {
 };
 
 /** Push auf diesem Gerät ein-/ausschalten und testen. */
-/** notifyCount = Anzahl der Geräte mit 🔔 (für den Hinweis, wenn keines markiert ist) */
+/** notifyCount = Anzahl der Geräte mit Glocke (für den Hinweis, wenn keines markiert ist) */
 export function PushToggle({ notifyCount }: { notifyCount: number }) {
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -40,14 +41,19 @@ export function PushToggle({ notifyCount }: { notifyCount: number }) {
       {HINTS[state] && <p className="muted small">{HINTS[state]}</p>}
       {state === "off" && (
         <button type="button" disabled={busy} onClick={() => run(enablePush)}>
-          🔔 Benachrichtigungen aktivieren
+          <BellRing size={17} className="ui-icon" aria-hidden /> Benachrichtigungen aktivieren
         </button>
       )}
       {state === "on" && (
         <>
-          <p className="push-on">✓ Auf diesem Gerät aktiv</p>
+          <p className="push-on">
+            <Check size={16} strokeWidth={3} className="ui-icon" aria-hidden /> Auf diesem Gerät aktiv
+          </p>
           {notifyCount === 0 && (
-            <p className="push-warning small">⚠️ Markiere unten Geräte mit 🔔 – sonst kommen keine automatischen Nachrichten.</p>
+            <p className="push-warning small">
+              <TriangleAlert size={15} className="ui-icon" aria-hidden /> Markiere unten Geräte mit der Glocke – sonst kommen keine
+              automatischen Nachrichten.
+            </p>
           )}
           <div className="push-actions">
             <button type="button" className="secondary" disabled={busy} onClick={() => run(async () => void (await api.pushTest()), "Testnachricht verschickt")}>

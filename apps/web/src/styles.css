@@ -104,9 +104,7 @@ input {
   padding: 10px 6px; border-radius: 12px; background: var(--bg);
   transition: opacity 0.4s, filter 0.4s;
 }
-.appliance-icon { display: inline-flex; align-items: center; justify-content: center; line-height: 1; color: var(--muted); }
-.appliance-svg { display: inline-block; vertical-align: -0.2em; flex: none; }
-.appliance-icon-text { line-height: 1; }
+.appliance-icon { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
 .appliance-name { font-size: 0.8rem; line-height: 1.2; min-height: 2.4em; display: flex; align-items: center; }
 .appliance-state { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .appliance-meter { width: 80%; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 25%, transparent); overflow: hidden; }
@@ -115,7 +113,6 @@ input {
 .appliance-grid li.ok .appliance-meter span { background: var(--good); }
 .appliance-grid li.ok .appliance-state { color: var(--good); font-weight: 600; }
 .appliance-grid li.no { opacity: 0.55; }
-.appliance-grid li.ok .appliance-icon { color: var(--good); }
 
 .small { font-size: 0.85rem; }
 .center-text { text-align: center; }
@@ -149,26 +146,24 @@ button.secondary {
   background: var(--card); color: var(--text); opacity: 0.6;
 }
 .appliance-grid.pick button.on { opacity: 1; box-shadow: inset 0 0 0 2px var(--accent); }
-.appliance-grid.pick button.on .appliance-icon { color: var(--text); }
 .appliance-grid.pick .check {
   position: absolute; top: 6px; right: 8px; font-weight: 700; color: var(--accent);
 }
 
 .custom-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .custom-list li { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 12px; padding: 6px 6px 6px 12px; }
-.custom-list .appliance-icon { color: var(--text); }
 .custom-form { display: flex; flex-direction: column; gap: 10px; background: var(--card); border-radius: 14px; padding: 14px; }
 .custom-form .muted { margin: 0; }
 .icon-picker { display: flex; flex-direction: column; gap: 10px; }
 .icon-group-title { margin: 0 0 6px; font-size: 0.8rem; color: var(--muted); }
 .icon-group-icons { display: flex; flex-wrap: wrap; gap: 6px; }
 .icon-chosen { margin: 0; display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.icon-picker button { padding: 8px; line-height: 0; background: var(--bg); color: var(--text); border-radius: 10px; }
-.icon-picker button.on { box-shadow: inset 0 0 0 2px var(--accent); color: var(--accent); }
+.icon-picker button { padding: 3px; line-height: 0; background: none; border-radius: 50%; }
+.icon-picker button.on { box-shadow: 0 0 0 3px var(--accent); }
 .custom-inputs { display: grid; grid-template-columns: 1fr 90px; gap: 8px; }
 
 .appliance-grid li { position: relative; }
-.bell { position: absolute; top: 4px; right: 6px; font-size: 0.8rem; }
+.bell { position: absolute; top: 6px; right: 7px; line-height: 0; color: var(--accent); }
 .push-toggle { display: flex; flex-direction: column; gap: 8px; }
 .push-toggle .muted { margin: 0; }
 .push-on { margin: 0; color: var(--good); font-weight: 600; }
@@ -212,3 +207,35 @@ button.secondary {
 .push-warning { margin: 0 0 10px; color: var(--some); }
 .push-toggle .push-warning { margin: 0; }
 button.link.inline { padding: 0; color: inherit; text-decoration: underline; font-size: inherit; }
+
+/* Geräte-Icons: weißes Icon im Kreis in der Farbe der Gerätegruppe */
+:root {
+  --tone-kitchen: #D85A30;
+  --tone-home: #378ADD;
+  --tone-climate: #E24B4A;
+  --tone-media: #7F77DD;
+  --tone-garden: #639922;
+  --tone-energy: #BA7517;
+  --tone-neutral: #888780;
+}
+.icon-badge {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  border-radius: 50%; color: #fff; vertical-align: middle; line-height: 1;
+  transition: background-color 0.4s;
+}
+.tone-kitchen { background: var(--tone-kitchen); }
+.tone-home { background: var(--tone-home); }
+.tone-climate { background: var(--tone-climate); }
+.tone-media { background: var(--tone-media); }
+.tone-garden { background: var(--tone-garden); }
+.tone-energy { background: var(--tone-energy); }
+.tone-neutral { background: var(--tone-neutral); }
+.tone-muted { background: color-mix(in srgb, var(--none) 55%, transparent); }
+
+/* Linien-Icons in Texten und Buttons */
+.ui-icon { vertical-align: -0.15em; flex: none; }
+button.edit-devices { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; white-space: nowrap; }
+.view-switch button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.appliance-grid.pick .check { line-height: 0; }
+.custom-list .link { line-height: 0; }

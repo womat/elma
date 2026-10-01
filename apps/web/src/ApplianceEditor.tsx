@@ -1,3 +1,4 @@
+import { Bell, BellOff, Check, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import type { ApplianceSettings, CustomAppliance } from "@elma/shared";
 import { CATALOG } from "./appliances.ts";
@@ -93,12 +94,12 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
               <li key={a.id}>
                 <button type="button" className={on ? "on" : ""} aria-pressed={on} onClick={() => toggle(a.id)}>
                   <span className="appliance-icon">
-                    <ApplianceIcon icon={a.icon} size={30} />
+                    <ApplianceIcon icon={a.icon} size={40} muted={!on} />
                   </span>
                   <span className="appliance-name">{a.name}</span>
                   <span className="appliance-state">{formatPower(a.watts)}</span>
                   <span className="check" aria-hidden>
-                    {on ? "✓" : ""}
+                    {on && <Check size={16} strokeWidth={3} />}
                   </span>
                 </button>
               </li>
@@ -112,7 +113,7 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
             {custom.map((c) => (
               <li key={c.id}>
                 <span className="appliance-icon">
-                  <ApplianceIcon icon={c.icon} size={24} />
+                  <ApplianceIcon icon={c.icon} size={32} />
                 </span>
                 <span className="grow">{c.name}</span>
                 <span className="muted">{formatPower(c.watts)}</span>
@@ -121,7 +122,7 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
                   aria-label={`${c.name} entfernen`}
                   onClick={() => setCustom((prev) => prev.filter((x) => x.id !== c.id))}
                 >
-                  ✕
+                  <X size={18} aria-hidden />
                 </button>
               </li>
             ))}
@@ -150,7 +151,7 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
           <p className="muted small">Die Leistung steht meist auf dem Typenschild oder in der Anleitung (z. B. „800 W“).</p>
 
           <p className="icon-chosen small">
-            <ApplianceIcon icon={icon} size={22} /> Symbol: {ICONS[icon]?.label ?? icon}
+            <ApplianceIcon icon={icon} size={28} /> Symbol: {ICONS[icon]?.label ?? icon}
           </p>
           <div className="icon-picker" role="radiogroup" aria-label="Symbol">
             {ICON_GROUPS.map((group) => (
@@ -171,7 +172,7 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
                         setIconPicked(true);
                       }}
                     >
-                      <ApplianceIcon icon={i} size={22} />
+                      <ApplianceIcon icon={i} size={36} />
                     </button>
                   ))}
                 </div>
@@ -183,7 +184,9 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
           </button>
         </form>
 
-        <h3>🔔 Benachrichtigungen</h3>
+        <h3>
+          <Bell size={18} className="ui-icon" aria-hidden /> Benachrichtigungen
+        </h3>
         <div className="custom-form">
           <PushToggle notifyCount={chosen.filter((a) => notify.has(a.id)).length} />
           <p className="muted small">
@@ -197,7 +200,8 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
                 const on = notify.has(a.id);
                 return (
                   <button key={a.id} type="button" className={on ? "chip on" : "chip"} aria-pressed={on} onClick={() => toggleNotify(a.id)}>
-                    {on ? "🔔" : "🔕"} <ApplianceIcon icon={a.icon} size={16} /> {a.name}
+                    {on ? <Bell size={15} className="ui-icon" aria-hidden /> : <BellOff size={15} className="ui-icon" aria-hidden />}{" "}
+                    <ApplianceIcon icon={a.icon} size={20} muted={!on} /> {a.name}
                   </button>
                 );
               })}

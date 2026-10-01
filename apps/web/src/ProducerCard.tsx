@@ -1,3 +1,4 @@
+import { Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   LEVEL_LOTS_WATTS,
@@ -82,7 +83,7 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
           {name}
           {producer.isOwner && (
             <button className="link small rename" onClick={rename} aria-label="Erzeuger umbenennen" title="Umbenennen">
-              ✏️
+              <Pencil size={15} aria-hidden />
             </button>
           )}
         </h2>
@@ -96,7 +97,7 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
           <div className="status">{LABELS[level]}</div>
           {hint && (
             <p className="hint">
-              Reicht z. B. für <ApplianceIcon icon={hint.icon} size={18} /> {hint.name}
+              Reicht z. B. für <ApplianceIcon icon={hint.icon} size={22} /> {hint.name}
             </p>
           )}
         </>

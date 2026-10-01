@@ -64,7 +64,7 @@ export function ApplianceTimeline({ points, appliances, now }: Props) {
                 {hour(sel.start)}–{hour(sel.start + 3_600_000)} Uhr · Ø {formatPower(Math.max(0, sel.watts))} ·{" "}
                 {sel.biggest ? (
                   <>
-                    reicht für <ApplianceIcon icon={sel.biggest.icon} size={16} /> {sel.biggest.name}
+                    reicht für <ApplianceIcon icon={sel.biggest.icon} size={20} /> {sel.biggest.name}
                   </>
                 ) : (
                   "reicht für keines deiner Geräte"

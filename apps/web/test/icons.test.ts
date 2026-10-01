@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CATALOG } from "@elma/shared";
 import { suggestIcon } from "../src/iconSuggest.ts";
-import { ICON_GROUPS, ICONS, LEGACY_EMOJI, resolveIcon } from "../src/icons.tsx";
+import { ICON_GROUPS, ICONS, LEGACY_EMOJI, iconTone, resolveIcon } from "../src/icons.tsx";
 
 describe("suggestIcon", () => {
   it.each([
@@ -46,5 +46,18 @@ describe("Icon-Registry", () => {
     expect(resolveIcon("🔥")).toBe("flame");
     expect(resolveIcon("washing-machine")).toBe("washing-machine");
     expect(resolveIcon("🦄")).toBeNull();
+  });
+});
+
+describe("Farbtöne", () => {
+  it("jedes Icon der Auswahl und jedes Katalog-Gerät hat eine Gruppenfarbe", () => {
+    for (const g of ICON_GROUPS) for (const i of g.icons) expect(iconTone(i), i).toBe(g.tone);
+    for (const a of CATALOG) expect(iconTone(a.icon), a.id).not.toBe("neutral");
+  });
+
+  it("alte Emojis bekommen die Farbe ihres neuen Icons, Unbekanntes bleibt neutral", () => {
+    expect(iconTone("🔥")).toBe("climate");
+    expect(iconTone("🏊")).toBe("climate");
+    expect(iconTone("🦄")).toBe("neutral");
   });
 });
