@@ -2,6 +2,11 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## Unveröffentlicht
+
+- **Release-Workflow:** GitHub-Bausteine auf die ersten Versionen mit Node 24 gehoben (checkout/setup-node v5, Docker-Actions v4/v6/v7).
+  Die Warnung „Node.js 20 is deprecated“ entfällt; getestet wird das beim nächsten Release-Lauf.
+
 ## 0.6.2 – 2026-10-01
 
 - **ELMA-Box abgeschottet** wie der Haupt-Stack:
