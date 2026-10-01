@@ -163,9 +163,9 @@ Dann den Einrichtungslink öffnen (http://localhost:3000/?setup=…) und den Pas
 Die Version steht in der Root-`package.json` (SemVer). Zu jedem Release gehört ein Git-Tag.
 
 1. In `package.json` (und den Paketen unter `apps/*`, `packages/*`) die Version erhöhen und `CHANGELOG.md` ergänzen.
-2. Committen und taggen:
+2. Committen und taggen, mit `-a` und Beschreibung, denn nur solche Tags überträgt `git push --follow-tags`:
    ```bash
-   git tag v0.3.0
+   git tag -a v0.3.0 -m "ELMA v0.3.0"
    ```
 3. Pushen:
    ```bash
