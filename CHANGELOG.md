@@ -2,6 +2,26 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## Unveröffentlicht
+
+- **Andere Erzeuger hosten:** Das Konzept dafür steht in [docs/hosting.md](docs/hosting.md), mit Diagrammen und Checklisten.
+  Es gibt zwei Modelle: zentral auf der eigenen Instanz oder als eigene ELMA-Box einer Gemeinschaft.
+- **Shelly direkt anbinden:** Neuer Endpunkt `/ingest/shelly/<token>` für Shelly Gen2+ (z. B. Pro 3EM) über Outbound WebSocket.
+  Beim Erzeuger braucht es dafür keinen Pi, keinen Broker und keine Bridge.
+  Einspeisung zählt als Überschuss, die Werte werden wie bei der Bridge gedrosselt.
+  Mit einem echten Shelly ist das noch nicht getestet.
+- **Token nicht im Log:** Das Geräte-Token im Pfad erscheint im Log nur als `/ingest/shelly/***`.
+- **CLI:**
+  - `create-producer` gibt zusätzlich die Shelly-URL aus.
+  - Neu ist `rotate-token <producerId>`: Es erzeugt ein neues Geräte-Token, das alte ist sofort ungültig.
+  - Die Zeile `DEVICE_TOKEN=…` steht allein und lässt sich 1:1 in die `.env` kopieren.
+- **ELMA-Box** (`deploy/box/`): eigene Instanz aus fertigen Images, ohne Build auf dem Gerät.
+  - Compose-Datei mit optionalem Mosquitto (nur mit Passwort) und Bridge.
+  - Einrichtung im Dialog mit `setup.sh`.
+  - Gemessener Speicherbedarf unter 150 MB, damit läuft sie auch auf einem Pi Zero 2 W.
+- **Release-Workflow** (`.github/workflows/release.yml`), nur von Hand zu starten: Er testet und baut dann die Images für amd64 und arm64 nach `ghcr.io/womat/elma-backend` und `-bridge`.
+- Intern: Die Drossel (`Throttle`) liegt jetzt in `@elma/shared` und wird von Bridge und Backend gemeinsam genutzt.
+
 ## 0.3.0 – 2026-10-01
 
 - **Geräte-Icons statt Emojis:** Alle Geräte nutzen jetzt einheitliche Linien-Icons ([Lucide](https://lucide.dev), Lizenz ISC).
