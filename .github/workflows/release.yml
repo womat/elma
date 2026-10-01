@@ -1,11 +1,11 @@
-# Baut bei jedem Versions-Tag (vX.Y.Z) fertige Images für die ELMA-Box:
+# Baut fertige Images für die ELMA-Box:
 #   ghcr.io/womat/elma-backend und ghcr.io/womat/elma-bridge, jeweils für amd64 und arm64.
 # Auf einem Pi Zero 2 W wäre ein Build vor Ort zu langsam und bräuchte zu viel Speicher.
+# Läuft nur von Hand: GitHub → Actions → release → "Run workflow", dabei unter "Use workflow from"
+# den Versions-Tag (z. B. v0.4.0) wählen – dann bekommen die Images diesen Tag und "latest".
 name: release
 
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
 
 permissions:

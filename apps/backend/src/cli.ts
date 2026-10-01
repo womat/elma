@@ -45,7 +45,9 @@ function usage(): never {
 }
 
 function printDeviceToken(deviceToken: string): void {
-  console.log(`DEVICE_TOKEN=${deviceToken}          (für die Bridge, in .env eintragen)`);
+  // eigene Zeile ohne Zusatztext, damit sie 1:1 in die .env der Bridge kopiert werden kann
+  console.log(`DEVICE_TOKEN=${deviceToken}`);
+  console.log("  ↳ diese Zeile für die Bridge in die .env übernehmen");
   console.log(`Shelly-URL: ${publicUrl.replace(/^http/, "ws")}/ingest/shelly/${deviceToken}`);
   console.log("Wird nur jetzt angezeigt. Nur über einen sicheren Kanal weitergeben.");
 }
