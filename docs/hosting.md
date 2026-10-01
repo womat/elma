@@ -14,9 +14,10 @@ Auch andere Haushalte können als **Erzeuger** mitmachen, und zwar auf zwei Arte
 In beiden Modellen kommt der Messwert von einem **Shelly Pro 3EM** am Hausanschluss.
 
 > **Stand:**
-> - **Umgesetzt:** Shelly-Endpunkt `/ingest/shelly/<token>`, `rotate-token`, Shelly-URL in `create-producer`, mehrere Erzeuger pro Instanz, Einladungen, MQTT-Bridge.
-> - **Geplant:** vorgebaute Images, ELMA-Box mit `setup.sh`.
-> - **Offen:** Test mit einem echten Shelly Pro 3EM (siehe [Offene Punkte](#offene-punkte)).
+> - **Umgesetzt:** Shelly-Endpunkt `/ingest/shelly/<token>`, `rotate-token`, Shelly-URL in `create-producer`, mehrere Erzeuger pro Instanz, Einladungen, MQTT-Bridge, ELMA-Box (`deploy/box/`) mit `setup.sh`, Release-Workflow für fertige Images.
+> - **Offen:**
+>   - erstes Release über den Workflow, dabei die Images auf ghcr.io öffentlich schalten;
+>   - Test mit einem echten Shelly Pro 3EM (siehe [Offene Punkte](#offene-punkte)).
 
 ## Messung: Shelly Pro 3EM
 
@@ -233,7 +234,7 @@ flowchart LR
 | Gerät | Eignung |
 |---|---|
 | Raspberry Pi Zero / Zero W (1. Generation) | ❌ ARMv6: kein offizielles Node 24, kaum Docker-Images |
-| Raspberry Pi Zero 2 W (512 MB) | ⚠️ Untergrenze: geht nur mit vorgebauten Images, 64-bit-System und Swap; Mosquitto und Bridge nur, wenn nötig |
+| Raspberry Pi Zero 2 W (512 MB) | ⚠️ Untergrenze: geht nur mit vorgebauten Images und 64-bit-System; Mosquitto und Bridge nur, wenn nötig |
 | Raspberry Pi 4 / 5 (ab 2 GB) | ✅ empfohlen, mit Reserve für Updates und weitere Dienste |
 
 - Betriebssystem: **Raspberry Pi OS Lite 64-bit**.
@@ -241,20 +242,68 @@ flowchart LR
   ELMA schreibt nur Minutenmittel, das ist für SD-Karten unkritisch.
 - Auf dem Pi wird **nichts gebaut**: Ein Build vor Ort (pnpm + Vite) wäre auf einem Zero 2 W zu langsam und würde am Speicher scheitern.
   Die Images kommen fertig aus der GitHub Container Registry.
+- Gemessener Speicherbedarf im Testlauf: backend ≈ 47 MB, bridge ≈ 44 MB, mosquitto ≈ 4 MB.
+  Dazu kommt cloudflared mit ca. 20–30 MB, insgesamt also unter 150 MB.
+  In `docker-compose.yml` sind Obergrenzen gesetzt (`mem_limit`).
+  Auf Raspberry Pi OS greifen sie erst, wenn in `/boot/firmware/cmdline.txt` `cgroup_enable=memory` steht; ohne diesen Eintrag ignoriert Docker sie mit einer Warnung.
 
-### Schritte (geplant)
-1. Raspberry Pi OS Lite 64-bit installieren, Docker installieren (`curl -fsSL https://get.docker.com | sh`).
-2. Domain bei Cloudflare hinzufügen und unter Zero Trust einen Tunnel anlegen.
-   Ziel ist `http://backend:3000`, das Tunnel-Token notieren.
-3. `deploy/box/` auf den Pi kopieren und `./setup.sh` starten. Das Skript
-   - erzeugt `JWT_SECRET`,
-   - fragt `PUBLIC_URL`, Tunnel-Token und Port ab,
-   - startet den Stack,
-   - legt den ersten Benutzer und Erzeuger an
-   - und gibt die Shelly-URL aus.
+### Inhalt von `deploy/box/`
+
+| Datei | Zweck |
+|---|---|
+| `docker-compose.yml` | nur fertige Images, kein Build; Dienste über `COMPOSE_PROFILES` in der `.env` |
+| `setup.sh` | Einrichtung im Dialog: `.env`, Mosquitto-Passwort, Start, erster Benutzer und Erzeuger |
+| `.env.example` | Vorlage, falls man die `.env` lieber von Hand schreibt |
+| `mosquitto/mosquitto.conf` | Broker nur mit Passwort, ohne Persistenz |
+
+### Schritte
+1. Raspberry Pi OS Lite 64-bit installieren (Raspberry Pi Imager: SSH und WLAN gleich mit einstellen), danach Docker installieren:
+   ```bash
+   curl -fsSL https://get.docker.com | sh && sudo usermod -aG docker $USER
+   ```
+   Anschließend einmal ab- und wieder anmelden.
+2. Domain bei Cloudflare hinzufügen und unter **Zero Trust → Networks → Tunnels** einen Tunnel anlegen.
+   - Public Hostname: z. B. `elma.meine-gemeinschaft.at`
+   - Service: `http://backend:3000`
+   - Tunnel-Token notieren.
+3. Box-Ordner auf den Pi bringen und `setup.sh` starten.
+   Solange das Repo privat ist, kopierst du den Ordner von deinem Rechner:
+   ```bash
+   scp -r deploy/box pi@<box>:~/elma-box
+   ```
+   ```bash
+   ssh -t pi@<box> 'cd ~/elma-box && ./setup.sh'
+   ```
+   Ist das Repo öffentlich, geht es auch direkt auf dem Pi:
+   ```bash
+   sudo apt install -y git && git clone --depth 1 https://github.com/womat/elma.git && cd elma/deploy/box && ./setup.sh
+   ```
+   Das Skript
+   - fragt öffentliche Adresse, Port, Kontakt-E-Mail, Version und Tunnel-Token ab,
+   - fragt, ob zusätzlich MQTT (Mosquitto + Bridge) laufen soll,
+   - erzeugt `JWT_SECRET` und das Mosquitto-Passwort selbst und schreibt die `.env` (nur für den Besitzer lesbar),
+   - startet den Stack und legt den ersten Benutzer und Erzeuger an,
+   - gibt die Shelly-URL aus und trägt bei MQTT das `DEVICE_TOKEN` für die Bridge selbst ein.
+
+   Eine vorhandene `.env` überschreibt es nur nach Rückfrage, und die Daten im Volume bleiben erhalten.
 4. Shelly wie oben einrichten.
-5. Updates: `docker compose pull && docker compose up -d`.
-6. Backup: Volume `elma-data` sichern.
+5. Updates:
+   ```bash
+   docker compose pull && docker compose up -d
+   ```
+   Eine feste Version lässt sich mit `ELMA_VERSION` in der `.env` setzen.
+6. Backup:
+   ```bash
+   docker compose stop backend && docker compose cp backend:/data/. ./backup/ && docker compose start backend
+   ```
+
+### Images veröffentlichen (Entwickler)
+Der Workflow `.github/workflows/release.yml` läuft bei jedem Tag `vX.Y.Z`.
+Er testet zuerst und baut dann `ghcr.io/womat/elma-backend` und `ghcr.io/womat/elma-bridge` für amd64 und arm64.
+Getaggt wird mit `vX.Y.Z` und `latest`.
+
+Neue Pakete auf ghcr.io sind zunächst **privat**.
+Nach dem ersten Lauf deshalb unter GitHub → Packages → Package settings jedes Paket auf **Public** stellen, sonst scheitert `docker compose pull` auf fremden Boxen.
 
 ### Optional: Mosquitto im LAN
 Nur für Quellen ohne Shelly-Direktverbindung (Smartfox, Shelly Gen1 …):

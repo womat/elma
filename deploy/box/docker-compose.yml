@@ -1,0 +1,57 @@
+# ELMA-Box: eigene ELMA-Instanz aus fertigen Images, ohne Quellcode und ohne Build auf dem Gerät.
+# Einrichtung: ./setup.sh   –   Update: docker compose pull && docker compose up -d
+# Welche Dienste laufen, steht in .env unter COMPOSE_PROFILES (tunnel, mqtt).
+services:
+  backend:
+    image: ghcr.io/womat/elma-backend:${ELMA_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET in .env setzen (./setup.sh)}
+      PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL in .env setzen}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:elma@example.com}
+    volumes:
+      - elma-data:/data
+    ports:
+      - "${ELMA_PORT:-3000}:3000" # nur fürs LAN; von außen kommt der Zugriff über den Tunnel
+    mem_limit: 256m
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on: [backend]
+    mem_limit: 96m
+    profiles: [tunnel]
+
+  # Nur für Quellen im LAN, die nur MQTT können (Smartfox, Shelly Gen1 …). Shelly Pro 3EM braucht das nicht.
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto:/mosquitto/config
+    ports:
+      - "1883:1883" # nur im LAN – im Router NICHT freigeben
+    mem_limit: 32m
+    profiles: [mqtt]
+
+  bridge:
+    image: ghcr.io/womat/elma-bridge:${ELMA_VERSION:-latest}
+    restart: unless-stopped
+    depends_on: [backend, mosquitto]
+    environment:
+      MQTT_URL: ${MQTT_URL:-mqtt://mosquitto:1883}
+      MQTT_TOPIC: ${MQTT_TOPIC:-}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      PAYLOAD_PATH: ${PAYLOAD_PATH:-}
+      PAYLOAD_UNIT: ${PAYLOAD_UNIT:-W}
+      PAYLOAD_INVERT: ${PAYLOAD_INVERT:-false}
+      BACKEND_URL: ws://backend:3000
+      DEVICE_TOKEN: ${DEVICE_TOKEN:-}
+    mem_limit: 128m
+    profiles: [mqtt]
+
+volumes:
+  elma-data:
