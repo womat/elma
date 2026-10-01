@@ -42,16 +42,22 @@ echo "==> ELMA-Box einrichten"
 if [ -f .env ] && ! yes_no ".env gibt es schon. Neu schreiben?" n; then
   echo "    .env bleibt unverändert."
 else
-  public_url="$(ask "Öffentliche Adresse (z. B. https://elma.meine-gemeinschaft.at)")"
-  [[ "$public_url" =~ ^https?:// ]] || { echo "Abbruch: Adresse muss mit https:// beginnen." >&2; exit 1; }
+  # Passkeys funktionieren nur über HTTPS und sind an diese Adresse gebunden
+  public_url=""
+  until [[ "$public_url" =~ ^https://[^/]+ ]]; do
+    public_url="$(ask "Öffentliche Adresse, mit https:// (z. B. https://elma.meine-gemeinschaft.at)")"
+  done
   public_url="${public_url%/}"
-  port="$(ask "Port im LAN" 3000)"
   vapid="$(ask "Kontakt-E-Mail für Push-Dienste" "")"
   version="$(ask "Image-Version" latest)"
-  tunnel_token="$(ask_secret "Cloudflare-Tunnel-Token (leer = nur im LAN)")"
+  # Ohne Tunnel ist ELMA nicht erreichbar: Das Backend hat absichtlich keinen Port im LAN.
+  echo "    Den Tunnel legst du im Cloudflare-Dashboard an (Anleitung: docs/cloudflare.md im ELMA-Repo)."
+  tunnel_token=""
+  until [ -n "$tunnel_token" ]; do
+    tunnel_token="$(ask_secret "Cloudflare-Tunnel-Token")"
+  done
 
   profiles=()
-  [ -n "$tunnel_token" ] && profiles+=(tunnel)
 
   mqtt_password="" mqtt_topic="" payload_path="" payload_invert=false
   if yes_no "Zusätzlich MQTT (Mosquitto + Bridge) für Smartfox, Shelly Gen1 o. Ä.?" n; then
@@ -71,7 +77,6 @@ else
 # erzeugt von setup.sh am $(date +%F)
 COMPOSE_PROFILES='$(IFS=,; echo "${profiles[*]-}")'
 ELMA_VERSION='$version'
-ELMA_PORT='$port'
 JWT_SECRET='$(random_hex)'
 PUBLIC_URL='$public_url'
 VAPID_SUBJECT='mailto:${vapid:-elma@example.com}'
@@ -95,7 +100,6 @@ env_set() { # ersetzt KEY=… in der .env
   echo "$1='$2'" >>"$tmp"
   mv "$tmp" .env
 }
-port="$(env_get ELMA_PORT)"
 mqtt_enabled=false
 [[ "$(env_get COMPOSE_PROFILES)" == *mqtt* ]] && mqtt_enabled=true
 
@@ -136,12 +140,10 @@ fi
 echo "==> Alle Dienste starten"
 docker compose up -d
 
-lan_ip="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
 cat <<EOF
 
 Fertig.
-  App im LAN:   http://${lan_ip:-localhost}:$port
-  Öffentlich:   $(env_get PUBLIC_URL)
+  App:          $(env_get PUBLIC_URL)  (nur über den Tunnel; mit dem Einrichtungslink von oben den Passkey anlegen)
   Shelly:       URL von oben unter Settings → Outbound WebSocket eintragen
   Update:       docker compose pull && docker compose up -d
   Backup:       docker compose stop backend && docker compose cp backend:/data/. ./backup/ && docker compose start backend

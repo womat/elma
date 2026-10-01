@@ -2,6 +2,15 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## Unveröffentlicht
+
+- **ELMA-Box abgeschottet** wie der Haupt-Stack:
+  - Backend nur im internen Docker-Netz, Push über den Push-Proxy, kein Port im LAN.
+  - Der Cloudflare Tunnel ist Pflicht; `setup.sh` fragt nicht mehr nach einem Port und verlangt Token und `https://`-Adresse.
+    Ein reiner LAN-Betrieb ging seit den Passkeys ohnehin nicht mehr.
+  - Mosquitto bleibt für Quellen im LAN erreichbar, das Backend kommt aber nicht an ihn heran.
+- **Release-Workflow:** baut zusätzlich das Image `ghcr.io/womat/elma-push-proxy`.
+
 ## 0.6.1 – 2026-10-01
 
 - **Push nach Kontowechsel:** Beim Abmelden wird das Push-Abo des Geräts jetzt abgemeldet.

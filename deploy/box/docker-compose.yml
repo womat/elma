@@ -1,6 +1,10 @@
 # ELMA-Box: eigene ELMA-Instanz aus fertigen Images, ohne Quellcode und ohne Build auf dem Gerät.
 # Einrichtung: ./setup.sh   –   Update: docker compose pull && docker compose up -d
-# Welche Dienste laufen, steht in .env unter COMPOSE_PROFILES (tunnel, mqtt).
+# Optionale Dienste stehen in .env unter COMPOSE_PROFILES (mqtt).
+#
+# Netze: Das Backend hängt nur im internen Netz und erreicht weder das LAN noch das Internet.
+# Falls jemand über die Anmeldung eindringt, kommt er so nicht an andere Geräte im Heimnetz.
+# Hinaus dürfen nur cloudflared (Tunnel, Pflicht), die Bridge (MQTT) und der Push-Proxy (nur Push-Dienste).
 services:
   backend:
     image: ghcr.io/womat/elma-backend:${ELMA_VERSION:-latest}
@@ -9,21 +13,29 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET in .env setzen (./setup.sh)}
       PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL in .env setzen}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:elma@example.com}
+      PUSH_PROXY: http://push-proxy:3128
     volumes:
       - elma-data:/data
-    ports:
-      - "${ELMA_PORT:-3000}:3000" # nur fürs LAN; von außen kommt der Zugriff über den Tunnel
+    depends_on: [push-proxy]
+    # kein Port am Gerät: erreichbar nur über den Tunnel (Passkeys brauchen ohnehin HTTPS)
+    networks: [intern]
     mem_limit: 256m
+
+  push-proxy:
+    image: ghcr.io/womat/elma-push-proxy:${ELMA_VERSION:-latest}
+    restart: unless-stopped
+    networks: [intern, extern]
+    mem_limit: 48m
 
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN in .env setzen (./setup.sh)}
     depends_on: [backend]
+    networks: [intern, extern]
     mem_limit: 96m
-    profiles: [tunnel]
 
   # Nur für Quellen im LAN, die nur MQTT können (Smartfox, Shelly Gen1 …). Shelly Pro 3EM braucht das nicht.
   mosquitto:
@@ -33,6 +45,7 @@ services:
       - ./mosquitto:/mosquitto/config
     ports:
       - "1883:1883" # nur im LAN – im Router NICHT freigeben
+    networks: [extern]
     mem_limit: 32m
     profiles: [mqtt]
 
@@ -40,6 +53,7 @@ services:
     image: ghcr.io/womat/elma-bridge:${ELMA_VERSION:-latest}
     restart: unless-stopped
     depends_on: [backend, mosquitto]
+    networks: [intern, extern]
     environment:
       MQTT_URL: ${MQTT_URL:-mqtt://mosquitto:1883}
       MQTT_TOPIC: ${MQTT_TOPIC:-}
@@ -52,6 +66,11 @@ services:
       DEVICE_TOKEN: ${DEVICE_TOKEN:-}
     mem_limit: 128m
     profiles: [mqtt]
+
+networks:
+  intern:
+    internal: true
+  extern:
 
 volumes:
   elma-data:

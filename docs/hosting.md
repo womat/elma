@@ -16,7 +16,7 @@ In beiden Modellen kommt der Messwert von einem **Shelly Pro 3EM** am Hausanschl
 > **Stand:**
 > - **Umgesetzt:** Shelly-Endpunkt `/ingest/shelly/<token>`, `rotate-token`, Shelly-URL in `create-producer`, mehrere Erzeuger pro Instanz, Einladungen, MQTT-Bridge, ELMA-Box (`deploy/box/`) mit `setup.sh`, Release-Workflow für fertige Images.
 > - **Offen:**
->   - erstes Release über den Workflow, dabei die Images auf ghcr.io öffentlich schalten;
+>   - erstes Release über den Workflow, dabei die drei Images (backend, bridge, push-proxy) auf ghcr.io öffentlich schalten;
 >   - Test mit einem echten Shelly Pro 3EM (siehe [Offene Punkte](#offene-punkte)).
 
 ## Messung: Shelly Pro 3EM
@@ -252,7 +252,7 @@ flowchart LR
 
 | Datei | Zweck |
 |---|---|
-| `docker-compose.yml` | nur fertige Images, kein Build; Dienste über `COMPOSE_PROFILES` in der `.env` |
+| `docker-compose.yml` | nur fertige Images, kein Build; Backend abgeschottet im internen Netz, MQTT über `COMPOSE_PROFILES` in der `.env` |
 | `setup.sh` | Einrichtung im Dialog: `.env`, Mosquitto-Passwort, Start, erster Benutzer und Erzeuger |
 | `.env.example` | Vorlage, falls man die `.env` lieber von Hand schreibt |
 | `mosquitto/mosquitto.conf` | Broker nur mit Passwort, ohne Persistenz |
@@ -263,7 +263,9 @@ flowchart LR
    curl -fsSL https://get.docker.com | sh && sudo usermod -aG docker $USER
    ```
    Anschließend einmal ab- und wieder anmelden.
-2. Domain bei Cloudflare hinzufügen und unter **Zero Trust → Networks → Tunnels** einen Tunnel anlegen.
+2. Domain bei Cloudflare hinzufügen und unter **Zero Trust → Networks → Tunnels** einen Tunnel anlegen
+   (ausführlich in [cloudflare.md](cloudflare.md)). Der Tunnel ist **Pflicht**: Die Box hat keinen Port im LAN,
+   und Passkeys funktionieren nur über HTTPS.
    - Public Hostname: z. B. `elma.meine-gemeinschaft.at`
    - Service: `http://backend:3000`
    - Tunnel-Token notieren.
@@ -280,10 +282,10 @@ flowchart LR
    sudo apt install -y git && git clone --depth 1 https://github.com/womat/elma.git && cd elma/deploy/box && ./setup.sh
    ```
    Das Skript
-   - fragt öffentliche Adresse, Port, Kontakt-E-Mail, Version und Tunnel-Token ab,
+   - fragt öffentliche Adresse (mit `https://`), Kontakt-E-Mail, Version und Tunnel-Token ab,
    - fragt, ob zusätzlich MQTT (Mosquitto + Bridge) laufen soll,
    - erzeugt `JWT_SECRET` und das Mosquitto-Passwort selbst und schreibt die `.env` (nur für den Besitzer lesbar),
-   - startet den Stack und legt den ersten Benutzer und Erzeuger an,
+   - startet den Stack und legt den ersten Benutzer und Erzeuger an; für den Benutzer gibt es einen Einrichtungslink zum Passkey,
    - gibt die Shelly-URL aus und trägt bei MQTT das `DEVICE_TOKEN` für die Bridge selbst ein.
 
    Eine vorhandene `.env` überschreibt es nur nach Rückfrage, und die Daten im Volume bleiben erhalten.
@@ -301,7 +303,7 @@ flowchart LR
 ### Images veröffentlichen (Entwickler)
 Der Workflow `.github/workflows/release.yml` läuft **nur von Hand**, damit normale Releases keine Actions-Minuten kosten.
 Start: GitHub → Actions → release → „Run workflow“, dabei unter „Use workflow from“ den Versions-Tag wählen, z. B. `v0.4.0`.
-Er testet zuerst und baut dann `ghcr.io/womat/elma-backend` und `ghcr.io/womat/elma-bridge` für amd64 und arm64.
+Er testet zuerst und baut dann `ghcr.io/womat/elma-backend`, `ghcr.io/womat/elma-bridge` und `ghcr.io/womat/elma-push-proxy` für amd64 und arm64.
 Getaggt wird mit `vX.Y.Z` und `latest`.
 
 Neue Pakete auf ghcr.io sind zunächst **privat**.
@@ -321,6 +323,9 @@ Nur für Quellen ohne Shelly-Direktverbindung (Smartfox, Shelly Gen1 …):
   - Das Token erlaubt nur, Messwerte für **diesen einen** Erzeuger zu schreiben, nicht das Lesen anderer Daten.
   - Es lässt sich jederzeit mit `rotate-token` tauschen.
 - **Keine offenen Ports:** Shelly und cloudflared bauen ihre Verbindungen von innen nach außen auf.
+- **Abgeschottetes Backend:** Das Backend hängt nur im internen Docker-Netz und erreicht weder das LAN noch das Internet.
+  Push-Nachrichten gehen über den Push-Proxy, der nur die Push-Dienste von Google, Apple, Mozilla und Microsoft durchlässt.
+  Falls jemand über die Anmeldung eindringt, kommt er so nicht an andere Geräte im Heimnetz.
 - **Mosquitto** ist nur im LAN erreichbar und nur mit Passwort.
 - **Empfänger** kommen nur über einen Einladungslink hinein: Er ist 7 Tage gültig und nur einmal verwendbar.
 
