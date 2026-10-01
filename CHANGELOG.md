@@ -2,6 +2,12 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.6.1 – 2026-10-01
+
+- **Push nach Kontowechsel:** Beim Abmelden wird das Push-Abo des Geräts jetzt abgemeldet.
+  Vorher bekam ein Gerät nach einem Kontowechsel weiter die Nachrichten des alten Kontos.
+  Nach dem nächsten Anmelden schaltet man die Benachrichtigungen unter *Meine Geräte* wieder ein.
+
 ## 0.6.0 – 2026-10-01
 
 - **Abgeschottetes Backend:** Das Backend hängt nur noch in einem internen Docker-Netz.

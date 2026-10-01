@@ -49,6 +49,7 @@ export async function enablePush(): Promise<PushState> {
   return "on";
 }
 
+/** Meldet das Abo beim Backend ab und hebt es im Browser auf (auch beim Abmelden). */
 export async function disablePush(): Promise<PushState> {
   const reg = await registration();
   const sub = await reg?.pushManager.getSubscription();

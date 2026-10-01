@@ -3,6 +3,7 @@ import type { MeDto } from "@elma/shared";
 import { api, ApiError, getToken, setToken } from "./api.ts";
 import { AuthScreen } from "./AuthScreen.tsx";
 import { Dashboard } from "./Dashboard.tsx";
+import { disablePush } from "./push.ts";
 
 /** Parameter (z. B. ?invite=...) lesen und aus der Adresszeile entfernen. */
 function takeFromUrl(name: "invite" | "setup"): string | null {
@@ -27,7 +28,10 @@ export function App() {
     setTokenState(newToken);
     setMe(user);
   };
-  const signOut = () => {
+  const signOut = async () => {
+    // Push dieses Geräts abmelden, solange das JWT noch gilt – sonst bekäme das Gerät
+    // nach einem Kontowechsel weiter die Nachrichten des alten Kontos
+    await disablePush().catch(() => undefined);
     setToken(null);
     setTokenState(null);
     setMe(null);
@@ -36,7 +40,7 @@ export function App() {
   useEffect(() => {
     if (!token) return;
     api.me().then(setMe, (err) => {
-      if (err instanceof ApiError && err.status === 401) signOut();
+      if (err instanceof ApiError && err.status === 401) void signOut();
     });
   }, [token]);
 
