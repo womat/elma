@@ -4,6 +4,7 @@ import fastifyRateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
 import { existsSync } from "node:fs";
+import { isIP } from "node:net";
 import { z } from "zod";
 import {
   ApplianceSettings,
@@ -54,6 +55,15 @@ const JWT_TTL = "30d";
 const SHELLY_MIN_INTERVAL_MS = 5000;
 const SHELLY_DELTA_WATTS = 50;
 
+/**
+ * Echte Adresse des Clients. Hinter dem Cloudflare Tunnel steht sie in CF-Connecting-IP; den Header setzt Cloudflare
+ * selbst und überschreibt dabei einen mitgeschickten. X-Forwarded-For dagegen kann der Client vorne mit Fantasiewerten füllen.
+ */
+export function clientIp(req: FastifyRequest): string {
+  const cf = req.headers["cf-connecting-ip"];
+  return typeof cf === "string" && isIP(cf) ? cf : req.ip;
+}
+
 /** Der Shelly trägt sein Geräte-Token im Pfad – das darf nicht im Log landen. */
 export function redactUrl(url: string): string {
   return url.replace(/^(\/ingest\/shelly\/)[^/?#]+/, "$1***");
@@ -79,16 +89,17 @@ export async function buildApp(
               method: req.method,
               url: redactUrl(req.url),
               host: req.host,
-              remoteAddress: req.ip,
+              remoteAddress: clientIp(req),
             }),
           },
         }
       : false,
-    trustProxy: true,
+    // nur Proxys im eigenen Netz vertrauen (cloudflared im Docker-Netz), nicht jedem Eintrag in X-Forwarded-For
+    trustProxy: "loopback, linklocal, uniquelocal",
   });
 
   await app.register(fastifyJwt, { secret: opts.jwtSecret });
-  await app.register(fastifyRateLimit, { global: false });
+  await app.register(fastifyRateLimit, { global: false, keyGenerator: clientIp });
   await app.register(fastifyWebsocket);
 
   const authenticate = async (req: FastifyRequest, reply: FastifyReply) => {

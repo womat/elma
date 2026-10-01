@@ -7,6 +7,8 @@ import type { Repo, UserRow } from "./repo.ts";
 import { verifyAuthenticationResponse, verifyRegistrationResponse } from "./webauthn.ts";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+/** Obergrenze, damit eine Flut von Anfragen den Speicher nicht füllen kann. */
+const MAX_OPEN_CHALLENGES = 1000;
 
 type Pending =
   | { kind: "login" }
@@ -14,12 +16,25 @@ type Pending =
   | { kind: "setup"; setupToken: string; userId: string }
   | { kind: "add"; userId: string };
 
-/** Offene Challenges im Speicher: kurzlebig und nur einmal verwendbar. */
+/** Offene Challenges im Speicher: kurzlebig, nur einmal verwendbar und in der Anzahl begrenzt. */
 export class ChallengeStore {
   private readonly items = new Map<string, Pending & { challenge: string; expiresAt: number }>();
+  private readonly max: number;
+
+  constructor(max = MAX_OPEN_CHALLENGES) {
+    this.max = max;
+  }
+
+  get size(): number {
+    return this.items.size;
+  }
 
   add(challenge: string, pending: Pending, now = Date.now()): string {
-    for (const [id, item] of this.items) if (item.expiresAt <= now) this.items.delete(id);
+    // Map hält die Einfügereihenfolge, bei gleicher Laufzeit also auch die Ablaufreihenfolge
+    for (const [id, item] of this.items) {
+      if (item.expiresAt > now && this.items.size < this.max) break;
+      this.items.delete(id); // abgelaufen, oder bei voller Liste die älteste
+    }
     const id = newToken();
     this.items.set(id, { ...pending, challenge, expiresAt: now + CHALLENGE_TTL_MS });
     return id;

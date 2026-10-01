@@ -109,6 +109,22 @@ https://my-elma.net/api/health aufrufen. Dort muss `{"ok":true,"version":"…"}`
   Danach das neue Token in die `.env` eintragen und `cloudflared` neu starten.
 - **Was Cloudflare abfängt:** Massenangriffe (DDoS) treffen Cloudflare und nicht den Pi.
   Gegen Fehler in ELMA selbst hilft Cloudflare nicht, weil Anfragen an Anmeldung und API bis zum Pi durchgehen.
+- **Echte Absender-Adresse:** ELMA bremst die Anmeldung auf 10 Anfragen pro Minute und Adresse.
+  Als Adresse dient `CF-Connecting-IP`, das Cloudflare selbst setzt. `X-Forwarded-For` kann der Client dagegen fälschen.
+
+### Optional: Rate-Limiting-Regel bei Cloudflare
+
+Damit fängt Cloudflare Fluten auf die Anmeldung schon ab, bevor sie den Pi erreichen.
+Der Gratis-Tarif erlaubt eine solche Regel, mit festen Werten (Zeitraum und Sperre je 10 Sekunden).
+
+1. Im Dashboard die Domain öffnen (nicht Zero Trust), dann **Security → Security rules → Create rule → Rate limiting rule**.
+   In der älteren Ansicht heißt es *Security → WAF → Rate limiting rules → Create rule*.
+2. Name, z. B. `ELMA Anmeldung`.
+3. Bedingung: *URI Path* · *starts with* · `/api/auth/`
+4. Gezählt wird pro IP (Standard). Grenze z. B. **10 Anfragen pro 10 Sekunden**.
+5. Aktion **Block** für 10 Sekunden, dann **Deploy**.
+
+Für normale Nutzer ändert sich nichts: Eine Anmeldung braucht nur zwei Anfragen.
 
 ## Kosten
 

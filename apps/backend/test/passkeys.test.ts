@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
-import { buildApp } from "../src/app.ts";
+import { buildApp, clientIp } from "../src/app.ts";
 import { openDb } from "../src/db.ts";
 import { ChallengeStore, deviceName } from "../src/passkeys.ts";
 import type { Repo } from "../src/repo.ts";
@@ -212,6 +212,28 @@ describe("Eigene Passkeys verwalten", () => {
   });
 });
 
+describe("Rate-Limit", () => {
+  const options = (headers: Record<string, string>) =>
+    app.inject({ method: "POST", url: "/api/auth/passkey/login/options", payload: {}, headers });
+
+  it("zählt pro CF-Connecting-IP, gefälschtes X-Forwarded-For hilft nicht", async () => {
+    for (let i = 0; i < 10; i++) {
+      const res = await options({ "cf-connecting-ip": "203.0.113.7", "x-forwarded-for": `198.51.100.${i}` });
+      expect(res.statusCode).toBe(200);
+    }
+    expect((await options({ "cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "198.51.100.99" })).statusCode).toBe(429);
+    // andere echte Adresse hat ihr eigenes Kontingent
+    expect((await options({ "cf-connecting-ip": "203.0.113.8" })).statusCode).toBe(200);
+  });
+
+  it("clientIp nimmt CF-Connecting-IP nur, wenn es eine gültige Adresse ist", () => {
+    const req = (headers: Record<string, string>) => ({ headers, ip: "10.0.0.5" }) as never;
+    expect(clientIp(req({ "cf-connecting-ip": "2001:db8::1" }))).toBe("2001:db8::1");
+    expect(clientIp(req({ "cf-connecting-ip": "kein-ip" }))).toBe("10.0.0.5");
+    expect(clientIp(req({}))).toBe("10.0.0.5");
+  });
+});
+
 describe("Hilfsfunktionen", () => {
   it("alte Passwort-Hashes werden beim Start gelöscht", () => {
     const dir = mkdtempSync(join(tmpdir(), "elma-"));
@@ -226,6 +248,14 @@ describe("Hilfsfunktionen", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("ChallengeStore: bei voller Liste fliegt die älteste Challenge raus", () => {
+    const store = new ChallengeStore(3);
+    const ids = ["a", "b", "c", "d"].map((c, i) => store.add(c, { kind: "login" }, i));
+    expect(store.size).toBe(3);
+    expect(store.take(ids[0]!, 10)).toBeUndefined();
+    expect(store.take(ids[3]!, 10)?.challenge).toBe("d");
   });
 
   it("ChallengeStore: einmal verwendbar, läuft nach 5 Minuten ab", () => {

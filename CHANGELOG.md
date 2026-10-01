@@ -2,6 +2,14 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.5.1 – 2026-10-01
+
+- **Anmeldung besser gegen Fluten geschützt:**
+  - Das Rate-Limit zählt jetzt pro echter Absender-Adresse (`CF-Connecting-IP` von Cloudflare).
+    Ein gefälschtes `X-Forwarded-For` hebelt es nicht mehr aus, im Log steht ebenfalls die echte Adresse.
+  - Es gibt höchstens 1000 offene Anmelde-Challenges gleichzeitig, der Speicher bleibt also begrenzt.
+  - In [docs/cloudflare.md](docs/cloudflare.md) steht, wie man zusätzlich eine kostenlose Rate-Limiting-Regel bei Cloudflare anlegt.
+
 ## 0.5.0 – 2026-10-01
 
 - **Anmeldung nur mit Passkey:** per Fingerabdruck, Gesicht oder Geräte-PIN. Die Anmeldung mit E-Mail und Passwort entfällt.
