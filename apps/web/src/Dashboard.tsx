@@ -1,6 +1,6 @@
-import { House, Zap } from "lucide-react";
+import { House, KeyRound, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { ApplianceSettings, MeDto, ProducerDto } from "@elma/shared";
+import type { ApplianceSettings, MeDto, PasskeyDto, ProducerDto } from "@elma/shared";
 import { api } from "./api.ts";
 import { useLive } from "./useLive.ts";
 import { ProducerCard, type View } from "./ProducerCard.tsx";
@@ -8,6 +8,7 @@ import { ApplianceEditor } from "./ApplianceEditor.tsx";
 import { defaultSettings, resolveAppliances } from "./appliances.ts";
 import { getPushState, syncPushSubscription } from "./push.ts";
 import { Footer } from "./Footer.tsx";
+import { AccountSheet } from "./AccountSheet.tsx";
 
 const VIEW_KEY = "elma.view";
 
@@ -43,9 +44,13 @@ export function Dashboard({ token, me, notice, onSignOut }: Props) {
   const [editing, setEditing] = useState(false);
   const [pushOn, setPushOn] = useState(false);
   const appliances = useMemo(() => resolveAppliances(applianceSettings), [applianceSettings]);
+  // null = noch nicht geladen; [] = Konto noch aus der Passwort-Zeit, Passkey fehlt
+  const [passkeys, setPasskeys] = useState<PasskeyDto[] | null>(null);
+  const [account, setAccount] = useState(false);
 
   useEffect(() => {
     api.producers().then(setProducers, (err: Error) => setError(err.message));
+    api.myPasskeys().then(setPasskeys, () => undefined);
     api.appliances().then(({ settings }) => settings && setApplianceSettings(settings), () => undefined);
     void syncPushSubscription();
     getPushState().then((s) => setPushOn(s === "on"), () => undefined);
@@ -74,10 +79,23 @@ export function Dashboard({ token, me, notice, onSignOut }: Props) {
           <strong>ELMA</strong>
         </div>
         <span className={`dot ${status}`} title={status === "open" ? "Live verbunden" : "Verbinde …"} />
+        <button className="link account" onClick={() => setAccount(true)} title={me.email} aria-label="Anmeldung und Passkeys">
+          <KeyRound size={18} aria-hidden />
+        </button>
         <button className="link" onClick={onSignOut} title={me.email}>
           Abmelden
         </button>
       </header>
+
+      {passkeys?.length === 0 && (
+        <p className="notice">
+          <KeyRound size={16} className="ui-icon" aria-hidden /> Die Anmeldung mit Passwort entfällt. Richte jetzt deinen Passkey
+          ein, damit du auch nach dem Abmelden wieder hineinkommst.{" "}
+          <button className="link small inline" onClick={() => setAccount(true)}>
+            Passkey einrichten
+          </button>
+        </p>
+      )}
 
       <div className="view-switch" role="tablist" aria-label="Ansicht">
         <button role="tab" aria-selected={view === "power"} onClick={() => changeView("power")}>
@@ -109,6 +127,10 @@ export function Dashboard({ token, me, notice, onSignOut }: Props) {
       ))}
 
       <Footer />
+
+      {account && passkeys && (
+        <AccountSheet me={me} passkeys={passkeys} onChange={setPasskeys} onSignOut={onSignOut} onClose={() => setAccount(false)} />
+      )}
 
       {editing && (
         <ApplianceEditor

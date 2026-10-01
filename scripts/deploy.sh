@@ -10,6 +10,8 @@ set -euo pipefail
 HOST="${DEPLOY_HOST:-mysmarthome}"
 DIR="${DEPLOY_DIR:-elma}"
 URL="${DEPLOY_URL:-https://my-elma.net}"
+BACKUP_DIR="${DEPLOY_BACKUP_DIR:-elma-backups}"
+KEEP_BACKUPS=10
 
 cd "$(git rev-parse --show-toplevel)"
 
@@ -32,6 +34,30 @@ if ! ssh "$HOST" "test -f ~/$DIR/.env"; then
   echo "Abbruch: ~/$DIR/.env fehlt auf $HOST (siehe README, Abschnitt 'Produktiv im Heimnetz')." >&2
   exit 1
 fi
+
+# Datenbank sichern, solange die bisherige Version noch läuft.
+# VACUUM INTO liefert trotz WAL-Modus eine konsistente Kopie und funktioniert mit jeder ELMA-Version.
+# Die Sicherungen liegen außerhalb von ~/$DIR, weil der nächste Schritt dort alles außer .env löscht.
+# Das Skript kommt über stdin, deshalb bekommt jeder docker-Aufruf </dev/null – sonst liest er den Rest mit.
+echo "==> Sichere die Datenbank nach $HOST:~/$BACKUP_DIR"
+ssh "$HOST" "bash -s" <<EOF
+set -euo pipefail
+cd ~/$DIR
+mkdir -p ~/$BACKUP_DIR
+running="\$(docker compose ps --status running --services </dev/null 2>/dev/null || true)"
+if ! grep -qx backend <<<"\$running"; then
+  echo "    kein laufendes Backend, nichts zu sichern"
+  exit 0
+fi
+old="\$(docker compose exec -T backend printenv ELMA_VERSION </dev/null 2>/dev/null || echo unbekannt)"
+file="elma-\$(date +%Y%m%d-%H%M%S)-\$old.db"
+docker compose exec -T backend sh -c 'rm -f /data/backup.db && node -e "new (require(\"node:sqlite\").DatabaseSync)(process.env.DB_PATH).exec(\"VACUUM INTO \x27/data/backup.db\x27\")"' </dev/null
+docker compose cp backend:/data/backup.db ~/$BACKUP_DIR/"\$file" </dev/null >/dev/null 2>&1
+docker compose exec -T backend rm -f /data/backup.db </dev/null
+echo "    gesichert: ~/$BACKUP_DIR/\$file"
+# nur die letzten $KEEP_BACKUPS Sicherungen behalten
+ls -1t ~/$BACKUP_DIR/elma-*.db | tail -n +$((KEEP_BACKUPS + 1)) | xargs -r rm --
+EOF
 
 # Code ersetzen, .env behalten (Daten liegen im Docker-Volume und bleiben unberührt)
 git archive --format=tar HEAD |

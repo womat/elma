@@ -1,4 +1,10 @@
-import type { ApplianceSettings, HistoryPoint, MeDto, ProducerDto } from "@elma/shared";
+import type { ApplianceSettings, HistoryPoint, MeDto, PasskeyDto, PasskeyRegisterStart, ProducerDto } from "@elma/shared";
+import type {
+  AuthenticationResponseJSON,
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+  RegistrationResponseJSON,
+} from "@simplewebauthn/browser";
 
 const TOKEN_KEY = "elma.token";
 
@@ -41,16 +47,30 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return body as T;
 }
 
-interface AuthResponse {
+export interface AuthResponse {
   token: string;
   user: MeDto;
 }
 
+interface Challenge<T> {
+  challengeId: string;
+  options: T;
+}
+
+const post = <T>(path: string, body: unknown = {}) => request<T>(path, { method: "POST", body: JSON.stringify(body) });
+
 export const api = {
-  login: (email: string, password: string) =>
-    request<AuthResponse>("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
-  register: (email: string, password: string, inviteCode: string) =>
-    request<AuthResponse>("/api/auth/register", { method: "POST", body: JSON.stringify({ email, password, inviteCode }) }),
+  passkeyLoginOptions: () => post<Challenge<PublicKeyCredentialRequestOptionsJSON>>("/api/auth/passkey/login/options"),
+  passkeyLogin: (challengeId: string, response: AuthenticationResponseJSON) =>
+    post<AuthResponse>("/api/auth/passkey/login/verify", { challengeId, response }),
+  passkeyRegisterOptions: (start: PasskeyRegisterStart) =>
+    post<Challenge<PublicKeyCredentialCreationOptionsJSON> & { email?: string }>("/api/auth/passkey/register/options", start),
+  passkeyRegister: (challengeId: string, response: RegistrationResponseJSON) =>
+    post<AuthResponse>("/api/auth/passkey/register/verify", { challengeId, response }),
+  myPasskeys: () => request<PasskeyDto[]>("/api/me/passkeys"),
+  addPasskeyOptions: () => post<Challenge<PublicKeyCredentialCreationOptionsJSON>>("/api/me/passkeys/options"),
+  addPasskey: (challengeId: string, response: RegistrationResponseJSON) => post<PasskeyDto[]>("/api/me/passkeys", { challengeId, response }),
+  deletePasskey: (id: string) => request<PasskeyDto[]>(`/api/me/passkeys/${encodeURIComponent(id)}`, { method: "DELETE" }),
   me: () => request<MeDto>("/api/me"),
   producers: () => request<ProducerDto[]>("/api/producers"),
   renameProducer: (id: string, name: string) =>

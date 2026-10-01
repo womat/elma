@@ -26,15 +26,15 @@ beforeEach(async () => {
   ({ repo, notifier } = await buildApp({
     db: openDb(":memory:"),
     jwtSecret: "x".repeat(32),
-    publicUrl: "",
+    publicUrl: "https://elma.test",
     pushSender: async (s, payload) => {
       if (failWith) throw Object.assign(new Error("fail"), { statusCode: failWith });
       sent.push({ sub: s, payload });
     },
   }));
-  const owner = await repo.createUser("erzeuger@elma.test", "passwort123");
+  const owner = repo.createUser("erzeuger@elma.test");
   producerId = repo.createProducer("PV Dach", owner.id).producer.id;
-  const recipient = await repo.createUser("empfaenger@elma.test", "passwort123");
+  const recipient = repo.createUser("empfaenger@elma.test");
   recipientId = recipient.id;
   repo.acceptInvite(repo.createInvite(producerId).code, recipientId);
   repo.savePushSubscription(recipientId, sub(1));
@@ -102,7 +102,7 @@ describe("Push-Benachrichtigungen", () => {
 
   it("schickt an alle Geräte des Empfängers, aber nicht an Fremde", async () => {
     repo.savePushSubscription(recipientId, sub(2));
-    const stranger = await repo.createUser("fremd@elma.test", "passwort123");
+    const stranger = repo.createUser("fremd@elma.test");
     repo.savePushSubscription(stranger.id, sub(3));
     repo.saveApplianceSettings(stranger.id, { selected: ["washer"], custom: [], notify: ["washer"] });
 
@@ -135,13 +135,12 @@ describe("Push-API", () => {
     const built = await buildApp({
       db: openDb(":memory:"),
       jwtSecret: "x".repeat(32),
-      publicUrl: "",
+      publicUrl: "https://elma.test",
       pushSender: async (s, payload) => void sent.push({ sub: s, payload }),
     });
     const { app } = built;
-    await built.repo.createUser("a@elma.test", "passwort123");
-    const login = await app.inject({ method: "POST", url: "/api/auth/login", payload: { email: "a@elma.test", password: "passwort123" } });
-    const headers = { authorization: `Bearer ${login.json().token}` };
+    const user = built.repo.createUser("a@elma.test");
+    const headers = { authorization: `Bearer ${app.jwt.sign({ sub: user.id })}` };
 
     const key = await app.inject({ url: "/api/push/key" });
     expect(key.json().publicKey).toMatch(/^[A-Za-z0-9_-]{80,}$/);
@@ -160,8 +159,8 @@ describe("Push-API", () => {
 
   it("VAPID-Schlüssel bleiben über Neustarts gleich", async () => {
     const db = openDb(":memory:");
-    const a = await buildApp({ db, jwtSecret: "x".repeat(32), publicUrl: "" });
-    const b = await buildApp({ db, jwtSecret: "x".repeat(32), publicUrl: "" });
+    const a = await buildApp({ db, jwtSecret: "x".repeat(32), publicUrl: "https://elma.test" });
+    const b = await buildApp({ db, jwtSecret: "x".repeat(32), publicUrl: "https://elma.test" });
     const keyA = (await a.app.inject({ url: "/api/push/key" })).json().publicKey;
     const keyB = (await b.app.inject({ url: "/api/push/key" })).json().publicKey;
     expect(keyA).toBe(keyB);

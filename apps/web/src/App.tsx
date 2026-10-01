@@ -4,21 +4,22 @@ import { api, ApiError, getToken, setToken } from "./api.ts";
 import { AuthScreen } from "./AuthScreen.tsx";
 import { Dashboard } from "./Dashboard.tsx";
 
-/** Einladungscode aus ?invite=... lesen und aus der Adresszeile entfernen. */
-function takeInviteFromUrl(): string | null {
+/** Parameter (z. B. ?invite=...) lesen und aus der Adresszeile entfernen. */
+function takeFromUrl(name: "invite" | "setup"): string | null {
   const url = new URL(location.href);
-  const code = url.searchParams.get("invite");
-  if (code) {
-    url.searchParams.delete("invite");
+  const value = url.searchParams.get(name);
+  if (value) {
+    url.searchParams.delete(name);
     history.replaceState(null, "", url.pathname + url.search);
   }
-  return code;
+  return value;
 }
 
 export function App() {
   const [token, setTokenState] = useState(getToken);
   const [me, setMe] = useState<MeDto | null>(null);
-  const [invite, setInvite] = useState(takeInviteFromUrl);
+  const [invite, setInvite] = useState(() => takeFromUrl("invite"));
+  const [setupToken, setSetupToken] = useState(() => takeFromUrl("setup"));
   const [notice, setNotice] = useState<string | null>(null);
 
   const signIn = (newToken: string, user: MeDto) => {
@@ -49,7 +50,19 @@ export function App() {
     setInvite(null);
   }, [me, invite]);
 
-  if (!token) return <AuthScreen inviteCode={invite} onSignedIn={(t, u) => { setInvite(null); signIn(t, u); }} />;
+  if (!token) {
+    return (
+      <AuthScreen
+        inviteCode={invite}
+        setupToken={setupToken}
+        onSignedIn={(t, u) => {
+          setInvite(null);
+          setSetupToken(null);
+          signIn(t, u);
+        }}
+      />
+    );
+  }
   if (!me) return <div className="center muted">Lade …</div>;
   return <Dashboard key={notice ?? ""} token={token} me={me} notice={notice} onSignOut={signOut} />;
 }

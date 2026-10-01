@@ -1,33 +1,14 @@
 /**
  * Verwaltung per Kommandozeile, z. B.:
- *   node src/cli.ts create-user wolfgang@example.com        (fragt das Passwort verdeckt ab)
+ *   node src/cli.ts create-user wolfgang@example.com        (gibt einen Link zum Einrichten des Passkeys aus)
+ *   node src/cli.ts setup-link wolfgang@example.com         (neuer Einrichtungslink, z. B. wenn das Handy weg ist)
  *   node src/cli.ts create-producer "PV Dach" wolfgang@example.com
  *   node src/cli.ts rotate-token <producerId>                 (neues Geräte-Token, z. B. für den Shelly)
  *   node src/cli.ts invite <producerId>
  */
 import { resolve } from "node:path";
-import { createInterface } from "node:readline";
 import { openDb } from "./db.ts";
 import { Repo } from "./repo.ts";
-
-/** Stellt Fragen, ohne die Antworten anzuzeigen (für Passwörter, damit sie nicht in der Shell-History landen). */
-async function askHidden(...questions: string[]): Promise<string[]> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: process.stdin.isTTY });
-  // Eingabe nicht anzeigen, nur den Zeilenumbruch
-  (rl as unknown as { _writeToOutput: (s: string) => void })._writeToOutput = (s: string) => {
-    if (s.includes("\n") || s.includes("\r")) process.stdout.write("\n");
-  };
-  const lines = rl[Symbol.asyncIterator](); // puffert Zeilen, auch wenn mehrere auf einmal kommen
-  const answers: string[] = [];
-  for (const q of questions) {
-    process.stdout.write(q);
-    const { value } = await lines.next();
-    if (!process.stdin.isTTY) process.stdout.write("\n");
-    answers.push(value ?? "");
-  }
-  rl.close();
-  return answers;
-}
 
 const [command, ...args] = process.argv.slice(2);
 const repo = new Repo(openDb(process.env.DB_PATH ?? resolve("data/elma.db")));
@@ -35,7 +16,9 @@ const publicUrl = (process.env.PUBLIC_URL ?? "http://localhost:3000").replace(/\
 
 function usage(): never {
   console.log(`Befehle:
-  create-user <email> [passwort]         -> ohne Passwort wird es verdeckt abgefragt
+  create-user <email>                    -> legt das Konto an und gibt einen Einrichtungslink für den Passkey aus
+  setup-link <email>                     -> neuer Einrichtungslink (Umstellung, neues Handy, Passkey verloren)
+  list-users                             -> alle User mit Anzahl ihrer Passkeys
   create-producer <name> <owner-email>   -> gibt das DEVICE_TOKEN für die Bridge aus
   rotate-token <producerId>              -> neues Geräte-Token, das alte wird ungültig
   rename-producer <producerId> <name>    -> Erzeuger umbenennen
@@ -52,19 +35,32 @@ function printDeviceToken(deviceToken: string): void {
   console.log("Wird nur jetzt angezeigt. Nur über einen sicheren Kanal weitergeben.");
 }
 
+function printSetupLink(userId: string): void {
+  const { token } = repo.createSetupLink(userId);
+  console.log(`${publicUrl}/?setup=${token}`);
+  console.log("  ↳ 7 Tage gültig, einmal verwendbar. Damit richtet der User am Handy seinen Passkey ein.");
+  console.log("Wer den Link hat, kann sich als dieser User anmelden – nur über einen sicheren Kanal weitergeben.");
+}
+
 switch (command) {
   case "create-user": {
     const [email] = args;
     if (!email) usage();
-    let password = args[1];
-    if (!password) {
-      const [first, second] = await askHidden("Passwort (mind. 8 Zeichen): ", "Passwort wiederholen: ");
-      if (first !== second) throw new Error("Passwörter stimmen nicht überein");
-      password = first!;
-    }
-    if (password.length < 8) throw new Error("Passwort muss mindestens 8 Zeichen haben");
-    const user = await repo.createUser(email, password);
+    if (repo.userByEmail(email)) throw new Error(`User ${email} gibt es schon – für einen neuen Passkey: setup-link`);
+    const user = repo.createUser(email);
     console.log(`User angelegt: ${user.email} (${user.id})`);
+    printSetupLink(user.id);
+    break;
+  }
+  case "setup-link": {
+    const [email] = args;
+    const user = email ? repo.userByEmail(email) : undefined;
+    if (!user) usage();
+    printSetupLink(user.id);
+    break;
+  }
+  case "list-users": {
+    for (const u of repo.usersWithPasskeyCount()) console.log(`${u.email}  ${u.passkeys === 0 ? "kein Passkey" : `${u.passkeys} Passkey(s)`}`);
     break;
   }
   case "create-producer": {

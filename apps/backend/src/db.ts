@@ -62,6 +62,26 @@ export function openDb(path: string): Db {
       value TEXT NOT NULL
     );
 
+    -- Passkeys (WebAuthn): nur der öffentliche Schlüssel, der private bleibt auf dem Gerät
+    CREATE TABLE IF NOT EXISTS passkeys (
+      id           TEXT PRIMARY KEY,
+      user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      public_key   BLOB NOT NULL,
+      counter      INTEGER NOT NULL,
+      transports   TEXT,
+      name         TEXT NOT NULL,
+      created_at   INTEGER NOT NULL,
+      last_used_at INTEGER
+    );
+
+    -- Einmal-Links zum Einrichten eines Passkeys (Umstellung, verlorenes Handy); nur als SHA-256 gespeichert
+    CREATE TABLE IF NOT EXISTS setup_links (
+      token_hash TEXT PRIMARY KEY,
+      user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at INTEGER NOT NULL,
+      used_at    INTEGER
+    );
+
     -- Minutenmittel des Überschusses
     CREATE TABLE IF NOT EXISTS readings (
       producer_id TEXT NOT NULL REFERENCES producers(id) ON DELETE CASCADE,

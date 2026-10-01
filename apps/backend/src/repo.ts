@@ -1,11 +1,18 @@
-import { ApplianceSettings, type PushSubscriptionBody } from "@elma/shared";
+import { ApplianceSettings, type PasskeyDto, type PushSubscriptionBody } from "@elma/shared";
 import type { Db } from "./db.ts";
-import { hashPassword, hashToken, newId, newInviteCode, newToken } from "./crypto.ts";
+import { hashToken, newId, newInviteCode, newToken } from "./crypto.ts";
 
 export interface UserRow {
   id: string;
   email: string;
-  password_hash: string;
+}
+
+export interface PasskeyRow {
+  id: string;
+  user_id: string;
+  public_key: Uint8Array<ArrayBuffer>;
+  counter: number;
+  transports: string[];
 }
 
 export interface ProducerRow {
@@ -15,6 +22,12 @@ export interface ProducerRow {
 }
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const SETUP_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/**
+ * Platzhalter für die alte Spalte password_hash (NOT NULL). Ältere Versionen erkennen das Format nicht
+ * und lehnen jede Passwort-Anmeldung ab, d. h. auch nach einem Zurücksteigen gibt es kein leeres Passwort.
+ */
+const NO_PASSWORD = "passkey-only";
 
 /** Datenzugriff an einer Stelle, damit Berechtigungsregeln nicht in den Routen verstreut sind. */
 export class Repo {
@@ -24,22 +37,103 @@ export class Repo {
     this.db = db;
   }
 
-  async createUser(email: string, password: string): Promise<UserRow> {
-    const user = { id: newId(), email: email.trim().toLowerCase(), password_hash: await hashPassword(password) };
+  createUser(email: string, id: string = newId()): UserRow {
+    const user = { id, email: email.trim().toLowerCase() };
     this.db
       .prepare("INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)")
-      .run(user.id, user.email, user.password_hash, Date.now());
+      .run(user.id, user.email, NO_PASSWORD, Date.now());
     return user;
   }
 
   userByEmail(email: string): UserRow | undefined {
-    return this.db.prepare("SELECT id, email, password_hash FROM users WHERE email = ?").get(email.trim().toLowerCase()) as
-      | UserRow
-      | undefined;
+    return this.db.prepare("SELECT id, email FROM users WHERE email = ?").get(email.trim().toLowerCase()) as UserRow | undefined;
   }
 
   userById(id: string): UserRow | undefined {
-    return this.db.prepare("SELECT id, email, password_hash FROM users WHERE id = ?").get(id) as UserRow | undefined;
+    return this.db.prepare("SELECT id, email FROM users WHERE id = ?").get(id) as UserRow | undefined;
+  }
+
+  /** Alle User mit Anzahl ihrer Passkeys, z. B. um zu sehen, wer noch umstellen muss. */
+  usersWithPasskeyCount(): { email: string; passkeys: number }[] {
+    return this.db
+      .prepare(
+        `SELECT u.email, (SELECT COUNT(*) FROM passkeys k WHERE k.user_id = u.id) AS passkeys
+         FROM users u ORDER BY u.email`,
+      )
+      .all() as { email: string; passkeys: number }[];
+  }
+
+  // ---------- Passkeys ----------
+
+  savePasskey(p: { id: string; userId: string; publicKey: Uint8Array; counter: number; transports?: string[]; name: string }): void {
+    this.db
+      .prepare(
+        "INSERT INTO passkeys (id, user_id, public_key, counter, transports, name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      )
+      .run(p.id, p.userId, p.publicKey, p.counter, JSON.stringify(p.transports ?? []), p.name, Date.now());
+  }
+
+  passkeyById(id: string): PasskeyRow | undefined {
+    const row = this.db.prepare("SELECT id, user_id, public_key, counter, transports FROM passkeys WHERE id = ?").get(id) as
+      | (Omit<PasskeyRow, "transports"> & { transports: string | null })
+      | undefined;
+    if (!row) return undefined;
+    return { ...row, public_key: new Uint8Array(row.public_key), transports: JSON.parse(row.transports ?? "[]") as string[] };
+  }
+
+  /** Nach erfolgreicher Anmeldung: Zähler (Schutz gegen geklonte Schlüssel) und Zeitpunkt merken. */
+  touchPasskey(id: string, counter: number): void {
+    this.db.prepare("UPDATE passkeys SET counter = ?, last_used_at = ? WHERE id = ?").run(counter, Date.now(), id);
+  }
+
+  passkeysOf(userId: string): PasskeyDto[] {
+    return this.db
+      .prepare(
+        "SELECT id, name, created_at AS createdAt, last_used_at AS lastUsedAt FROM passkeys WHERE user_id = ? ORDER BY created_at",
+      )
+      .all(userId) as unknown as PasskeyDto[];
+  }
+
+  /** IDs und Transportwege der Passkeys eines Users, damit dasselbe Gerät nicht doppelt registriert wird. */
+  passkeyDescriptorsOf(userId: string): { id: string; transports: string[] }[] {
+    const rows = this.db.prepare("SELECT id, transports FROM passkeys WHERE user_id = ?").all(userId) as {
+      id: string;
+      transports: string | null;
+    }[];
+    return rows.map((r) => ({ id: r.id, transports: JSON.parse(r.transports ?? "[]") as string[] }));
+  }
+
+  deletePasskey(id: string, userId: string): boolean {
+    return this.db.prepare("DELETE FROM passkeys WHERE id = ? AND user_id = ?").run(id, userId).changes > 0;
+  }
+
+  // ---------- Einrichtungslinks ----------
+
+  /** Erzeugt einen Einmal-Link zum Einrichten eines Passkeys; das Token gibt es nur jetzt im Klartext. */
+  createSetupLink(userId: string): { token: string; expiresAt: number } {
+    const token = newToken();
+    const expiresAt = Date.now() + SETUP_LINK_TTL_MS;
+    this.db.prepare("INSERT INTO setup_links (token_hash, user_id, expires_at) VALUES (?, ?, ?)").run(hashToken(token), userId, expiresAt);
+    return { token, expiresAt };
+  }
+
+  /** User zu einem noch gültigen Einrichtungslink, ohne ihn zu verbrauchen. */
+  userBySetupToken(token: string): UserRow | undefined {
+    return this.db
+      .prepare(
+        `SELECT u.id, u.email FROM setup_links l JOIN users u ON u.id = l.user_id
+         WHERE l.token_hash = ? AND l.used_at IS NULL AND l.expires_at > ?`,
+      )
+      .get(hashToken(token), Date.now()) as UserRow | undefined;
+  }
+
+  /** Verbraucht den Einrichtungslink; false, wenn er inzwischen benutzt oder abgelaufen ist. */
+  useSetupLink(token: string): boolean {
+    return (
+      this.db
+        .prepare("UPDATE setup_links SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?")
+        .run(Date.now(), hashToken(token), Date.now()).changes > 0
+    );
   }
 
   /** Legt einen Erzeuger an und gibt das Geräte-Token einmalig im Klartext zurück. */

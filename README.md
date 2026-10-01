@@ -48,6 +48,7 @@ ELMA liefert die Information, *wann* sich das Teilen lohnt.
   Das passiert erst nach 2 Minuten stabilem Überschuss, damit kurze Wolken keinen Fehlalarm auslösen.
 - **Einladung per Link:** Der Erzeuger lädt Empfänger mit einem Link ein, z. B. über WhatsApp.
   Ohne Einladung kann sich niemand registrieren, die Daten bleiben also im kleinen Kreis.
+- **Anmelden mit Passkey:** per Fingerabdruck, Gesicht oder Geräte-PIN. Ein Passwort gibt es nicht.
 - **Wie eine App am Handy:** Die App lässt sich auf Android und iPhone über „Zum Startbildschirm hinzufügen“ installieren.
   Kein App Store ist nötig.
 - **Läuft zuhause:** Die Daten kommen direkt vom eigenen Energiemanager, z. B. Smartfox über MQTT.
@@ -84,8 +85,11 @@ docker compose -f dev/docker-compose.dev.yml up -d --build mosquitto backend
 ```
 
 ```bash
-docker compose -f dev/docker-compose.dev.yml exec backend node src/cli.ts create-user ich@example.com 'mein-passwort'
+docker compose -f dev/docker-compose.dev.yml exec backend node src/cli.ts create-user ich@example.com
 ```
+
+Das gibt einen Einrichtungslink aus. Darüber legst du im Browser deinen Passkey an.
+Passkeys funktionieren auf `localhost` auch ohne HTTPS.
 
 ```bash
 docker compose -f dev/docker-compose.dev.yml exec backend node src/cli.ts create-producer "PV Dach" ich@example.com
@@ -103,7 +107,7 @@ Einen Testwert von 2300 W schicken:
 docker compose -f dev/docker-compose.dev.yml exec mosquitto mosquitto_pub -t elma/test/surplus -m 2300
 ```
 
-Dann http://localhost:3000 öffnen und anmelden.
+Dann den Einrichtungslink öffnen (http://localhost:3000/?setup=…) und den Passkey anlegen.
 
 ## Produktiv im Heimnetz
 
@@ -114,8 +118,10 @@ Dann http://localhost:3000 öffnen und anmelden.
    docker compose up -d --build backend
    ```
    ```bash
-   docker compose exec backend node src/cli.ts create-user ich@example.com 'mein-passwort'
+   docker compose exec backend node src/cli.ts create-user ich@example.com
    ```
+   Das gibt einen **Einrichtungslink** aus. Damit legst du am Handy deinen Passkey an.
+   Das geht erst über die öffentliche HTTPS-Adresse, also nach Schritt 4.
    ```bash
    docker compose exec backend node src/cli.ts create-producer "PV Dach" ich@example.com
    ```
@@ -188,6 +194,52 @@ Alternativ geht das auch per Kommandozeile:
 
 ```bash
 docker compose exec backend node src/cli.ts invite <producerId>
+```
+
+## Anmeldung mit Passkey
+
+ELMA kennt keine Passwörter. Angemeldet wird mit einem **Passkey**: Das Handy speichert einen Schlüssel für ELMA,
+und man bestätigt per Fingerabdruck, Gesicht oder Geräte-PIN. Auf dem Server liegt nur der öffentliche Schlüssel.
+
+- **Neues Konto:** über einen Einladungslink. Man gibt die E-Mail ein und tippt auf „Passkey anlegen“.
+- **Erster Zugang** für den Betreiber: `create-user <email>` gibt einen Einrichtungslink aus.
+- **Neues Handy, Passkey verloren oder Konto aus der Passwort-Zeit:** Einen neuen Einrichtungslink erzeugen.
+  Er ist 7 Tage gültig und nur einmal verwendbar.
+  Wer den Link hat, kann sich als dieser User anmelden, deshalb nur über einen sicheren Kanal weitergeben.
+  ```bash
+  docker compose exec backend node src/cli.ts setup-link <email>
+  ```
+- **Wer hat schon einen Passkey?**
+  ```bash
+  docker compose exec backend node src/cli.ts list-users
+  ```
+- **Weitere Geräte:** Über das Schlüssel-Symbol oben in der App lassen sich Passkeys ansehen, hinzufügen und löschen.
+  Über das Google- bzw. Apple-Konto sind sie meist ohnehin auf allen eigenen Geräten.
+  Am PC kann man sich auch anmelden, indem man den angezeigten QR-Code mit dem Handy scannt.
+- Passkeys sind an die Domain gebunden (z. B. `my-elma.net`). Bei einem Umzug auf eine andere Domain müssen alle neu angelegt werden.
+  Über die LAN-Adresse (`http://192.168.…`) funktionieren sie nicht, nur über HTTPS oder `localhost`.
+
+## Datenbank sichern und wiederherstellen
+
+`scripts/deploy.sh` sichert vor jedem Ausrollen die Datenbank nach `~/elma-backups/` auf dem Pi.
+Die letzten 10 Sicherungen bleiben erhalten, der Dateiname enthält Datum und bisherige Version.
+
+Wiederherstellen, z. B. nach einem Zurücksteigen auf eine ältere Version:
+
+```bash
+cd ~/elma && docker compose stop backend
+```
+
+```bash
+docker compose cp ~/elma-backups/<datei>.db backend:/data/elma.db
+```
+
+```bash
+docker compose run --rm --no-deps --entrypoint rm backend -f /data/elma.db-wal /data/elma.db-shm
+```
+
+```bash
+docker compose start backend
 ```
 
 ## Push-Benachrichtigungen

@@ -133,10 +133,10 @@ sequenceDiagram
   actor R as Empfänger
 
   B->>CLI: create-user erzeuger@example.com
-  CLI-->>B: Passwort wird verdeckt abgefragt
+  CLI-->>B: Einrichtungslink für den Passkey
   B->>CLI: create-producer "PV Huber" erzeuger@example.com
   CLI-->>B: Geräte-Token + Shelly-URL
-  B->>E: Zugangsdaten + Shelly-URL (sicherer Kanal)
+  B->>E: Einrichtungslink + Shelly-URL (sicherer Kanal)
   E->>SH: Web-Oberfläche → Outbound WebSocket → URL eintragen
   SH->>BE: wss /ingest/shelly/<token>
   BE-->>SH: Token gültig → Verbindung bleibt offen
@@ -181,7 +181,8 @@ sequenceDiagram
 - [ ] Lizenz beachten: Hosting für andere ist erlaubt, solange es **nicht kommerziell** ist (siehe [LICENSE.md](../LICENSE.md)).
 
 ### Pro Erzeuger
-1. Konto anlegen: `docker compose exec backend node src/cli.ts create-user <email>`
+1. Konto anlegen: `docker compose exec backend node src/cli.ts create-user <email>`.
+   Das gibt einen Einrichtungslink aus, mit dem der Erzeuger seinen Passkey anlegt.
 2. Erzeuger anlegen: `docker compose exec backend node src/cli.ts create-producer "<Name>" <email>`.
    Das gibt das Geräte-Token und die fertige Shelly-URL aus.
 3. Die URL **nur über einen sicheren Kanal** weitergeben, weil sie das Token enthält.

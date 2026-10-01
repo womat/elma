@@ -7,19 +7,17 @@ import { existsSync } from "node:fs";
 import { z } from "zod";
 import {
   ApplianceSettings,
-  Credentials,
   IngestMessage,
   LiveClientMessage,
   Throttle,
   PushSubscriptionBody,
-  RegisterBody,
   type LiveServerMessage,
   type MeDto,
   type ProducerDto,
 } from "@elma/shared";
-import { verifyPassword } from "./crypto.ts";
 import type { Db } from "./db.ts";
 import { LiveHub } from "./hub.ts";
+import { registerPasskeyRoutes } from "./passkeys.ts";
 import { loadVapidKeys, PushNotifier, webPushSender, type NotifierOptions, type PushSender } from "./push.ts";
 import { Repo } from "./repo.ts";
 import { parseShellyFrame } from "./shelly.ts";
@@ -110,26 +108,8 @@ export async function buildApp(
 
   // ---------- Auth ----------
 
-  app.post("/api/auth/login", authRateLimit, async (req, reply) => {
-    const body = Credentials.safeParse(req.body);
-    if (!body.success) return reply.code(400).send({ error: "E-Mail oder Passwort ungültig" });
-    const user = repo.userByEmail(body.data.email);
-    if (!user || !(await verifyPassword(body.data.password, user.password_hash))) {
-      return reply.code(401).send({ error: "E-Mail oder Passwort falsch" });
-    }
-    return loginResponse(user);
-  });
-
-  /** Registrierung nur mit gültiger Einladung – so bleibt die Instanz privat. */
-  app.post("/api/auth/register", authRateLimit, async (req, reply) => {
-    const body = RegisterBody.safeParse(req.body);
-    if (!body.success) return reply.code(400).send({ error: body.error.issues[0]?.message ?? "Ungültige Eingabe" });
-    if (!repo.validInvite(body.data.inviteCode)) return reply.code(400).send({ error: "Einladung ungültig oder abgelaufen" });
-    if (repo.userByEmail(body.data.email)) return reply.code(409).send({ error: "E-Mail ist bereits registriert, bitte anmelden" });
-    const user = await repo.createUser(body.data.email, body.data.password);
-    repo.acceptInvite(body.data.inviteCode, user.id);
-    return loginResponse(user);
-  });
+  // Anmeldung nur mit Passkey; neue Konten nur mit gültiger Einladung – so bleibt die Instanz privat.
+  registerPasskeyRoutes(app, { repo, publicUrl: opts.publicUrl, authenticate, loginResponse, rateLimit: authRateLimit });
 
   app.get("/api/me", { preHandler: authenticate }, async (req, reply) => {
     const user = repo.userById(req.user.sub);

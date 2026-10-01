@@ -44,14 +44,27 @@ export interface MeDto {
   email: string;
 }
 
-export const Credentials = z.object({
-  email: z.string().trim().toLowerCase().email(),
-  password: z.string().min(8, "Passwort muss mindestens 8 Zeichen haben"),
-});
+/** Ein Passkey des angemeldeten Users (ohne Schlüsselmaterial). */
+export interface PasskeyDto {
+  id: string;
+  name: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+}
 
-export const RegisterBody = Credentials.extend({
-  inviteCode: z.string().min(1),
+/** Passkey-Registrierung starten: neues Konto per Einladung oder bestehendes Konto per Einrichtungslink. */
+export const PasskeyRegisterStart = z.union([
+  z.object({ inviteCode: z.string().min(1).max(100), email: z.string().trim().toLowerCase().email("Bitte eine gültige E-Mail angeben") }),
+  z.object({ setupToken: z.string().min(1).max(100) }),
+]);
+export type PasskeyRegisterStart = z.infer<typeof PasskeyRegisterStart>;
+
+/** Antwort des Browsers auf eine Challenge; den Inhalt prüft die WebAuthn-Bibliothek. */
+export const PasskeyFinish = z.object({
+  challengeId: z.string().min(1).max(100),
+  response: z.looseObject({ id: z.string().min(1).max(1000) }),
 });
+export type PasskeyFinish = z.infer<typeof PasskeyFinish>;
 
 /** Ab dieser Leistung gilt es als "etwas Überschuss" (Ampel gelb, Balken "ein wenig"). */
 export const LEVEL_SOME_WATTS = 50;

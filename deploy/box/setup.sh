@@ -122,11 +122,8 @@ cli() { docker compose exec "$@"; }
 if yes_no "Ersten Benutzer und Erzeuger jetzt anlegen?" j; then
   email="$(ask "E-Mail des Erzeugers")"
   name="$(ask "Name des Erzeugers (erscheint in der App)" "PV-Anlage")"
-  if [ -t 0 ]; then
-    cli backend node src/cli.ts create-user "$email" || echo "    (Benutzer gibt es vermutlich schon)" # fragt das Passwort verdeckt ab
-  else
-    cli -T backend node src/cli.ts create-user "$email" || echo "    (Benutzer gibt es vermutlich schon)"
-  fi
+  # gibt den Link aus, mit dem der Erzeuger am Handy seinen Passkey einrichtet
+  cli -T backend node src/cli.ts create-user "$email" </dev/null || echo "    (Benutzer gibt es vermutlich schon, neuer Link: setup-link <email>)"
   output="$(cli -T backend node src/cli.ts create-producer "$name" "$email" </dev/null)"
   echo "$output"
   token="$(echo "$output" | sed -n 's/^DEVICE_TOKEN=\([^ ]*\).*/\1/p')"
@@ -149,6 +146,6 @@ Fertig.
   Update:       docker compose pull && docker compose up -d
   Backup:       docker compose stop backend && docker compose cp backend:/data/. ./backup/ && docker compose start backend
 Weitere Erzeuger:
-  docker compose exec backend node src/cli.ts create-user <email>
+  docker compose exec backend node src/cli.ts create-user <email>      (gibt den Einrichtungslink für den Passkey aus)
   docker compose exec backend node src/cli.ts create-producer "<Name>" <email>
 EOF

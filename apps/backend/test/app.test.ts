@@ -27,10 +27,11 @@ beforeEach(async () => {
 
 afterEach(() => app.close());
 
-async function login(email: string, password: string): Promise<string> {
-  const res = await app.inject({ method: "POST", url: "/api/auth/login", payload: { email, password } });
-  expect(res.statusCode).toBe(200);
-  return res.json().token;
+/** Anmeldung läuft über Passkeys (siehe passkeys.test.ts); hier reicht ein gültiges JWT. */
+async function login(email: string): Promise<string> {
+  const user = repo.userByEmail(email);
+  if (!user) throw new Error(`kein User ${email}`);
+  return app.jwt.sign({ sub: user.id });
 }
 
 /** Öffnet /live, meldet sich an und sammelt alle Nachrichten. */
@@ -53,56 +54,34 @@ async function waitFor(check: () => boolean, timeoutMs = 2000): Promise<void> {
 }
 
 async function setup() {
-  const owner = await repo.createUser("erzeuger@elma.test", "passwort123");
+  const owner = repo.createUser("erzeuger@elma.test");
   const { producer, deviceToken } = repo.createProducer("PV Dach", owner.id);
   return { owner, producer, deviceToken };
 }
 
 describe("Einladung und Freigabe", () => {
-  it("Empfänger registriert sich per Einladung und sieht den Erzeuger", async () => {
+  it("Einladungslink zeigt auf die öffentliche Adresse", async () => {
     const { producer } = await setup();
-    const ownerToken = await login("erzeuger@elma.test", "passwort123");
-
     const invite = await app.inject({
       method: "POST",
       url: `/api/producers/${producer.id}/invites`,
-      headers: { authorization: `Bearer ${ownerToken}` },
+      headers: { authorization: `Bearer ${await login("erzeuger@elma.test")}` },
     });
     expect(invite.statusCode).toBe(200);
     expect(invite.json().url).toContain("https://elma.test/?invite=");
-
-    const reg = await app.inject({
-      method: "POST",
-      url: "/api/auth/register",
-      payload: { email: "empfaenger@elma.test", password: "passwort456", inviteCode: invite.json().code },
-    });
-    expect(reg.statusCode).toBe(200);
-
-    const list = await app.inject({ url: "/api/producers", headers: { authorization: `Bearer ${reg.json().token}` } });
-    expect(list.json()).toMatchObject([{ id: producer.id, name: "PV Dach", isOwner: false }]);
-
-    // Einladung ist nur einmal verwendbar
-    const again = await app.inject({
-      method: "POST",
-      url: "/api/auth/register",
-      payload: { email: "dritter@elma.test", password: "passwort789", inviteCode: invite.json().code },
-    });
-    expect(again.statusCode).toBe(400);
   });
 
-  it("Registrierung ohne gültige Einladung ist nicht möglich", async () => {
-    const res = await app.inject({
-      method: "POST",
-      url: "/api/auth/register",
-      payload: { email: "x@elma.test", password: "passwort123", inviteCode: "falsch" },
-    });
-    expect(res.statusCode).toBe(400);
+  it("Anmeldung und Registrierung mit Passwort gibt es nicht mehr", async () => {
+    const oldLogin = await app.inject({ method: "POST", url: "/api/auth/login", payload: { email: "a@elma.test", password: "x" } });
+    const register = await app.inject({ method: "POST", url: "/api/auth/register", payload: {} });
+    expect(oldLogin.statusCode).toBe(404);
+    expect(register.statusCode).toBe(404);
   });
 
   it("nur der Eigentümer darf einladen, Fremde sehen keinen Verlauf", async () => {
     const { producer } = await setup();
-    await repo.createUser("fremd@elma.test", "passwort123");
-    const token = await login("fremd@elma.test", "passwort123");
+    repo.createUser("fremd@elma.test");
+    const token = await login("fremd@elma.test");
     const headers = { authorization: `Bearer ${token}` };
     expect((await app.inject({ method: "POST", url: `/api/producers/${producer.id}/invites`, headers })).statusCode).toBe(403);
     expect((await app.inject({ url: `/api/producers/${producer.id}/history`, headers })).statusCode).toBe(404);
@@ -112,12 +91,12 @@ describe("Einladung und Freigabe", () => {
 describe("Live-Daten", () => {
   it("Werte der Bridge kommen beim berechtigten Empfänger an, nicht bei Fremden", async () => {
     const { producer, deviceToken } = await setup();
-    const recipient = await repo.createUser("empfaenger@elma.test", "passwort123");
+    const recipient = repo.createUser("empfaenger@elma.test");
     repo.acceptInvite(repo.createInvite(producer.id).code, recipient.id);
-    await repo.createUser("fremd@elma.test", "passwort123");
+    repo.createUser("fremd@elma.test");
 
-    const allowed = await openLive(await login("empfaenger@elma.test", "passwort123"));
-    const stranger = await openLive(await login("fremd@elma.test", "passwort123"));
+    const allowed = await openLive(await login("empfaenger@elma.test"));
+    const stranger = await openLive(await login("fremd@elma.test"));
     expect(allowed.messages[0]).toEqual({ type: "ready", producerIds: [producer.id] });
     expect(stranger.messages[0]).toEqual({ type: "ready", producerIds: [] });
 
@@ -133,7 +112,7 @@ describe("Live-Daten", () => {
 
     const list = await app.inject({
       url: "/api/producers",
-      headers: { authorization: `Bearer ${await login("empfaenger@elma.test", "passwort123")}` },
+      headers: { authorization: `Bearer ${await login("empfaenger@elma.test")}` },
     });
     expect(list.json()[0].current).toEqual(reading);
 
@@ -148,7 +127,7 @@ describe("Live-Daten", () => {
 
   it("Shelly schickt Werte direkt, gedrosselt und mit gedrehtem Vorzeichen", async () => {
     const { producer, deviceToken } = await setup();
-    const { messages, ws } = await openLive(await login("erzeuger@elma.test", "passwort123"));
+    const { messages, ws } = await openLive(await login("erzeuger@elma.test"));
 
     const shelly = new WebSocket(`ws://${baseUrl}/ingest/shelly/${deviceToken}`);
     await new Promise((r) => shelly.once("open", r));
@@ -191,10 +170,10 @@ describe("Live-Daten", () => {
 describe("Erzeuger umbenennen", () => {
   it("nur der Eigentümer darf umbenennen", async () => {
     const { producer } = await setup();
-    const recipient = await repo.createUser("empfaenger@elma.test", "passwort123");
+    const recipient = repo.createUser("empfaenger@elma.test");
     repo.acceptInvite(repo.createInvite(producer.id).code, recipient.id);
-    await repo.createUser("fremd@elma.test", "passwort123");
-    const auth = async (email: string) => ({ authorization: `Bearer ${await login(email, "passwort123")}` });
+    repo.createUser("fremd@elma.test");
+    const auth = async (email: string) => ({ authorization: `Bearer ${await login(email)}` });
     const rename = async (email: string, name: string) =>
       app.inject({ method: "PATCH", url: `/api/producers/${producer.id}`, headers: await auth(email), payload: { name } });
 
@@ -211,7 +190,7 @@ describe("Erzeuger umbenennen", () => {
 
 describe("Version", () => {
   it("/api/health liefert die Version", async () => {
-    const built = await buildApp({ db: openDb(":memory:"), jwtSecret: "x".repeat(32), publicUrl: "", version: "v0.2.0" });
+    const built = await buildApp({ db: openDb(":memory:"), jwtSecret: "x".repeat(32), publicUrl: "https://elma.test", version: "v0.2.0" });
     expect((await built.app.inject({ url: "/api/health" })).json()).toEqual({ ok: true, version: "v0.2.0" });
     expect((await app.inject({ url: "/api/health" })).json()).toEqual({ ok: true, version: "dev" });
   });
@@ -219,10 +198,10 @@ describe("Version", () => {
 
 describe("Geräteauswahl", () => {
   it("ist anfangs leer, lässt sich speichern und ist pro User getrennt", async () => {
-    await repo.createUser("a@elma.test", "passwort123");
-    await repo.createUser("b@elma.test", "passwort123");
-    const a = { authorization: `Bearer ${await login("a@elma.test", "passwort123")}` };
-    const b = { authorization: `Bearer ${await login("b@elma.test", "passwort123")}` };
+    repo.createUser("a@elma.test");
+    repo.createUser("b@elma.test");
+    const a = { authorization: `Bearer ${await login("a@elma.test")}` };
+    const b = { authorization: `Bearer ${await login("b@elma.test")}` };
 
     expect((await app.inject({ url: "/api/me/appliances", headers: a })).json()).toEqual({ settings: null });
 
@@ -234,8 +213,8 @@ describe("Geräteauswahl", () => {
   });
 
   it("lehnt ungültige Geräte ab", async () => {
-    await repo.createUser("a@elma.test", "passwort123");
-    const headers = { authorization: `Bearer ${await login("a@elma.test", "passwort123")}` };
+    repo.createUser("a@elma.test");
+    const headers = { authorization: `Bearer ${await login("a@elma.test")}` };
     const bad = { selected: [], custom: [{ id: "c1", icon: "x", name: "", watts: -5 }] };
     expect((await app.inject({ method: "PUT", url: "/api/me/appliances", headers, payload: bad })).statusCode).toBe(400);
   });

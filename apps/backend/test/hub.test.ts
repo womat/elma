@@ -10,7 +10,7 @@ const T0 = 1_800_000_000_000;
 /** Schickt Rohwerte [Sekunde, Watt] durch einen Hub und liefert die geglätteten Werte. */
 async function run(samples: [number, number][], windowMs = 120 * S): Promise<number[]> {
   const repo = new Repo(openDb(":memory:"));
-  const owner = await repo.createUser("a@elma.test", "passwort123");
+  const owner = repo.createUser("a@elma.test");
   const { producer } = repo.createProducer("P", owner.id);
   const hub = new LiveHub(repo, windowMs);
   const out: number[] = [];
