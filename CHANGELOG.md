@@ -2,7 +2,7 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
-## Unveröffentlicht
+## 0.6.2 – 2026-10-01
 
 - **ELMA-Box abgeschottet** wie der Haupt-Stack:
   - Backend nur im internen Docker-Netz, Push über den Push-Proxy, kein Port im LAN.
