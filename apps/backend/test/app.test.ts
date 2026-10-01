@@ -12,7 +12,13 @@ let repo: Repo;
 let baseUrl: string;
 
 beforeEach(async () => {
-  ({ app, repo } = await buildApp({ db: openDb(":memory:"), jwtSecret: "x".repeat(32), publicUrl: "https://elma.test" }));
+  // ohne Glättung, damit Live-Werte 1:1 prüfbar sind (Glättung testet hub.test.ts)
+  ({ app, repo } = await buildApp({
+    db: openDb(":memory:"),
+    jwtSecret: "x".repeat(32),
+    publicUrl: "https://elma.test",
+    smoothWindowMs: 0,
+  }));
   await app.listen({ port: 0, host: "127.0.0.1" });
   const address = app.server.address();
   if (!address || typeof address === "string") throw new Error("keine Adresse");
@@ -138,6 +144,42 @@ describe("Live-Daten", () => {
     const bridge = new WebSocket(`ws://${baseUrl}/ingest`, { headers: { authorization: "Bearer falsch" } });
     const code = await new Promise<number>((r) => bridge.once("close", (c) => r(c)));
     expect(code).toBe(4401);
+  });
+
+  it("Shelly schickt Werte direkt, gedrosselt und mit gedrehtem Vorzeichen", async () => {
+    const { producer, deviceToken } = await setup();
+    const { messages, ws } = await openLive(await login("erzeuger@elma.test", "passwort123"));
+
+    const shelly = new WebSocket(`ws://${baseUrl}/ingest/shelly/${deviceToken}`);
+    await new Promise((r) => shelly.once("open", r));
+    const frame = (power: number) =>
+      JSON.stringify({ src: "shellypro3em-abc", dst: "ws", method: "NotifyStatus", params: { "em:0": { total_act_power: power } } });
+    shelly.send(frame(-1840));
+    shelly.send(frame(-1830)); // < 50 W Änderung innerhalb von 5 s: wird verworfen
+    shelly.send(frame(-2500)); // Sprung: sofort
+
+    await waitFor(() => messages.filter((m) => m.type === "reading").length >= 2);
+    await new Promise((r) => setTimeout(r, 50));
+    const watts = messages.flatMap((m) => (m.type === "reading" && m.producerId === producer.id ? [m.reading.watts] : []));
+    expect(watts).toEqual([1840, 2500]);
+
+    shelly.close();
+    ws.close();
+  });
+
+  it("Shelly mit falschem Token wird abgewiesen", async () => {
+    const shelly = new WebSocket(`ws://${baseUrl}/ingest/shelly/falsch`);
+    const code = await new Promise<number>((r) => shelly.once("close", (c) => r(c)));
+    expect(code).toBe(4401);
+  });
+
+  it("nach rotate-token gilt nur noch das neue Token", async () => {
+    const { producer, deviceToken } = await setup();
+    const fresh = repo.rotateDeviceToken(producer.id);
+    expect(fresh).toBeDefined();
+    expect(repo.producerByDeviceToken(deviceToken)).toBeUndefined();
+    expect(repo.producerByDeviceToken(fresh!)?.id).toBe(producer.id);
+    expect(repo.rotateDeviceToken("gibt-es-nicht")).toBeUndefined();
   });
 
   it("Live-Verbindung mit ungültigem JWT wird abgewiesen", async () => {

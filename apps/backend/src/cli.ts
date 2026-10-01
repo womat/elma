@@ -2,6 +2,7 @@
  * Verwaltung per Kommandozeile, z. B.:
  *   node src/cli.ts create-user wolfgang@example.com        (fragt das Passwort verdeckt ab)
  *   node src/cli.ts create-producer "PV Dach" wolfgang@example.com
+ *   node src/cli.ts rotate-token <producerId>                 (neues Geräte-Token, z. B. für den Shelly)
  *   node src/cli.ts invite <producerId>
  */
 import { resolve } from "node:path";
@@ -36,10 +37,17 @@ function usage(): never {
   console.log(`Befehle:
   create-user <email> [passwort]         -> ohne Passwort wird es verdeckt abgefragt
   create-producer <name> <owner-email>   -> gibt das DEVICE_TOKEN für die Bridge aus
+  rotate-token <producerId>              -> neues Geräte-Token, das alte wird ungültig
   rename-producer <producerId> <name>    -> Erzeuger umbenennen
   invite <producerId>                    -> Einladungslink für einen Empfänger
   list <email>                           -> sichtbare Erzeuger eines Users`);
   process.exit(1);
+}
+
+function printDeviceToken(deviceToken: string): void {
+  console.log(`DEVICE_TOKEN=${deviceToken}          (für die Bridge, in .env eintragen)`);
+  console.log(`Shelly-URL: ${publicUrl.replace(/^http/, "ws")}/ingest/shelly/${deviceToken}`);
+  console.log("Wird nur jetzt angezeigt. Nur über einen sicheren Kanal weitergeben.");
 }
 
 switch (command) {
@@ -64,8 +72,16 @@ switch (command) {
     if (!owner) throw new Error(`User ${email} nicht gefunden – zuerst create-user`);
     const { producer, deviceToken } = repo.createProducer(name, owner.id);
     console.log(`Erzeuger angelegt: ${producer.name} (${producer.id})`);
-    console.log(`DEVICE_TOKEN=${deviceToken}`);
-    console.log("Das Token wird nur jetzt angezeigt – in die .env der Bridge eintragen.");
+    printDeviceToken(deviceToken);
+    break;
+  }
+  case "rotate-token": {
+    const [producerId] = args;
+    if (!producerId) usage();
+    const deviceToken = repo.rotateDeviceToken(producerId);
+    if (!deviceToken) throw new Error(`Erzeuger ${producerId} nicht gefunden`);
+    console.log("Neues Geräte-Token erzeugt, das alte ist ab sofort ungültig.");
+    printDeviceToken(deviceToken);
     break;
   }
   case "rename-producer": {

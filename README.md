@@ -228,6 +228,11 @@ Ohne lokales Node laufen die Tests so im Container:
 docker run --rm -v "$PWD":/app -w /app node:24-alpine sh -c "corepack enable && pnpm install && pnpm test"
 ```
 
+## Andere hosten / selbst betreiben
+
+Auch andere Haushalte können als Erzeuger mitmachen: mit einem Shelly Pro 3EM, zentral auf deiner Instanz oder mit einer eigenen ELMA-Box.
+Konzept, Diagramme und Checkliste stehen in **[docs/hosting.md](docs/hosting.md)**.
+
 ## Nächste Schritte
 
 - Android-App im Play Store über Capacitor (gleicher Code)

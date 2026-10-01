@@ -52,6 +52,15 @@ export class Repo {
     return { producer, deviceToken };
   }
 
+  /** Ersetzt das Geräte-Token (z. B. wenn die Shelly-URL weitergegeben wurde); das alte ist sofort ungültig. */
+  rotateDeviceToken(producerId: string): string | undefined {
+    const deviceToken = newToken();
+    const { changes } = this.db
+      .prepare("UPDATE producers SET device_token_hash = ? WHERE id = ?")
+      .run(hashToken(deviceToken), producerId);
+    return changes > 0 ? deviceToken : undefined;
+  }
+
   producerByDeviceToken(token: string): ProducerRow | undefined {
     return this.db
       .prepare("SELECT id, name, owner_id FROM producers WHERE device_token_hash = ?")

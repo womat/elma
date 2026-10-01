@@ -94,3 +94,5 @@ export interface PushPayload {
 }
 
 export * from "./appliances.ts";
+
+export { Throttle } from "./throttle.ts";

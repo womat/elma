@@ -10,6 +10,7 @@ import {
   Credentials,
   IngestMessage,
   LiveClientMessage,
+  Throttle,
   PushSubscriptionBody,
   RegisterBody,
   type LiveServerMessage,
@@ -21,6 +22,7 @@ import type { Db } from "./db.ts";
 import { LiveHub } from "./hub.ts";
 import { loadVapidKeys, PushNotifier, webPushSender, type NotifierOptions, type PushSender } from "./push.ts";
 import { Repo } from "./repo.ts";
+import { parseShellyFrame } from "./shelly.ts";
 
 export interface AppOptions {
   db: Db;
@@ -50,6 +52,14 @@ declare module "@fastify/jwt" {
 
 const HISTORY_RANGES: Record<string, number> = { "1h": 3_600_000, "24h": 86_400_000, "7d": 604_800_000 };
 const JWT_TTL = "30d";
+/** Drossel für Shelly-Werte, wie bei der Bridge: sofort ab 50 W Änderung, sonst höchstens alle 5 s */
+const SHELLY_MIN_INTERVAL_MS = 5000;
+const SHELLY_DELTA_WATTS = 50;
+
+/** Der Shelly trägt sein Geräte-Token im Pfad – das darf nicht im Log landen. */
+export function redactUrl(url: string): string {
+  return url.replace(/^(\/ingest\/shelly\/)[^/?#]+/, "$1***");
+}
 
 export async function buildApp(
   opts: AppOptions,
@@ -63,7 +73,21 @@ export async function buildApp(
     opts.pushOptions,
   );
   hub.subscribe((producerId, reading) => void notifier.onReading(producerId, reading));
-  const app = Fastify({ logger: opts.logger ?? false, trustProxy: true });
+  const app = Fastify({
+    logger: opts.logger
+      ? {
+          serializers: {
+            req: (req: FastifyRequest) => ({
+              method: req.method,
+              url: redactUrl(req.url),
+              host: req.host,
+              remoteAddress: req.ip,
+            }),
+          },
+        }
+      : false,
+    trustProxy: true,
+  });
 
   await app.register(fastifyJwt, { secret: opts.jwtSecret });
   await app.register(fastifyRateLimit, { global: false });
@@ -215,6 +239,25 @@ export async function buildApp(
         return;
       }
       hub.publish(producer.id, parsed.data.reading);
+    });
+  });
+
+  // Shelly Gen2+ (Outbound WebSocket) kann keinen Authorization-Header setzen, daher Token im Pfad.
+  app.get<{ Params: { token: string } }>("/ingest/shelly/:token", { websocket: true }, (socket, req) => {
+    const producer = repo.producerByDeviceToken(req.params.token);
+    if (!producer) {
+      socket.close(4401, "Ungültiges Geräte-Token");
+      return;
+    }
+    req.log.info({ producer: producer.name }, "Shelly verbunden");
+    const throttle = new Throttle(SHELLY_MIN_INTERVAL_MS, SHELLY_DELTA_WATTS);
+    socket.on("message", (raw) => {
+      const watts = parseShellyFrame(raw.toString());
+      if (watts === null) return;
+      const now = Date.now();
+      if (!throttle.shouldSend(watts, now)) return;
+      throttle.markSent(watts, now);
+      hub.publish(producer.id, { watts, timestamp: now });
     });
   });
 

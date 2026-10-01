@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalizePayload } from "../src/normalize.ts";
-import { Throttle } from "../src/throttle.ts";
+import { Throttle } from "@elma/shared";
 
 const base = { payloadPath: undefined, payloadUnit: "W" as const, payloadInvert: false };
 

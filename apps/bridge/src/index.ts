@@ -1,7 +1,7 @@
 import mqtt from "mqtt";
 import { loadConfig } from "./config.ts";
 import { normalizePayload } from "./normalize.ts";
-import { Throttle } from "./throttle.ts";
+import { Throttle } from "@elma/shared";
 import { BackendLink } from "./backend-link.ts";
 
 const config = loadConfig();
