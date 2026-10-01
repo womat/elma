@@ -18,9 +18,9 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 git fetch -q origin
-BRANCH="$(git branch --show-current)"
-if ! git merge-base --is-ancestor HEAD "origin/$BRANCH"; then
-  echo "Abbruch: HEAD ist nicht nach origin/$BRANCH gepusht." >&2
+# funktioniert auch in einem zweiten Arbeitsordner (git worktree) ohne eigenen Branch
+if [ -z "$(git branch -r --contains HEAD)" ]; then
+  echo "Abbruch: HEAD ist noch nicht gepusht." >&2
   exit 1
 fi
 

@@ -1,5 +1,6 @@
 import type { Appliance } from "./appliances.ts";
 import { formatPower } from "./format.ts";
+import { ApplianceIcon } from "./icons.tsx";
 
 interface Props {
   /** aktueller Überschuss in Watt, null = keine aktuellen Daten */
@@ -59,8 +60,8 @@ export function ApplianceGrid({ watts, appliances, notify, pushOn, onEdit }: Pro
                     🔔
                   </span>
                 )}
-                <span className="appliance-icon" aria-hidden>
-                  {a.icon}
+                <span className="appliance-icon">
+                  <ApplianceIcon icon={a.icon} size={32} />
                 </span>
                 <span className="appliance-name">{a.name}</span>
                 <span className="appliance-meter" aria-hidden>

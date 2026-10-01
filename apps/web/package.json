@@ -1,6 +1,6 @@
 {
   "name": "@elma/web",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "license": "PolyForm-Noncommercial-1.0.0",
   "author": "Wolfgang Mathe",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@elma/shared": "workspace:*",
+    "lucide-react": "^1.49.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

@@ -54,7 +54,7 @@ describe("Push-Benachrichtigungen", () => {
     expect(sent).toHaveLength(0);
     await reading(600, T0 + 2 * MIN);
     expect(sent).toHaveLength(1);
-    expect(sent[0]!.payload.title).toBe("Jetzt reicht's für 🧺 Waschmaschine");
+    expect(sent[0]!.payload.title).toBe("Jetzt reicht's für Waschmaschine");
     expect(sent[0]!.payload.body).toBe("PV Dach hat gerade 0,6 kW Überschuss.");
   });
 
@@ -90,7 +90,7 @@ describe("Push-Benachrichtigungen", () => {
     await reading(2500, T0);
     await reading(2500, T0 + 2 * MIN);
     expect(sent).toHaveLength(1);
-    expect(sent[0]!.payload.title).toBe("Jetzt geht: 🧺 Waschmaschine, 🫖 Wasserkocher");
+    expect(sent[0]!.payload.title).toBe("Jetzt geht: Waschmaschine, Wasserkocher");
   });
 
   it("benachrichtigt nur Geräte, die ausgewählt UND zum Benachrichtigen markiert sind", async () => {
@@ -121,12 +121,12 @@ describe("Push-Benachrichtigungen", () => {
   it("eigene Geräte lösen ebenfalls aus", async () => {
     repo.saveApplianceSettings(recipientId, {
       selected: [],
-      custom: [{ id: "pool", icon: "🏊", name: "Poolpumpe", watts: 800 }],
+      custom: [{ id: "pool", icon: "waves-ladder", name: "Poolpumpe", watts: 800 }],
       notify: ["pool"],
     });
     await reading(900, T0);
     await reading(900, T0 + 2 * MIN);
-    expect(sent[0]!.payload.title).toBe("Jetzt reicht's für 🏊 Poolpumpe");
+    expect(sent[0]!.payload.title).toBe("Jetzt reicht's für Poolpumpe");
   });
 });
 

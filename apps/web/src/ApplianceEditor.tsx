@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
 import type { ApplianceSettings, CustomAppliance } from "@elma/shared";
-import { CATALOG, CUSTOM_ICONS } from "./appliances.ts";
+import { CATALOG } from "./appliances.ts";
+import { ApplianceIcon, ICON_GROUPS, ICONS } from "./icons.tsx";
+import { suggestIcon } from "./iconSuggest.ts";
 import { formatPower } from "./format.ts";
 import { PushToggle } from "./PushToggle.tsx";
 
@@ -15,7 +17,9 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
   const [selected, setSelected] = useState(() => new Set(initial.selected));
   const [custom, setCustom] = useState<CustomAppliance[]>(initial.custom);
   const [notify, setNotify] = useState(() => new Set(initial.notify));
-  const [icon, setIcon] = useState(CUSTOM_ICONS[0]!);
+  const [icon, setIcon] = useState("plug");
+  // Solange der User kein Icon selbst gewählt hat, schlagen wir eines passend zum Namen vor
+  const [iconPicked, setIconPicked] = useState(false);
   const [name, setName] = useState("");
   const [watts, setWatts] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +47,8 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
     setCustom((prev) => [...prev, { id: `custom-${crypto.randomUUID().slice(0, 8)}`, icon, name: name.trim(), watts: w }]);
     setName("");
     setWatts("");
+    setIcon("plug");
+    setIconPicked(false);
     setError(null);
   };
 
@@ -86,8 +92,8 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
             return (
               <li key={a.id}>
                 <button type="button" className={on ? "on" : ""} aria-pressed={on} onClick={() => toggle(a.id)}>
-                  <span className="appliance-icon" aria-hidden>
-                    {a.icon}
+                  <span className="appliance-icon">
+                    <ApplianceIcon icon={a.icon} size={30} />
                   </span>
                   <span className="appliance-name">{a.name}</span>
                   <span className="appliance-state">{formatPower(a.watts)}</span>
@@ -105,8 +111,8 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
           <ul className="custom-list">
             {custom.map((c) => (
               <li key={c.id}>
-                <span className="appliance-icon" aria-hidden>
-                  {c.icon}
+                <span className="appliance-icon">
+                  <ApplianceIcon icon={c.icon} size={24} />
                 </span>
                 <span className="grow">{c.name}</span>
                 <span className="muted">{formatPower(c.watts)}</span>
@@ -123,22 +129,16 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
         )}
 
         <form className="custom-form" onSubmit={addCustom}>
-          <div className="icon-picker" role="radiogroup" aria-label="Symbol">
-            {CUSTOM_ICONS.map((i) => (
-              <button
-                key={i}
-                type="button"
-                role="radio"
-                aria-checked={i === icon}
-                className={i === icon ? "on" : ""}
-                onClick={() => setIcon(i)}
-              >
-                {i}
-              </button>
-            ))}
-          </div>
           <div className="custom-inputs">
-            <input placeholder="Name, z. B. Poolpumpe" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
+            <input
+              placeholder="Name, z. B. Poolpumpe"
+              maxLength={40}
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (!iconPicked) setIcon(suggestIcon(e.target.value) ?? "plug");
+              }}
+            />
             <input
               placeholder="Watt"
               inputMode="numeric"
@@ -148,6 +148,36 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
             />
           </div>
           <p className="muted small">Die Leistung steht meist auf dem Typenschild oder in der Anleitung (z. B. „800 W“).</p>
+
+          <p className="icon-chosen small">
+            <ApplianceIcon icon={icon} size={22} /> Symbol: {ICONS[icon]?.label ?? icon}
+          </p>
+          <div className="icon-picker" role="radiogroup" aria-label="Symbol">
+            {ICON_GROUPS.map((group) => (
+              <div key={group.title} className="icon-group">
+                <p className="icon-group-title">{group.title}</p>
+                <div className="icon-group-icons">
+                  {group.icons.map((i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      role="radio"
+                      aria-checked={i === icon}
+                      aria-label={ICONS[i]!.label}
+                      title={ICONS[i]!.label}
+                      className={i === icon ? "on" : ""}
+                      onClick={() => {
+                        setIcon(i);
+                        setIconPicked(true);
+                      }}
+                    >
+                      <ApplianceIcon icon={i} size={22} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
           <button type="submit" className="secondary">
             + Gerät hinzufügen
           </button>
@@ -167,7 +197,7 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
                 const on = notify.has(a.id);
                 return (
                   <button key={a.id} type="button" className={on ? "chip on" : "chip"} aria-pressed={on} onClick={() => toggleNotify(a.id)}>
-                    {on ? "🔔" : "🔕"} {a.icon} {a.name}
+                    {on ? "🔔" : "🔕"} <ApplianceIcon icon={a.icon} size={16} /> {a.name}
                   </button>
                 );
               })}

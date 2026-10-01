@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Appliance, HistoryPoint } from "@elma/shared";
 import { formatPower } from "./format.ts";
+import { ApplianceIcon } from "./icons.tsx";
 import { bestSpan, bucketByHour, type HourLevel } from "./timeline.ts";
 
 interface Props {
@@ -58,9 +59,18 @@ export function ApplianceTimeline({ points, appliances, now }: Props) {
         {sel
           ? sel.watts === null
             ? `${hour(sel.start)}–${hour(sel.start + 3_600_000)} Uhr · keine Daten`
-            : `${hour(sel.start)}–${hour(sel.start + 3_600_000)} Uhr · Ø ${formatPower(Math.max(0, sel.watts))} · ${
-                sel.biggest ? `reicht für ${sel.biggest.icon} ${sel.biggest.name}` : "reicht für keines deiner Geräte"
-              }`
+            : (
+              <>
+                {hour(sel.start)}–{hour(sel.start + 3_600_000)} Uhr · Ø {formatPower(Math.max(0, sel.watts))} ·{" "}
+                {sel.biggest ? (
+                  <>
+                    reicht für <ApplianceIcon icon={sel.biggest.icon} size={16} /> {sel.biggest.name}
+                  </>
+                ) : (
+                  "reicht für keines deiner Geräte"
+                )}
+              </>
+            )
           : "Tippe auf einen Balken für Details."}
       </p>
 

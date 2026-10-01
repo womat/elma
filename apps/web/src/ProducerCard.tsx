@@ -12,6 +12,7 @@ import { formatPower } from "./format.ts";
 import { HistoryChart } from "./HistoryChart.tsx";
 import { ApplianceGrid } from "./ApplianceGrid.tsx";
 import { ApplianceTimeline } from "./ApplianceTimeline.tsx";
+import { ApplianceIcon } from "./icons.tsx";
 import { biggestFitting, type Appliance } from "./appliances.ts";
 
 export type View = "power" | "appliances";
@@ -95,7 +96,7 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
           <div className="status">{LABELS[level]}</div>
           {hint && (
             <p className="hint">
-              Reicht z. B. für {hint.icon} {hint.name}
+              Reicht z. B. für <ApplianceIcon icon={hint.icon} size={18} /> {hint.name}
             </p>
           )}
         </>

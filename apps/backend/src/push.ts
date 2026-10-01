@@ -91,7 +91,7 @@ export class PushNotifier {
   }
 
   private message(producerName: string, watts: number, due: Appliance[]): PushPayload {
-    const list = due.map((a) => `${a.icon} ${a.name}`).join(", ");
+    const list = due.map((a) => a.name).join(", ");
     const kw = (watts / 1000).toLocaleString("de-AT", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
     return {
       title: due.length === 1 ? `Jetzt reicht's für ${list}` : `Jetzt geht: ${list}`,

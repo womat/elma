@@ -2,6 +2,16 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.3.0 – 2026-10-01
+
+- **Geräte-Icons statt Emojis:** Alle Geräte nutzen jetzt einheitliche Linien-Icons ([Lucide](https://lucide.dev), Lizenz ISC).
+  Geht ein Gerät, ist das Icon grün, sonst grau.
+- **64 Icons für eigene Geräte** in sechs Gruppen: Küche, Haushalt & Wäsche, Heizen/Kühlen/Wasser, Unterhaltung & Büro, Werkstatt & Garten, Mobilität & Energie.
+  Darunter sind Waschmaschine, Kühlschrank, Heizlüfter, Klimaanlage, Saugroboter, Wallbox, Pumpe, Pool und Solar.
+- **Icon-Vorschlag nach Name:** z. B. „Infrarotheizung“ → Heizlüfter, „Wallbox“ → Wallbox, „Teichpumpe“ → Teich.
+- Bestehende eigene Geräte mit Emoji werden automatisch auf passende Icons abgebildet. Eine Datenbank-Umstellung ist nicht nötig.
+- Push-Nachrichten nennen nur noch den Gerätenamen, z. B. „Jetzt reicht's für Waschmaschine“.
+
 ## 0.2.1 – 2026-10-01
 
 - Die Anzeige „vor x s“ in der Karte des Erzeugers ist entfernt.

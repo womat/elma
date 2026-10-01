@@ -64,7 +64,7 @@ export const STALE_AFTER_MS = 60_000;
 /** Ein selbst angelegtes Gerät des Empfängers. */
 export const CustomAppliance = z.object({
   id: z.string().min(1).max(40),
-  icon: z.string().min(1).max(16),
+  icon: z.string().min(1).max(40), // Lucide-Icon-Name, ältere Einträge: Emoji
   name: z.string().trim().min(1).max(40),
   watts: z.number().int().min(1).max(50_000),
 });
