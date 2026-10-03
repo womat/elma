@@ -15,9 +15,8 @@ In beiden Modellen kommt der Messwert von einem **Shelly Pro 3EM** am Hausanschl
 
 > **Stand:**
 > - **Umgesetzt:** Shelly-Endpunkt `/ingest/shelly/<token>`, `rotate-token`, Shelly-URL in `create-producer`, mehrere Erzeuger pro Instanz, Einladungen, MQTT-Bridge, ELMA-Box (`deploy/box/`) mit `setup.sh`, Release-Workflow für fertige Images.
-> - **Offen:**
->   - erstes Release über den Workflow, dabei die drei Images (backend, bridge, push-proxy) auf ghcr.io öffentlich schalten;
->   - Test mit einem echten Shelly Pro 3EM (siehe [Offene Punkte](#offene-punkte)).
+>   Die drei Images (backend, bridge, push-proxy) sind auf ghcr.io öffentlich, das Repo ebenfalls.
+> - **Offen:** Test mit einem echten Shelly Pro 3EM (siehe [Offene Punkte](#offene-punkte)).
 
 ## Messung: Shelly Pro 3EM
 
@@ -269,15 +268,8 @@ flowchart LR
    - Public Hostname: z. B. `elma.meine-gemeinschaft.at`
    - Service: `http://backend:3000`
    - Tunnel-Token notieren.
-3. Box-Ordner auf den Pi bringen und `setup.sh` starten.
-   Solange das Repo privat ist, kopierst du den Ordner von deinem Rechner:
-   ```bash
-   scp -r deploy/box pi@<box>:~/elma-box
-   ```
-   ```bash
-   ssh -t pi@<box> 'cd ~/elma-box && ./setup.sh'
-   ```
-   Ist das Repo öffentlich, geht es auch direkt auf dem Pi:
+3. Box-Ordner direkt auf dem Pi holen und `setup.sh` starten.
+   Das Repo ist öffentlich, ein GitHub-Konto braucht es dafür nicht:
    ```bash
    sudo apt install -y git && git clone --depth 1 https://github.com/womat/elma.git && cd elma/deploy/box && ./setup.sh
    ```
@@ -306,8 +298,11 @@ Start: GitHub → Actions → release → „Run workflow“, dabei unter „Use
 Er testet zuerst und baut dann `ghcr.io/womat/elma-backend`, `ghcr.io/womat/elma-bridge` und `ghcr.io/womat/elma-push-proxy` für amd64 und arm64.
 Getaggt wird mit `vX.Y.Z` und `latest`.
 
-Neue Pakete auf ghcr.io sind zunächst **privat**.
-Nach dem ersten Lauf deshalb unter GitHub → Packages → Package settings jedes Paket auf **Public** stellen, sonst scheitert `docker compose pull` auf fremden Boxen.
+Ohne das Häkchen „Images hochladen“ wird nur getestet und gebaut, aber nichts veröffentlicht.
+
+Die drei Pakete sind bereits öffentlich.
+Kommt einmal ein **neues** Paket dazu, ist es auf ghcr.io zunächst privat.
+Nach dessen erstem Lauf deshalb unter GitHub → Packages → Package settings auf **Public** stellen, sonst scheitert `docker compose pull` auf fremden Boxen.
 
 ### Optional: Mosquitto im LAN
 Nur für Quellen ohne Shelly-Direktverbindung (Smartfox, Shelly Gen1 …):
