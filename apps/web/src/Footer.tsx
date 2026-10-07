@@ -24,7 +24,7 @@ export function Footer() {
         </p>
       )}
       ELMA {APP_VERSION} · <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer">Quellcode</a> ·{" "}
-      <a href={`${SOURCE_URL}/blob/master/LICENSE.md`} target="_blank" rel="noopener noreferrer">
+      <a href={`${SOURCE_URL}/blob/HEAD/LICENSE.md`} target="_blank" rel="noopener noreferrer">
         Lizenz (PolyForm Noncommercial)
       </a>
     </footer>
