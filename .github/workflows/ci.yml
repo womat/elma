@@ -19,5 +19,7 @@ jobs:
         # kein automatischer pnpm-Cache: pnpm kommt erst im nächsten Schritt über corepack
         with: { node-version: 24, package-manager-cache: false }
       - run: corepack enable && pnpm install --frozen-lockfile
+      # Bekannte Sicherheitslücken in den npm-Paketen (ab "high") lassen den Lauf scheitern.
+      - run: pnpm audit --audit-level high
       - run: pnpm test
       - run: pnpm typecheck

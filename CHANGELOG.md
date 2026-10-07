@@ -4,6 +4,11 @@ Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jed
 
 ## Unveröffentlicht
 
+- **Sicherheitslücke behoben:** `@fastify/static` von 8.3 auf 10.1.5 gehoben. Die alte Version ließ sich über
+  umgebogene Pfade an Zugriffsprüfungen vorbei austricksen ([GHSA-83w8-p2f5-377r](https://github.com/advisories/GHSA-83w8-p2f5-377r) und drei weitere).
+  Die Auslieferung der PWA ist unverändert.
+- **Prüfung auf bekannte Lücken:** `pnpm audit` läuft jetzt in `ci` und im Release-Workflow; ab Stufe „high“ schlägt der Lauf fehl.
+  Die Testwerkzeuge (vitest) sind dafür ebenfalls aktualisiert.
 - **Workflows abgesichert:** Alle GitHub-Bausteine sind auf den Commit-SHA ihres Releases festgenagelt statt auf
   verschiebbare Tags wie `@v5`. Neu ist `.github/dependabot.yml`: einmal pro Woche Update-PRs für npm-Pakete,
   das Basis-Image im `Dockerfile` und die Actions.
