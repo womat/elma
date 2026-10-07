@@ -7,6 +7,8 @@ Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jed
 - **Sicherheitslücke behoben:** `@fastify/static` von 8.3 auf 10.1.5 gehoben. Die alte Version ließ sich über
   umgebogene Pfade an Zugriffsprüfungen vorbei austricksen ([GHSA-83w8-p2f5-377r](https://github.com/advisories/GHSA-83w8-p2f5-377r) und drei weitere).
   Die Auslieferung der PWA ist unverändert.
+- **Abhängigkeiten:** `@fastify/rate-limit` 10.3 → 11.2 (Sicherheits-Release, die Login-Begrenzung bleibt gleich),
+  `@fastify/websocket` 11.3.3, `lucide-react` 1.52.
 - **Prüfung auf bekannte Lücken:** `pnpm audit` läuft jetzt in `ci` und im Release-Workflow; ab Stufe „high“ schlägt der Lauf fehl.
   Die Testwerkzeuge (vitest) sind dafür ebenfalls aktualisiert.
 - **Workflows abgesichert:** Alle GitHub-Bausteine sind auf den Commit-SHA ihres Releases festgenagelt statt auf
