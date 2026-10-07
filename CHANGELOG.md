@@ -2,7 +2,7 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
-## Unveröffentlicht
+## 0.6.3 – 2026-10-08
 
 - **Sicherheitslücke behoben:** `@fastify/static` von 8.3 auf 10.1.5 gehoben. Die alte Version ließ sich über
   umgebogene Pfade an Zugriffsprüfungen vorbei austricksen ([GHSA-83w8-p2f5-377r](https://github.com/advisories/GHSA-83w8-p2f5-377r) und drei weitere).
