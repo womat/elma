@@ -1,0 +1,30 @@
+# Hält die npm-Pakete (pnpm-Lockfile), die Basis-Images im Dockerfile und die auf SHA festgenagelten
+# GitHub Actions aktuell: einmal pro Woche ein PR pro Bereich.
+
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dev:
+        dependency-type: development
+      prod:
+        dependency-type: production
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - "*"

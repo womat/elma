@@ -4,6 +4,9 @@ Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jed
 
 ## Unveröffentlicht
 
+- **Workflows abgesichert:** Alle GitHub-Bausteine sind auf den Commit-SHA ihres Releases festgenagelt statt auf
+  verschiebbare Tags wie `@v5`. Neu ist `.github/dependabot.yml`: einmal pro Woche Update-PRs für npm-Pakete,
+  das Basis-Image im `Dockerfile` und die Actions.
 - **Release-Workflow:** GitHub-Bausteine auf die ersten Versionen mit Node 24 gehoben (checkout/setup-node v5, Docker-Actions v4/v6/v7).
   Die Warnung „Node.js 20 is deprecated“ entfällt; getestet wird das beim nächsten Release-Lauf.
 - **Release-Workflow testen ohne Veröffentlichen:** Beim Start lässt sich das Häkchen „Images hochladen“ entfernen.
