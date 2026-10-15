@@ -182,7 +182,7 @@ Die Version steht in der Root-`package.json` (SemVer). Zu jedem Release gehört 
 1. In `package.json` (und den Paketen unter `apps/*`, `packages/*`) die Version erhöhen und `CHANGELOG.md` ergänzen.
 2. Committen und taggen, mit `-a` und Beschreibung, denn nur solche Tags überträgt `git push --follow-tags`:
    ```bash
-   git tag -a v0.3.0 -m "ELMA v0.3.0"
+   git tag -a vX.Y.Z -m "ELMA vX.Y.Z"
    ```
 3. Pushen:
    ```bash
@@ -194,7 +194,7 @@ Die Version steht in der Root-`package.json` (SemVer). Zu jedem Release gehört 
    ```
 
 Das Skript bricht ab, wenn es nicht committete oder nicht gepushte Änderungen gibt.
-Es vergibt die Version aus `git describe` (z. B. `v0.3.0`, oder `v0.3.0-2-gabc1234` für Zwischenstände) und ersetzt den Code auf dem Pi.
+Es vergibt die Version aus `git describe` (z. B. `vX.Y.Z`, oder `vX.Y.Z-2-gabc1234` für Zwischenstände) und ersetzt den Code auf dem Pi.
 Die `.env` und die Daten bleiben dabei erhalten.
 Danach baut es die Container neu und prüft über `<PUBLIC_URL>/api/health`, dass die neue Version läuft.
 Die Adresse kommt aus `PUBLIC_URL` in der `.env` auf dem Ziel; mit `DEPLOY_URL=…` lässt sie sich überschreiben.

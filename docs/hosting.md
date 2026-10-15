@@ -294,7 +294,7 @@ flowchart LR
 
 ### Images veröffentlichen (Entwickler)
 Der Workflow `.github/workflows/release.yml` läuft **nur von Hand**, damit normale Releases keine Actions-Minuten kosten.
-Start: GitHub → Actions → release → „Run workflow“, dabei unter „Use workflow from“ den Versions-Tag wählen, z. B. `v0.4.0`.
+Start: GitHub → Actions → release → „Run workflow“, dabei unter „Use workflow from“ den Versions-Tag wählen, z. B. `vX.Y.Z`.
 Er testet zuerst und baut dann `ghcr.io/womat/elma-backend`, `ghcr.io/womat/elma-bridge` und `ghcr.io/womat/elma-push-proxy` für amd64 und arm64.
 Getaggt wird mit `vX.Y.Z` und `latest`.
 
