@@ -48,6 +48,7 @@ const LABELS: Record<Level, string> = {
 export function ProducerCard({ producer, reading, now, view, appliances, notify, pushOn, onEditAppliances }: Props) {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [invite, setInvite] = useState<string | null>(null);
+  const [inviteName, setInviteName] = useState("");
   const [name, setName] = useState(producer.name);
   const level = levelOf(reading, now);
   const liveWatts = reading && level !== "offline" ? Math.max(0, reading.watts) : null;
@@ -71,7 +72,13 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
   };
 
   const createInvite = async () => {
-    const { url } = await api.createInvite(producer.id);
+    let url: string;
+    try {
+      ({ url } = await api.createInvite(producer.id, inviteName.trim() || undefined));
+    } catch (err) {
+      alert((err as Error).message);
+      return;
+    }
     setInvite(url);
     if (navigator.share) navigator.share({ title: "ELMA Einladung", text: "Sieh dir meinen Stromüberschuss an:", url }).catch(() => undefined);
   };
@@ -112,6 +119,13 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
 
       {producer.isOwner && (
         <div className="owner">
+          <input
+            placeholder="Name der Person, z. B. Margit (optional)"
+            aria-label="Name der eingeladenen Person"
+            maxLength={40}
+            value={inviteName}
+            onChange={(e) => setInviteName(e.target.value)}
+          />
           <button onClick={createInvite}>Empfänger einladen</button>
           {invite && (
             <input readOnly value={invite} onFocus={(e) => e.currentTarget.select()} aria-label="Einladungslink" />

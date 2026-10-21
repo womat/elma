@@ -72,12 +72,14 @@ export const api = {
   addPasskey: (challengeId: string, response: RegistrationResponseJSON) => post<PasskeyDto[]>("/api/me/passkeys", { challengeId, response }),
   deletePasskey: (id: string) => request<PasskeyDto[]>(`/api/me/passkeys/${encodeURIComponent(id)}`, { method: "DELETE" }),
   me: () => request<MeDto>("/api/me"),
+  setDisplayName: (displayName: string | null) => request<MeDto>("/api/me", { method: "PUT", body: JSON.stringify({ displayName }) }),
   producers: () => request<ProducerDto[]>("/api/producers"),
   renameProducer: (id: string, name: string) =>
     request<{ id: string; name: string }>(`/api/producers/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
   health: () => request<{ ok: boolean; version: string }>("/api/health"),
   history: (id: string, range = "24h") => request<HistoryPoint[]>(`/api/producers/${id}/history?range=${range}`),
-  createInvite: (id: string) => request<{ code: string; url: string; expiresAt: number }>(`/api/producers/${id}/invites`, { method: "POST" }),
+  createInvite: (id: string, displayName?: string) =>
+    post<{ code: string; url: string; expiresAt: number }>(`/api/producers/${id}/invites`, displayName ? { displayName } : {}),
   appliances: () => request<{ settings: ApplianceSettings | null }>("/api/me/appliances"),
   saveAppliances: (settings: ApplianceSettings) =>
     request<{ settings: ApplianceSettings }>("/api/me/appliances", { method: "PUT", body: JSON.stringify(settings) }),

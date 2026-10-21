@@ -1,6 +1,6 @@
 # ELISA-Modus: Überschuss reservieren
 
-> **Status:** Plan vollständig (2026-10-21), noch nicht umgesetzt.
+> **Status:** Plan vollständig (2026-10-21). Phase 1 (Anzeigename) ist mit 0.7.0 umgesetzt, der Rest ist offen (siehe [Umsetzungsreihenfolge](#umsetzungsreihenfolge)).
 > Mockups (Datei im Browser öffnen):
 > - [elisa-mockup.html](elisa-mockup.html): klickbarer Ablauf in ELMA
 > - [elisa-szenarien.html](elisa-szenarien.html): sieben Szenarien nebeneinander für Elisa (ELMA), Wolfgang (ELMA) und Margit (MAGGIE)
@@ -99,7 +99,7 @@ Push-Texte:
 ### Backend
 - `db.ts`, jeweils als idempotentes Statement in `openDb` (Spalten per `PRAGMA table_info` prüfen):
   - `shares.can_reserve INTEGER NOT NULL DEFAULT 0`
-  - `users.display_name TEXT`
+  - `users.display_name TEXT` *(Phase 1, umgesetzt)*
   - Neue Tabelle `reservations (id, producer_id, user_id, starts_at, ends_at, ended_at, end_reason)`. Die Historie bleibt, darüber läuft das Tagesbudget.
   - Neue Tabelle `control_tokens (token_hash PK, producer_id, created_at, last_used_at)`. Nur der SHA-256 wird gespeichert, wie bei `setup_links`.
 - `repo.ts`:
@@ -119,7 +119,10 @@ Push-Texte:
     - 409 bei zu wenig Budget, laufender Reservierung oder laufendem Gerät
   - `DELETE /api/producers/:id/reservation`: für den Reservierenden und den Erzeuger.
   - `GET /api/producers/:id/recipients`, `PUT /api/producers/:id/recipients/:userId` mit `{ canReserve }`: nur für den Erzeuger. Entzug beendet eine laufende Reservierung.
-  - `PUT /api/me` mit `{ displayName }` (1–40 Zeichen, getrimmt). `GET /api/me` liefert den Namen mit.
+  - `PUT /api/me` mit `{ displayName }` (1–40 Zeichen, getrimmt, `null` löscht ihn). `GET /api/me` liefert den Namen mit. *(Phase 1, umgesetzt)*
+    Den Fallback auf den Teil vor dem @ liefert `displayNameOf()` aus `@elma/shared`. Das gilt für Banner, Push und MAGGIE.
+    Neue Spalten legt `addColumn()` in `db.ts` an. Zusätzlich zum Plan kann der Erzeuger den Namen schon beim Einladen
+    angeben (`invites.display_name`), und `cli.ts set-name` trägt ihn für bestehende Konten ein (Wolfgang, 2026-10-21).
   - `POST /api/control/status` mit `Authorization: Bearer <Steuer-Token>`, Body `ControlStatus`, Antwort `{ active, until, by }`, mit Rate-Limit.
     - Ohne Token, mit falschem Token oder mit dem Geräte-Token gibt es 401.
   - `/ingest` sendet beim Verbinden und bei jeder Änderung `{type:"reservation", until, by}`.
@@ -136,12 +139,12 @@ Push-Texte:
 
 ### Web
 - `ProducerCard.tsx`: Knopf (auch grau mit Grund), Sheet, Banner und Empfängerliste wie oben.
-- `AccountSheet.tsx`: Feld „Name“.
+- `AccountSheet.tsx`: Feld „Name“. *(Phase 1, umgesetzt)*
 - `useLive.ts`: Nachricht `reservation` verarbeiten.
 - `api.ts`: neue Aufrufe.
 
 ### Release
-- Version 0.7.0 in allen `package.json`.
+- Version 0.8.0 in allen `package.json` (0.7.0 war Phase 1, der Anzeigename).
 - CHANGELOG-Eintrag mit den Begründungen aus der Tabelle oben.
 - README und `README.en.md` unter „Was die App kann“.
 
@@ -174,7 +177,7 @@ Festgelegt mit Wolfgang am 2026-10-21. Jede Phase ist für sich ausrollbar, ein 
 | Phase | Repo | Inhalt | Wirkung danach | Stand |
 |---|---|---|---|---|
 | 0 | myhome, maggie | Nur Doku: `KONZEPT-ELISA.md` in myhome, ELISA-Abschnitt in `docs/KONZEPT.md` von maggie | Jedes Repo kennt seinen Teil | erledigt 2026-10-21 |
-| 1 | elma | **Anzeigename** im Konto (`users.display_name`, `PUT /api/me`, Feld im Konto-Sheet) | Klein und auch ohne ELISA nützlich | offen |
+| 1 | elma | **Anzeigename** im Konto (`users.display_name`, `PUT /api/me`, Feld im Konto-Sheet) | Klein und auch ohne ELISA nützlich | erledigt 2026-10-21 (0.7.0) |
 | 2 | elma | **Reservierung**: Recht, Budget, Knopf, Sheet, Banner, Push, `POST /api/control/status`, Steuer-Token per CLI | Elisa kann reservieren, der Erzeuger bekommt die Info. Ohne Node-RED steht „Die Sperre wirkt gerade nicht“ da | offen |
 | 3 | myhome | **Node-RED**: `lib/elisa.js`, `ElisaEVU`/`ElisaHalt` in `lib/aktor.js`, Tab *ELISA*. Zuerst **Probebetrieb** (nur Schaltprotokoll, was es tun würde), danach scharf | Wallbox und WP werden zurückgehalten | offen |
 | 4 | elma, maggie | Bridge veröffentlicht `elma/reservation`. MAGGIE bekommt den Zustand `reserved` und die Push an Margit | Margit sieht die Reservierung | offen |
@@ -209,7 +212,7 @@ Warum so: Node-RED und MAGGIE reagieren nur auf das, was ELMA liefert, deshalb k
   - `POST /api/control/status`: ohne Token, mit falschem Token oder mit dem Geräte-Token → 401. Mit Steuer-Token kommt der Stand zurück, `controlConnected` ist danach true und nach 60 s ohne Abfrage wieder false.
   - `/ingest` bekommt den Stand nach dem Verbinden, `/live` bekommt Start und Ende.
   - Nur der Erzeuger kann `can_reserve` setzen.
-  - `PUT /api/me` validiert `displayName`.
+  - `PUT /api/me` validiert `displayName`. *(Phase 1, umgesetzt)*
 - `apps/bridge/test/`: Parser für `IngestServerMessage` und MQTT-Payload.
 - End-to-End mit `dev/docker-compose.dev.yml`:
   - Ein Status per `curl` mit Steuer-Token liefert die Reservierung.

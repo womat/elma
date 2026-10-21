@@ -78,6 +78,12 @@ describe("Registrierung per Einladung", () => {
     expect(passkeys.json()).toMatchObject([{ id: "cred-1", name: "iPhone", lastUsedAt: null }]);
   });
 
+  it("übernimmt den Namen aus der Einladung ins neue Konto", async () => {
+    const { producer } = ownerWithInvite();
+    const res = await registerWithInvite(repo.createInvite(producer.id, "Margit").code, "margit@elma.test", "cred-m");
+    expect(res.json().user).toMatchObject({ email: "margit@elma.test", displayName: "Margit" });
+  });
+
   it("Optionen verlangen einen auffindbaren Schlüssel für die richtige Domain", async () => {
     const { invite } = ownerWithInvite();
     const start = await post("/api/auth/passkey/register/options", { inviteCode: invite.code, email: "e@elma.test" });

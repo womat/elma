@@ -1,6 +1,6 @@
-import { KeyRound, Trash2 } from "lucide-react";
-import { useState } from "react";
-import type { MeDto, PasskeyDto } from "@elma/shared";
+import { KeyRound, Trash2, UserRound } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { displayNameOf, type MeDto, type PasskeyDto } from "@elma/shared";
 import { api } from "./api.ts";
 import { addPasskey, PasskeyCancelled } from "./passkey.ts";
 
@@ -8,17 +8,38 @@ interface Props {
   me: MeDto;
   passkeys: PasskeyDto[];
   onChange: (passkeys: PasskeyDto[]) => void;
+  onMeChange: (me: MeDto) => void;
   onSignOut: () => void;
   onClose: () => void;
 }
 
 const date = (t: number) => new Date(t).toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-/** Vollbild-Blatt: eigene Passkeys ansehen, hinzufügen und löschen. */
-export function AccountSheet({ me, passkeys, onChange, onSignOut, onClose }: Props) {
+/** Vollbild-Blatt: Anzeigename ändern, eigene Passkeys ansehen, hinzufügen und löschen. */
+export function AccountSheet({ me, passkeys, onChange, onMeChange, onSignOut, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const [name, setName] = useState(me.displayName ?? "");
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [nameSaved, setNameSaved] = useState(false);
+  const nameChanged = name.trim() !== (me.displayName ?? "");
+
+  const saveName = async (e: FormEvent) => {
+    e.preventDefault();
+    setNameError(null);
+    setNameSaved(false);
+    try {
+      // leeres Feld löscht den Namen, dann gilt wieder der Teil der E-Mail vor dem @
+      const next = await api.setDisplayName(name.trim() || null);
+      onMeChange(next);
+      setName(next.displayName ?? "");
+      setNameSaved(true);
+    } catch (err) {
+      setNameError((err as Error).message);
+    }
+  };
 
   const act = async (action: () => Promise<PasskeyDto[]>) => {
     setBusy(true);
@@ -50,6 +71,32 @@ export function AccountSheet({ me, passkeys, onChange, onSignOut, onClose }: Pro
         </header>
 
         <p className="muted">Angemeldet als {me.email}</p>
+
+        <h3>
+          <UserRound size={18} className="ui-icon" aria-hidden /> Dein Name
+        </h3>
+        <form className="custom-form" onSubmit={saveName}>
+          <div className="name-inputs">
+            <input
+              aria-label="Dein Name"
+              placeholder={displayNameOf({ displayName: null, email: me.email })}
+              maxLength={40}
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setNameSaved(false);
+              }}
+            />
+            <button type="submit" className="secondary" disabled={!nameChanged}>
+              Speichern
+            </button>
+          </div>
+          <p className="muted small">
+            Andere sehen diesen Namen statt deiner E-Mail-Adresse. Ohne Namen steht dort „{displayNameOf({ displayName: null, email: me.email })}“.
+          </p>
+          {nameSaved && <p className="muted small">Gespeichert.</p>}
+          {nameError && <p className="error">{nameError}</p>}
+        </form>
 
         <h3>
           <KeyRound size={18} className="ui-icon" aria-hidden /> Deine Passkeys

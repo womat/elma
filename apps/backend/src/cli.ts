@@ -2,11 +2,13 @@
  * Verwaltung per Kommandozeile, z. B.:
  *   node src/cli.ts create-user wolfgang@example.com        (gibt einen Link zum Einrichten des Passkeys aus)
  *   node src/cli.ts setup-link wolfgang@example.com         (neuer Einrichtungslink, z. B. wenn das Handy weg ist)
+ *   node src/cli.ts set-name wolfgang@example.com Wolfgang  (Anzeigename, den sonst jeder im Konto-Blatt selbst setzt)
  *   node src/cli.ts create-producer "PV Dach" wolfgang@example.com
  *   node src/cli.ts rotate-token <producerId>                 (neues Geräte-Token, z. B. für den Shelly)
- *   node src/cli.ts invite <producerId>
+ *   node src/cli.ts invite <producerId> Margit                (Name ist optional und landet beim Einlösen im Konto)
  */
 import { resolve } from "node:path";
+import { DisplayNameBody, InviteBody } from "@elma/shared";
 import { openDb } from "./db.ts";
 import { Repo } from "./repo.ts";
 
@@ -18,11 +20,12 @@ function usage(): never {
   console.log(`Befehle:
   create-user <email>                    -> legt das Konto an und gibt einen Einrichtungslink für den Passkey aus
   setup-link <email>                     -> neuer Einrichtungslink (Umstellung, neues Handy, Passkey verloren)
-  list-users                             -> alle User mit Anzahl ihrer Passkeys
+  list-users                             -> alle User mit Name und Anzahl ihrer Passkeys
+  set-name <email> <name>                -> Anzeigename setzen, z. B. "Elisa" (leerer Name "" löscht ihn)
   create-producer <name> <owner-email>   -> gibt das DEVICE_TOKEN für die Bridge aus
   rotate-token <producerId>              -> neues Geräte-Token, das alte wird ungültig
   rename-producer <producerId> <name>    -> Erzeuger umbenennen
-  invite <producerId>                    -> Einladungslink für einen Empfänger
+  invite <producerId> [name]             -> Einladungslink für einen Empfänger, optional mit seinem Namen
   list <email>                           -> sichtbare Erzeuger eines Users`);
   process.exit(1);
 }
@@ -60,7 +63,21 @@ switch (command) {
     break;
   }
   case "list-users": {
-    for (const u of repo.usersWithPasskeyCount()) console.log(`${u.email}  ${u.passkeys === 0 ? "kein Passkey" : `${u.passkeys} Passkey(s)`}`);
+    for (const u of repo.usersWithPasskeyCount()) {
+      const name = u.displayName ? `  „${u.displayName}“` : "";
+      console.log(`${u.email}${name}  ${u.passkeys === 0 ? "kein Passkey" : `${u.passkeys} Passkey(s)`}`);
+    }
+    break;
+  }
+  case "set-name": {
+    const [email, name] = args;
+    const user = email ? repo.userByEmail(email) : undefined;
+    if (!user || name === undefined) usage();
+    // dieselben Regeln wie PUT /api/me; "" heißt löschen, wie ein leeres Feld in der App
+    const body = DisplayNameBody.safeParse({ displayName: name.trim() || null });
+    if (!body.success) throw new Error(body.error.issues[0]?.message ?? "Ungültiger Name");
+    repo.setDisplayName(user.id, body.data.displayName);
+    console.log(body.data.displayName ? `Name von ${user.email}: ${body.data.displayName}` : `Name von ${user.email} gelöscht`);
     break;
   }
   case "create-producer": {
@@ -91,9 +108,11 @@ switch (command) {
     break;
   }
   case "invite": {
-    const [producerId] = args;
+    const [producerId, name] = args;
     if (!producerId) usage();
-    const { code } = repo.createInvite(producerId);
+    const body = InviteBody.safeParse({ displayName: name?.trim() || undefined });
+    if (!body.success) throw new Error(body.error.issues[0]?.message ?? "Ungültiger Name");
+    const { code } = repo.createInvite(producerId, body.data.displayName ?? null);
     console.log(`${publicUrl}/?invite=${code}  (7 Tage gültig, einmal verwendbar)`);
     break;
   }

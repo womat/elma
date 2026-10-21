@@ -92,5 +92,14 @@ export function openDb(path: string): Db {
   `);
   // Seit 0.5.0 nur Passkeys: alte Passwort-Hashes löschen (Platzhalter wie in Repo.createUser, Spalte ist NOT NULL)
   db.exec("UPDATE users SET password_hash = 'passkey-only' WHERE password_hash LIKE 'scrypt:%'");
+  // 0.7.0: Anzeigename, damit in Banner und Push „Elisa“ steht statt der E-Mail (docs/elisa.md)
+  addColumn(db, "users", "display_name", "TEXT");
+  addColumn(db, "invites", "display_name", "TEXT");
   return db;
+}
+
+/** Neue Spalte in einer bestehenden DB; CREATE TABLE IF NOT EXISTS ändert vorhandene Tabellen nicht. */
+function addColumn(db: Db, table: string, column: string, definition: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!columns.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }

@@ -218,10 +218,12 @@ Melde dich als Erzeuger in der App an und tippe auf **„Empfänger einladen“*
 Am Handy öffnet sich direkt „Teilen“ (WhatsApp, Signal, Mail usw.).
 Der Link ist 7 Tage gültig und nur einmal verwendbar.
 Der Empfänger legt damit sein Konto an; ohne Einladung ist keine Registrierung möglich.
-Alternativ geht das auch per Kommandozeile:
+Trägst du vorher den Namen der Person ins Feld darüber ein (z. B. „Margit“), steht er gleich in ihrem Konto.
+Sie kann ihn später selbst ändern.
+Alternativ geht das auch per Kommandozeile, der Name ist optional:
 
 ```bash
-docker compose exec backend node src/cli.ts invite <producerId>
+docker compose exec backend node src/cli.ts invite <producerId> Margit
 ```
 
 ## Anmeldung mit Passkey
@@ -241,6 +243,9 @@ und man bestätigt per Fingerabdruck, Gesicht oder Geräte-PIN. Auf dem Server l
   ```bash
   docker compose exec backend node src/cli.ts list-users
   ```
+- **Name:** Ebenfalls dort setzt jeder seinen Anzeigenamen, z. B. „Elisa“. Ohne Namen gilt der Teil der E-Mail vor dem @.
+  Als Betreiber geht es auch im Terminal: `docker compose exec backend node src/cli.ts set-name <email> Elisa`.
+  Der Name ist für Anzeigen bei anderen gedacht (zuerst für den ELISA-Modus, siehe [docs/elisa.md](docs/elisa.md)), damit dort nie die E-Mail-Adresse steht.
 - **Weitere Geräte:** Über das Schlüssel-Symbol oben in der App lassen sich Passkeys ansehen, hinzufügen und löschen.
   Über das Google- bzw. Apple-Konto sind sie meist ohnehin auf allen eigenen Geräten.
   Am PC kann man sich auch anmelden, indem man den angezeigten QR-Code mit dem Handy scannt.

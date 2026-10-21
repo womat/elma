@@ -8,7 +8,9 @@ import { isIP } from "node:net";
 import { z } from "zod";
 import {
   ApplianceSettings,
+  DisplayNameBody,
   IngestMessage,
+  InviteBody,
   LiveClientMessage,
   Throttle,
   PushSubscriptionBody,
@@ -20,7 +22,7 @@ import type { Db } from "./db.ts";
 import { LiveHub } from "./hub.ts";
 import { registerPasskeyRoutes } from "./passkeys.ts";
 import { loadVapidKeys, PushNotifier, webPushSender, type NotifierOptions, type PushSender } from "./push.ts";
-import { Repo } from "./repo.ts";
+import { Repo, type UserRow } from "./repo.ts";
 import { parseShellyFrame } from "./shelly.ts";
 
 export interface AppOptions {
@@ -112,9 +114,11 @@ export async function buildApp(
     }
   };
 
-  const loginResponse = (user: { id: string; email: string }) => ({
+  const meDto = (user: UserRow): MeDto => ({ id: user.id, email: user.email, displayName: user.displayName });
+
+  const loginResponse = (user: UserRow) => ({
     token: app.jwt.sign({ sub: user.id }, { expiresIn: JWT_TTL }),
-    user: { id: user.id, email: user.email } satisfies MeDto,
+    user: meDto(user),
   });
 
   const authRateLimit = { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } };
@@ -127,7 +131,16 @@ export async function buildApp(
   app.get("/api/me", { preHandler: authenticate }, async (req, reply) => {
     const user = repo.userById(req.user.sub);
     if (!user) return reply.code(401).send({ error: "Nicht angemeldet" });
-    return { id: user.id, email: user.email } satisfies MeDto;
+    return meDto(user);
+  });
+
+  app.put("/api/me", { preHandler: authenticate }, async (req, reply) => {
+    const body = DisplayNameBody.safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: body.error.issues[0]?.message ?? "Ungültiger Name" });
+    repo.setDisplayName(req.user.sub, body.data.displayName);
+    const user = repo.userById(req.user.sub);
+    if (!user) return reply.code(401).send({ error: "Nicht angemeldet" });
+    return meDto(user);
   });
 
   // ---------- Persönliche Geräteauswahl ----------
@@ -198,7 +211,9 @@ export async function buildApp(
 
   app.post<{ Params: { id: string } }>("/api/producers/:id/invites", { preHandler: authenticate }, async (req, reply) => {
     if (!repo.isOwner(req.user.sub, req.params.id)) return reply.code(403).send({ error: "Nur der Erzeuger kann einladen" });
-    const invite = repo.createInvite(req.params.id);
+    const body = InviteBody.safeParse(req.body ?? {});
+    if (!body.success) return reply.code(400).send({ error: body.error.issues[0]?.message ?? "Ungültiger Name" });
+    const invite = repo.createInvite(req.params.id, body.data.displayName ?? null);
     return { ...invite, url: `${opts.publicUrl.replace(/\/$/, "")}/?invite=${invite.code}` };
   });
 

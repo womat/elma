@@ -170,6 +170,7 @@ button.secondary {
 .icon-picker button { padding: 3px; line-height: 0; background: none; border-radius: 50%; }
 .icon-picker button.on { box-shadow: 0 0 0 3px var(--accent); }
 .custom-inputs { display: grid; grid-template-columns: 1fr 90px; gap: 8px; }
+.name-inputs { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 
 .appliance-grid li { position: relative; }
 .bell { position: absolute; top: 6px; right: 7px; line-height: 0; color: var(--accent); }

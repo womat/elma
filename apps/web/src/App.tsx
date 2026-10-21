@@ -68,5 +68,5 @@ export function App() {
     );
   }
   if (!me) return <div className="center muted">Lade …</div>;
-  return <Dashboard key={notice ?? ""} token={token} me={me} notice={notice} onSignOut={signOut} />;
+  return <Dashboard key={notice ?? ""} token={token} me={me} notice={notice} onMeChange={setMe} onSignOut={signOut} />;
 }

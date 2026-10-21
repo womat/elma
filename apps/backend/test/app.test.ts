@@ -188,6 +188,59 @@ describe("Erzeuger umbenennen", () => {
   });
 });
 
+describe("Anzeigename", () => {
+  it("ist anfangs leer, lässt sich setzen, trimmen und wieder löschen", async () => {
+    repo.createUser("elisa@elma.test");
+    const headers = { authorization: `Bearer ${await login("elisa@elma.test")}` };
+    const put = (displayName: unknown) => app.inject({ method: "PUT", url: "/api/me", headers, payload: { displayName } });
+
+    expect((await app.inject({ url: "/api/me", headers })).json()).toMatchObject({ email: "elisa@elma.test", displayName: null });
+
+    const ok = await put("  Elisa ");
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json()).toMatchObject({ displayName: "Elisa" });
+    expect((await app.inject({ url: "/api/me", headers })).json()).toMatchObject({ displayName: "Elisa" });
+    expect(repo.userByEmail("elisa@elma.test")?.displayName).toBe("Elisa");
+
+    expect((await put(null)).json()).toMatchObject({ displayName: null });
+  });
+
+  it("lehnt leere, zu lange und falsche Namen ab und verlangt Anmeldung", async () => {
+    repo.createUser("elisa@elma.test");
+    const headers = { authorization: `Bearer ${await login("elisa@elma.test")}` };
+    const put = (payload: unknown) => app.inject({ method: "PUT", url: "/api/me", headers, payload: payload as object });
+
+    expect((await put({ displayName: "   " })).statusCode).toBe(400);
+    expect((await put({ displayName: "x".repeat(41) })).statusCode).toBe(400);
+    expect((await put({ displayName: 42 })).statusCode).toBe(400);
+    expect((await put({})).statusCode).toBe(400);
+    expect((await put({ displayName: "x".repeat(40) })).statusCode).toBe(200);
+    expect((await app.inject({ method: "PUT", url: "/api/me", payload: { displayName: "Elisa" } })).statusCode).toBe(401);
+  });
+});
+
+describe("Name in der Einladung", () => {
+  it("landet beim Einlösen im Konto, überschreibt aber keinen selbst gewählten Namen", async () => {
+    const { producer } = await setup();
+    const owner = { authorization: `Bearer ${await login("erzeuger@elma.test")}` };
+    const invite = (payload?: object) =>
+      app.inject({ method: "POST", url: `/api/producers/${producer.id}/invites`, headers: owner, ...(payload ? { payload } : {}) });
+
+    expect((await invite({ displayName: "x".repeat(41) })).statusCode).toBe(400);
+    expect((await invite()).statusCode).toBe(200);
+
+    const margit = repo.createUser("margit@elma.test");
+    const named = (await invite({ displayName: " Margit " })).json();
+    const headers = { authorization: `Bearer ${await login("margit@elma.test")}` };
+    expect((await app.inject({ method: "POST", url: `/api/invites/${named.code}/accept`, headers })).statusCode).toBe(200);
+    expect(repo.userById(margit.id)?.displayName).toBe("Margit");
+
+    repo.setDisplayName(margit.id, "Mama");
+    repo.acceptInvite(repo.createInvite(producer.id, "Margit").code, margit.id);
+    expect(repo.userById(margit.id)?.displayName).toBe("Mama");
+  });
+});
+
 describe("Version", () => {
   it("/api/health liefert die Version", async () => {
     const built = await buildApp({ db: openDb(":memory:"), jwtSecret: "x".repeat(32), publicUrl: "https://elma.test", version: "v0.2.0" });

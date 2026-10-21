@@ -24,10 +24,11 @@ interface Props {
   token: string;
   me: MeDto;
   notice: string | null;
+  onMeChange: (me: MeDto) => void;
   onSignOut: () => void;
 }
 
-export function Dashboard({ token, me, notice, onSignOut }: Props) {
+export function Dashboard({ token, me, notice, onMeChange, onSignOut }: Props) {
   const [producers, setProducers] = useState<ProducerDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>(loadView);
@@ -129,7 +130,14 @@ export function Dashboard({ token, me, notice, onSignOut }: Props) {
       <Footer />
 
       {account && passkeys && (
-        <AccountSheet me={me} passkeys={passkeys} onChange={setPasskeys} onSignOut={onSignOut} onClose={() => setAccount(false)} />
+        <AccountSheet
+          me={me}
+          passkeys={passkeys}
+          onChange={setPasskeys}
+          onMeChange={onMeChange}
+          onSignOut={onSignOut}
+          onClose={() => setAccount(false)}
+        />
       )}
 
       {editing && (

@@ -5,6 +5,7 @@ import { hashToken, newId, newInviteCode, newToken } from "./crypto.ts";
 export interface UserRow {
   id: string;
   email: string;
+  displayName: string | null;
 }
 
 export interface PasskeyRow {
@@ -38,7 +39,7 @@ export class Repo {
   }
 
   createUser(email: string, id: string = newId()): UserRow {
-    const user = { id, email: email.trim().toLowerCase() };
+    const user = { id, email: email.trim().toLowerCase(), displayName: null };
     this.db
       .prepare("INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)")
       .run(user.id, user.email, NO_PASSWORD, Date.now());
@@ -46,21 +47,26 @@ export class Repo {
   }
 
   userByEmail(email: string): UserRow | undefined {
-    return this.db.prepare("SELECT id, email FROM users WHERE email = ?").get(email.trim().toLowerCase()) as UserRow | undefined;
+    return this.db.prepare("SELECT id, email, display_name AS displayName FROM users WHERE email = ?").get(email.trim().toLowerCase()) as UserRow | undefined;
   }
 
   userById(id: string): UserRow | undefined {
-    return this.db.prepare("SELECT id, email FROM users WHERE id = ?").get(id) as UserRow | undefined;
+    return this.db.prepare("SELECT id, email, display_name AS displayName FROM users WHERE id = ?").get(id) as UserRow | undefined;
+  }
+
+  /** null löscht den Namen, dann gilt wieder der Teil der E-Mail vor dem @. */
+  setDisplayName(userId: string, displayName: string | null): void {
+    this.db.prepare("UPDATE users SET display_name = ? WHERE id = ?").run(displayName, userId);
   }
 
   /** Alle User mit Anzahl ihrer Passkeys, z. B. um zu sehen, wer noch umstellen muss. */
-  usersWithPasskeyCount(): { email: string; passkeys: number }[] {
+  usersWithPasskeyCount(): { email: string; displayName: string | null; passkeys: number }[] {
     return this.db
       .prepare(
-        `SELECT u.email, (SELECT COUNT(*) FROM passkeys k WHERE k.user_id = u.id) AS passkeys
+        `SELECT u.email, u.display_name AS displayName, (SELECT COUNT(*) FROM passkeys k WHERE k.user_id = u.id) AS passkeys
          FROM users u ORDER BY u.email`,
       )
-      .all() as { email: string; passkeys: number }[];
+      .all() as { email: string; displayName: string | null; passkeys: number }[];
   }
 
   // ---------- Passkeys ----------
@@ -121,7 +127,7 @@ export class Repo {
   userBySetupToken(token: string): UserRow | undefined {
     return this.db
       .prepare(
-        `SELECT u.id, u.email FROM setup_links l JOIN users u ON u.id = l.user_id
+        `SELECT u.id, u.email, u.display_name AS displayName FROM setup_links l JOIN users u ON u.id = l.user_id
          WHERE l.token_hash = ? AND l.used_at IS NULL AND l.expires_at > ?`,
       )
       .get(hashToken(token), Date.now()) as UserRow | undefined;
@@ -181,21 +187,27 @@ export class Repo {
     return !!this.db.prepare("SELECT 1 FROM producers WHERE id = ? AND owner_id = ?").get(producerId, userId);
   }
 
-  createInvite(producerId: string): { code: string; expiresAt: number } {
+  /** displayName: Name der eingeladenen Person, landet beim Einlösen im Konto (siehe acceptInvite). */
+  createInvite(producerId: string, displayName: string | null = null): { code: string; expiresAt: number } {
     const code = newInviteCode();
     const expiresAt = Date.now() + INVITE_TTL_MS;
-    this.db.prepare("INSERT INTO invites (code, producer_id, expires_at) VALUES (?, ?, ?)").run(code, producerId, expiresAt);
+    this.db
+      .prepare("INSERT INTO invites (code, producer_id, expires_at, display_name) VALUES (?, ?, ?, ?)")
+      .run(code, producerId, expiresAt, displayName);
     return { code, expiresAt };
   }
 
   /** Prüft, ob ein Einladungscode noch einlösbar ist, ohne ihn zu verbrauchen. */
-  validInvite(code: string): { producer_id: string } | undefined {
+  validInvite(code: string): { producer_id: string; display_name: string | null } | undefined {
     return this.db
-      .prepare("SELECT producer_id FROM invites WHERE code = ? AND used_by IS NULL AND expires_at > ?")
-      .get(code, Date.now()) as { producer_id: string } | undefined;
+      .prepare("SELECT producer_id, display_name FROM invites WHERE code = ? AND used_by IS NULL AND expires_at > ?")
+      .get(code, Date.now()) as { producer_id: string; display_name: string | null } | undefined;
   }
 
-  /** Löst eine Einladung ein und legt die Freigabe an. Gibt die producerId zurück oder null. */
+  /**
+   * Löst eine Einladung ein und legt die Freigabe an. Gibt die producerId zurück oder null.
+   * Der Name aus der Einladung kommt nur in ein Konto ohne Namen: Was jemand selbst gewählt hat, überschreibt keine Einladung.
+   */
   acceptInvite(code: string, userId: string): string | null {
     const invite = this.validInvite(code);
     if (!invite) return null;
@@ -205,6 +217,9 @@ export class Repo {
       this.db
         .prepare("INSERT OR IGNORE INTO shares (producer_id, recipient_id, created_at) VALUES (?, ?, ?)")
         .run(invite.producer_id, userId, Date.now());
+      if (invite.display_name) {
+        this.db.prepare("UPDATE users SET display_name = ? WHERE id = ? AND display_name IS NULL").run(invite.display_name, userId);
+      }
       this.db.exec("COMMIT");
     } catch (err) {
       this.db.exec("ROLLBACK");

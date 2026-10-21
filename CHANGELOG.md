@@ -2,6 +2,27 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.7.0 – 2026-10-21
+
+- **Anzeigename im Konto:** Im Blatt „Anmeldung“ (Schlüssel-Symbol oben) gibt es das neue Feld „Dein Name“, z. B. „Elisa“.
+  Er ist 1 bis 40 Zeichen lang, Leerzeichen am Rand fallen weg. Ein leeres Feld löscht den Namen wieder.
+  Ohne Namen gilt der Teil der E-Mail vor dem @. Wo andere den Namen sehen, soll also nie die ganze E-Mail-Adresse stehen.
+  Das ist Phase 1 des geplanten ELISA-Modus ([docs/elisa.md](docs/elisa.md)): Banner, Push-Nachrichten und die Strom-Ampel MAGGIE
+  zeigen später, wer gerade reserviert. Sonst zeigt die App den Namen noch nirgends an.
+  - Terminal: `node src/cli.ts set-name <email> <Name>` setzt den Namen für einen User, `""` löscht ihn. `list-users` zeigt die Namen mit an.
+    Damit trägt der Betreiber die Namen bestehender Konten nach dem Update selbst ein. In die Datenbank-Umstellung kommen sie
+    bewusst nicht: Das Repo ist öffentlich, die E-Mail-Adressen stünden sonst im Code, und die ELMA-Box anderer Erzeuger führt dieselbe Umstellung aus.
+  - **Name gleich bei der Einladung:** Über dem Knopf „Empfänger einladen“ gibt es ein Feld für den Namen der Person, im Terminal
+    `invite <producerId> <Name>`. Legt sie über den Link ihr Konto an, steht der Name schon drin.
+    Löst jemand mit bestehendem Konto die Einladung ein, wird der Name nur übernommen, wenn noch keiner gesetzt ist.
+    Einen selbst gewählten Namen überschreibt eine Einladung nie.
+  - API: `GET /api/me` und die Anmeldeantwort liefern zusätzlich `displayName` (oder `null`). `PUT /api/me` mit `{ displayName }` setzt ihn, `null` löscht ihn.
+  - Datenbank: neue Spalten `users.display_name` und `invites.display_name`. Bestehende Datenbanken bekommen sie beim Start automatisch (`ALTER TABLE`, nur wenn sie noch fehlen).
+    Der Hilfsbaustein dafür (`addColumn` in `db.ts`) ist für die weiteren Spalten des ELISA-Modus gedacht.
+- **Sicherheitsupdate:** `vite` 8.3.2 → 8.3.5. Die alte Version meldete `pnpm audit` als „high“: Über `launch-editor` ließ sich
+  unter Windows eine Existenzprüfung von Dateien umgehen. Das betrifft nur den Entwicklungsserver, nicht die ausgelieferte App,
+  hätte die CI aber rot gemacht.
+
 ## 0.6.3 – 2026-10-08
 
 - **Sicherheitslücke behoben:** `@fastify/static` von 8.3 auf 10.1.5 gehoben. Die alte Version ließ sich über

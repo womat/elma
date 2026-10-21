@@ -198,7 +198,8 @@ export function registerPasskeyRoutes(app: FastifyInstance, { repo, publicUrl, a
       const user = repo.createUser(pending.email, pending.userId);
       savePasskey(req, user.id, credential);
       repo.acceptInvite(pending.inviteCode, user.id);
-      return loginResponse(user);
+      // neu lesen: acceptInvite kann den Namen aus der Einladung eingetragen haben
+      return loginResponse(repo.userById(user.id) ?? user);
     }
 
     const user = repo.userBySetupToken(pending.setupToken);

@@ -43,6 +43,24 @@ export interface HistoryPoint {
 export interface MeDto {
   id: string;
   email: string;
+  /** selbst gewählter Name; null = nicht gesetzt, angezeigt wird dann {@link displayNameOf} */
+  displayName: string | null;
+}
+
+/** Anzeigename im Konto, z. B. „Elisa“: 1–40 Zeichen, getrimmt. */
+const DisplayName = z.string().trim().min(1, "Name darf nicht leer sein").max(40, "Name darf höchstens 40 Zeichen haben");
+
+/** Anzeigename ändern; null löscht ihn. */
+export const DisplayNameBody = z.object({ displayName: DisplayName.nullable() });
+export type DisplayNameBody = z.infer<typeof DisplayNameBody>;
+
+/** Einladung erstellen; der Name wird beim Einlösen ins Konto übernommen, wenn dort noch keiner steht. */
+export const InviteBody = z.object({ displayName: DisplayName.optional() });
+export type InviteBody = z.infer<typeof InviteBody>;
+
+/** Name für Banner und Push: der gewählte Anzeigename, sonst der Teil der E-Mail vor dem @ – nie die ganze Adresse. */
+export function displayNameOf(user: { displayName: string | null; email: string }): string {
+  return user.displayName ?? user.email.split("@")[0]!;
 }
 
 /** Ein Passkey des angemeldeten Users (ohne Schlüsselmaterial). */
