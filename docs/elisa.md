@@ -148,7 +148,7 @@ Push-Texte:
 ## Node-RED (womat/myhome)
 
 Die Details stehen in `KONZEPT-ELISA.md` im Repo myhome, hier nur die Schnittstelle und die Kurzfassung:
-- Ein neuer Tab *ELISA* ruft alle 15 s `POST https://my-elma.net/api/control/status` mit dem Steuer-Token auf (aus den Node-RED-Credentials).
+- Ein neuer Tab *ELISA* ruft alle 15 s `POST <öffentliche ELMA-Adresse>/api/control/status` mit dem Steuer-Token auf (aus den Node-RED-Credentials).
   - Er schickt den Gerätezustand mit (Kompressor aus `myhome/heatpump/runtime`, Ladung über S0 > 1 kW).
   - Zurück kommt die Reservierung.
 - Die Logik liegt in `lib/elisa.js`, mit Tests.
@@ -157,7 +157,7 @@ Die Details stehen in `KONZEPT-ELISA.md` im Repo myhome, hier nur die Schnittste
   - `ElisaHalt` für die Wallbox. Die LM-Freigabe schaltet dann nicht ein. Handbedienung und Abfahrtsplanung haben Vorrang, dafür bekommt das LM der Abfahrtsplanung ein Kennzeichen `abfahrt`.
 - Einträge ins Schaltprotokoll.
 - Fail-open: keine Antwort oder `until` vorbei heißt keine Sperre.
-- Uhrzeit: `until` kommt aus der Backend-Uhr. ELMA und Node-RED laufen beide auf `mysmarthome`, die Uhr ist also dieselbe.
+- Uhrzeit: `until` kommt aus der Backend-Uhr. Laufen ELMA und Node-RED auf demselben Gerät (im ersten Haus der Fall), ist die Uhr dieselbe, sonst reicht NTP.
 
 ## MAGGIE (womat/maggie)
 
@@ -167,11 +167,25 @@ Die Details stehen in `docs/KONZEPT.md` von maggie, hier nur die Kurzfassung:
   - Eingang ist `elma/reservation`. MAGGIE prüft `until` selbst.
 - **Push an Margit beim Start**, denn ELMA schreibt nicht an Margit. Es gelten die Regeln von MAGGIE (Nachtruhe 22–7 Uhr, höchstens eine pro Stunde und Zustand).
 
+## Umsetzungsreihenfolge
+
+Festgelegt mit Wolfgang am 2026-10-21. Jede Phase ist für sich ausrollbar, ein eigenes Release und eine eigene Session, gestartet im jeweiligen Repo-Ordner (z. B. „Setz Phase 2 aus docs/elisa.md um“). Nach Abschluss hier abhaken.
+
+| Phase | Repo | Inhalt | Wirkung danach | Stand |
+|---|---|---|---|---|
+| 0 | myhome, maggie | Nur Doku: `KONZEPT-ELISA.md` in myhome, ELISA-Abschnitt in `docs/KONZEPT.md` von maggie | Jedes Repo kennt seinen Teil | erledigt 2026-10-21 |
+| 1 | elma | **Anzeigename** im Konto (`users.display_name`, `PUT /api/me`, Feld im Konto-Sheet) | Klein und auch ohne ELISA nützlich | offen |
+| 2 | elma | **Reservierung**: Recht, Budget, Knopf, Sheet, Banner, Push, `POST /api/control/status`, Steuer-Token per CLI | Elisa kann reservieren, der Erzeuger bekommt die Info. Ohne Node-RED steht „Die Sperre wirkt gerade nicht“ da | offen |
+| 3 | myhome | **Node-RED**: `lib/elisa.js`, `ElisaEVU`/`ElisaHalt` in `lib/aktor.js`, Tab *ELISA*. Zuerst **Probebetrieb** (nur Schaltprotokoll, was es tun würde), danach scharf | Wallbox und WP werden zurückgehalten | offen |
+| 4 | elma, maggie | Bridge veröffentlicht `elma/reservation`. MAGGIE bekommt den Zustand `reserved` und die Push an Margit | Margit sieht die Reservierung | offen |
+
+Warum so: Node-RED und MAGGIE reagieren nur auf das, was ELMA liefert, deshalb kommt ELMA zuerst. Das Schalten im Haus greift in Wallbox und WP ein und kommt deshalb spät und zuerst im Probebetrieb, so wie es bei der Entladesperre eine Woche Probebetrieb gab.
+
 ## Vor der Umsetzung mitbringen
 
 - Zugang zu den drei Repos (elma, myhome, maggie). Node-RED wird im Editor auf dem Pi geändert und danach exportiert, so beschreibt es myhome.
 - Nach dem Ausrollen von ELMA einmal `control-token` erzeugen und in Node-RED eintragen. Das Token erzeugt Wolfgang selbst im Terminal, nicht über eine Claude-Sitzung.
-- Prüfen, ob Node-RED vom Pi aus `https://my-elma.net` erreicht. Das ist erwartbar, weil auch der aWATTar-Abruf ins Internet geht.
+- Prüfen, ob Node-RED die öffentliche ELMA-Adresse erreicht. Das ist erwartbar, weil auch der aWATTar-Abruf ins Internet geht.
 
 ## Tests
 
