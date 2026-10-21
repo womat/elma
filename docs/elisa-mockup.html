@@ -223,7 +223,7 @@ function sheet() {
     <p class="long"><b>E</b>nergie für die <b>L</b>ieblingstochter: <b>I</b>hr <b>S</b>onnenstrom-<b>A</b>nteil</p>
     <div>Wie lange brauchst du den Überschuss?</div>
     <div class="chips">${DURATIONS.map((d) => `<button data-pick="${d}" aria-pressed="${state.pick === d}" ${d > l ? "disabled" : ""}>${d} min</button>`).join("")}</div>
-    <p class="info">Solange du reservierst, bleibt der Überschuss für dich frei. Heute noch ${l} min frei.</p>
+    <p class="info">Solange du reservierst, bleibt der Überschuss für dich frei. Heute noch ${l} min übrig.</p>
     <button data-act="start" ${state.pick > l ? "disabled" : ""}>${state.pick} min reservieren, bis ${fmt(state.clock + state.pick)}</button>
   </div></div>`;
 }

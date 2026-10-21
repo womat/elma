@@ -71,7 +71,7 @@ Die einzelnen Bildschirme zeigen die Mockups.
 3. Ein Tipp öffnet ein Bottom-Sheet (wie `AccountSheet`):
    - die Langform des Namens
    - die Dauer-Chips 15/30/45/60 min, über dem Restbudget gesperrt
-   - der Hinweis „Solange du reservierst, bleibt der Überschuss für dich frei. Heute noch X min frei.“, ohne Node-RED-Kontakt stattdessen „Die Sperre wirkt gerade nicht, Wolfgang bekommt nur eine Info.“
+   - der Hinweis „Solange du reservierst, bleibt der Überschuss für dich frei. Heute noch X min übrig.“, ohne Node-RED-Kontakt stattdessen „Die Sperre wirkt gerade nicht, Wolfgang bekommt nur eine Info.“
    - der Bestätigungsknopf mit Endzeit, z. B. „30 min reservieren, bis 14:22“
 4. Während die Reservierung läuft, sehen alle Betrachter oben in der Karte ein Banner: „🔒 ELISA-Modus aktiv · noch 17 min · bis 14:22“, mit Fortschrittsbalken. Reservierender und Erzeuger haben dort „Beenden“.
    - Bei Elisa: „Du hast reserviert. Solange du reservierst, bleibt der Überschuss für dich frei.“

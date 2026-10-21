@@ -175,7 +175,7 @@ function elma(s) {
       <h4>🔒 ELISA-Modus</h4><p class="long"><b>E</b>nergie für die <b>L</b>ieblingstochter: <b>I</b>hr <b>S</b>onnenstrom-<b>A</b>nteil</p>
       <div>Wie lange brauchst du den Überschuss?</div>
       <div class="chips">${[15, 30, 45, 60].map((d) => `<span class="${d === s.sheet.pick ? "on" : ""} ${d > s.budget ? "off" : ""}">${d} min</span>`).join("")}</div>
-      ${s.offline ? `<p class="info" style="color:var(--e-text)">⚠ Die Sperre wirkt gerade nicht, Wolfgang bekommt nur eine Info.</p>` : `<p class="info">Solange du reservierst, bleibt der Überschuss für dich frei. Heute noch ${s.budget} min frei.</p>`}
+      ${s.offline ? `<p class="info" style="color:var(--e-text)">⚠ Die Sperre wirkt gerade nicht, Wolfgang bekommt nur eine Info.</p>` : `<p class="info">Solange du reservierst, bleibt der Überschuss für dich frei. Heute noch ${s.budget} min übrig.</p>`}
       <button class="go">${s.sheet.pick} min reservieren, bis ${s.sheet.until}</button></div></div>` : "";
   return `<div class="elma">
     <div class="bar-top"><div class="brand"><span class="logo"><i></i></span>ELMA</div><span class="dot"></span><span class="me">${s.me}</span></div>
