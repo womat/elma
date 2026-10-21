@@ -70,6 +70,11 @@ export class PushNotifier {
     });
   }
 
+  /** Nachricht an bestimmte User, unabhängig von den Glocken, z. B. zu einer Reservierung. */
+  async notifyUsers(userIds: string[], payload: PushPayload): Promise<void> {
+    await Promise.all([...new Set(userIds)].map((id) => this.sendToUser(id, payload)));
+  }
+
   /** true = für dieses Gerät jetzt benachrichtigen. */
   private update(key: string, appliance: Appliance, reading: SurplusReading): boolean {
     const now = reading.timestamp;

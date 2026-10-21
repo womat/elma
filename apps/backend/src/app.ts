@@ -8,21 +8,27 @@ import { isIP } from "node:net";
 import { z } from "zod";
 import {
   ApplianceSettings,
+  CanReserveBody,
+  ControlStatus,
   DisplayNameBody,
+  displayNameOf,
   IngestMessage,
   InviteBody,
   LiveClientMessage,
   Throttle,
   PushSubscriptionBody,
+  ReservationBody,
   type LiveServerMessage,
   type MeDto,
   type ProducerDto,
+  type RecipientDto,
 } from "@elma/shared";
 import type { Db } from "./db.ts";
 import { LiveHub } from "./hub.ts";
 import { registerPasskeyRoutes } from "./passkeys.ts";
 import { loadVapidKeys, PushNotifier, webPushSender, type NotifierOptions, type PushSender } from "./push.ts";
 import { Repo, type UserRow } from "./repo.ts";
+import { ReservationError, ReservationService } from "./reservations.ts";
 import { parseShellyFrame } from "./shelly.ts";
 
 export interface AppOptions {
@@ -75,7 +81,7 @@ export function redactUrl(url: string): string {
 
 export async function buildApp(
   opts: AppOptions,
-): Promise<{ app: FastifyInstance; hub: LiveHub; repo: Repo; notifier: PushNotifier }> {
+): Promise<{ app: FastifyInstance; hub: LiveHub; repo: Repo; notifier: PushNotifier; reservations: ReservationService }> {
   const repo = new Repo(opts.db);
   const hub = new LiveHub(repo, opts.smoothWindowMs);
   const vapid = loadVapidKeys(repo);
@@ -85,6 +91,8 @@ export async function buildApp(
     opts.pushOptions,
   );
   hub.subscribe((producerId, reading) => void notifier.onReading(producerId, reading));
+  const reservations = new ReservationService(repo, notifier);
+  reservations.start();
   const app = Fastify({
     logger: opts.logger
       ? {
@@ -105,6 +113,7 @@ export async function buildApp(
   await app.register(fastifyJwt, { secret: opts.jwtSecret });
   await app.register(fastifyRateLimit, { global: false, keyGenerator: clientIp });
   await app.register(fastifyWebsocket);
+  app.addHook("onClose", async () => reservations.stop());
 
   const authenticate = async (req: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -184,9 +193,21 @@ export async function buildApp(
 
   // ---------- Erzeuger ----------
 
+  const ownerName = (ownerId: string) => {
+    const owner = repo.userById(ownerId);
+    return owner ? displayNameOf(owner) : "Erzeuger";
+  };
+
   app.get("/api/producers", { preHandler: authenticate }, async (req) => {
     return repo.visibleProducers(req.user.sub).map(
-      (p): ProducerDto => ({ id: p.id, name: p.name, isOwner: p.owner_id === req.user.sub, current: hub.get(p.id) }),
+      (p): ProducerDto => ({
+        id: p.id,
+        name: p.name,
+        ownerName: ownerName(p.owner_id),
+        isOwner: p.owner_id === req.user.sub,
+        current: hub.get(p.id),
+        reservation: reservations.stateFor(p.id, req.user.sub),
+      }),
     );
   });
 
@@ -221,6 +242,75 @@ export async function buildApp(
     const producerId = repo.acceptInvite(req.params.code, req.user.sub);
     if (!producerId) return reply.code(400).send({ error: "Einladung ungültig oder abgelaufen" });
     return { producerId };
+  });
+
+  // ---------- Reservierung (ELISA-Modus, docs/elisa.md) ----------
+
+  const reservationReply = (reply: FastifyReply, err: unknown) => {
+    if (err instanceof ReservationError) return reply.code(err.status).send({ error: err.message });
+    throw err;
+  };
+
+  app.post<{ Params: { id: string } }>(
+    "/api/producers/:id/reservation",
+    { preHandler: authenticate, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } },
+    async (req, reply) => {
+      if (!repo.canView(req.user.sub, req.params.id)) return reply.code(404).send({ error: "Nicht gefunden" });
+      const body = ReservationBody.safeParse(req.body);
+      if (!body.success) return reply.code(400).send({ error: body.error.issues[0]?.message ?? "Ungültige Dauer" });
+      try {
+        reservations.reserve(req.params.id, req.user.sub, body.data.minutes);
+      } catch (err) {
+        return reservationReply(reply, err);
+      }
+      return reservations.stateFor(req.params.id, req.user.sub);
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>("/api/producers/:id/reservation", { preHandler: authenticate }, async (req, reply) => {
+    if (!repo.canView(req.user.sub, req.params.id)) return reply.code(404).send({ error: "Nicht gefunden" });
+    try {
+      reservations.end(req.params.id, req.user.sub);
+    } catch (err) {
+      return reservationReply(reply, err);
+    }
+    return reservations.stateFor(req.params.id, req.user.sub);
+  });
+
+  app.get<{ Params: { id: string } }>("/api/producers/:id/recipients", { preHandler: authenticate }, async (req, reply) => {
+    if (!repo.isOwner(req.user.sub, req.params.id)) return reply.code(403).send({ error: "Nur der Erzeuger sieht die Empfänger" });
+    return repo
+      .recipientsOf(req.params.id)
+      .map((r): RecipientDto => ({ userId: r.id, name: displayNameOf(r), email: r.email, canReserve: r.canReserve }));
+  });
+
+  app.put<{ Params: { id: string; userId: string } }>(
+    "/api/producers/:id/recipients/:userId",
+    { preHandler: authenticate },
+    async (req, reply) => {
+      if (!repo.isOwner(req.user.sub, req.params.id)) return reply.code(403).send({ error: "Nur der Erzeuger vergibt das Recht" });
+      const body = CanReserveBody.safeParse(req.body);
+      if (!body.success) return reply.code(400).send({ error: "canReserve fehlt" });
+      try {
+        reservations.setCanReserve(req.params.id, req.params.userId, body.data.canReserve);
+      } catch (err) {
+        return reservationReply(reply, err);
+      }
+      return { userId: req.params.userId, canReserve: body.data.canReserve };
+    },
+  );
+
+  // Node-RED fragt von innen nach außen (über den Cloudflare-Tunnel), statt dass ELMA ins LAN schaltet: Das Backend
+  // erreicht das LAN nicht, und in myhome schaltet keine eingehende MQTT-Nachricht etwas. Eigenes Token, damit es keine
+  // Messwerte einspeisen kann; das Geräte-Token der Bridge gilt hier nicht.
+  app.post("/api/control/status", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (req, reply) => {
+    const token = req.headers.authorization?.replace(/^Bearer\s+/i, "") ?? "";
+    const producer = token ? repo.controlTokenProducer(token) : undefined;
+    if (!producer) return reply.code(401).send({ error: "Ungültiges Steuer-Token" });
+    const body = ControlStatus.safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: "Ungültiger Status" });
+    repo.touchControlToken(token);
+    return reservations.reportStatus(producer.id, body.data);
   });
 
   app.get("/api/health", async () => ({ ok: true, version: opts.version ?? "dev" }));
@@ -292,14 +382,24 @@ export async function buildApp(
       clearTimeout(authTimeout);
 
       const allowed = new Set(repo.visibleProducers(userId).map((p) => p.id));
+      const sendReservation = (producerId: string) =>
+        send({ type: "reservation", producerId, state: reservations.stateFor(producerId, userId) });
       send({ type: "ready", producerIds: [...allowed] });
       for (const id of allowed) {
         const reading = hub.get(id);
         if (reading) send({ type: "reading", producerId: id, reading });
+        sendReservation(id);
       }
-      unsubscribe = hub.subscribe((producerId, reading) => {
+      const offReadings = hub.subscribe((producerId, reading) => {
         if (allowed.has(producerId)) send({ type: "reading", producerId, reading });
       });
+      const offReservations = reservations.subscribe((producerId) => {
+        if (allowed.has(producerId)) sendReservation(producerId);
+      });
+      unsubscribe = () => {
+        offReadings();
+        offReservations();
+      };
     });
 
     socket.on("close", () => {
@@ -319,5 +419,5 @@ export async function buildApp(
     });
   }
 
-  return { app, hub, repo, notifier };
+  return { app, hub, repo, notifier, reservations };
 }

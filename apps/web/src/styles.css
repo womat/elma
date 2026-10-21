@@ -273,3 +273,52 @@ button.edit-devices { display: inline-flex; align-items: center; gap: 6px; paddi
 .chip { display: inline-flex; align-items: center; gap: 6px; }
 .appliance-grid.pick .check { line-height: 0; }
 .custom-list .link { line-height: 0; }
+
+/* ELISA-Modus: Reservieren, Banner, Recht pro Empfänger (docs/elisa.md, Mockup docs/elisa-mockup.html) */
+:root { --lock: #f5c542; }
+@media (prefers-color-scheme: light) {
+  :root { --lock: #b7860b; }
+}
+.reserve { display: grid; gap: 6px; justify-items: center; margin-top: 14px; }
+button.reserve-main { width: 100%; display: grid; gap: 1px; padding: 12px 16px 10px; }
+button.reserve-main span { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+button.reserve-main small { font-weight: 500; font-size: 0.75rem; opacity: 0.75; letter-spacing: 0.06em; }
+button.reserve-main:disabled { opacity: 1; background: color-mix(in srgb, var(--none) 35%, var(--card)); color: var(--muted); cursor: not-allowed; }
+.reserve-left, .reserve-blocked { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; }
+.reserve-blocked { color: var(--text); display: inline-flex; align-items: center; gap: 6px; }
+
+.reservation-banner {
+  margin-top: 12px; padding: 12px 14px; border-radius: 14px; display: grid; gap: 6px;
+  border: 1.5px solid color-mix(in srgb, var(--lock) 70%, transparent);
+  background: color-mix(in srgb, var(--lock) 12%, transparent);
+}
+.reservation-title { font-weight: 700; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.reservation-title span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+.reservation-rest { font-variant-numeric: tabular-nums; color: var(--lock); white-space: nowrap; }
+.reservation-text { margin: 0; font-size: 0.88rem; color: var(--muted); }
+.reservation-bar { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--muted) 25%, transparent); overflow: hidden; }
+.reservation-bar i { display: block; height: 100%; background: var(--lock); transition: width 0.4s linear; }
+.reservation-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.reservation-row button { padding: 6px 12px; }
+
+.elisa-long b { color: var(--lock); }
+.duration-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.duration-chips button { padding: 14px 4px; background: var(--card); color: var(--text); box-shadow: inset 0 0 0 1.5px transparent; }
+.duration-chips button[aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+.duration-chips button:disabled { text-decoration: line-through; opacity: 0.45; }
+.reserve-info { margin: 14px 0 0; }
+.reserve-confirm { width: 100%; margin-top: 14px; }
+
+.recipients-head { display: flex; justify-content: space-between; align-items: center; }
+.recipients-head span { display: inline-flex; align-items: center; gap: 6px; }
+.custom-list li.recipient { padding: 8px 12px; }
+button.switch { width: 46px; height: 26px; border-radius: 13px; padding: 0; background: var(--none); position: relative; flex: none; }
+button.switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.2s;
+}
+button.switch[aria-checked="true"] { background: var(--good); }
+button.switch[aria-checked="true"]::after { transform: translateX(20px); }
+.push-calm { margin: 0 0 10px; }
+@media (prefers-reduced-motion: reduce) {
+  .reservation-bar i, button.switch::after { transition: none; }
+}

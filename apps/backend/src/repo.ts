@@ -22,6 +22,20 @@ export interface ProducerRow {
   owner_id: string;
 }
 
+export interface ReservationRow {
+  id: string;
+  producerId: string;
+  userId: string;
+  startsAt: number;
+  endsAt: number;
+}
+
+/** expired = Zeit abgelaufen, user/owner = vorzeitig beendet, wallbox = Ladung begonnen, revoked = Recht entzogen */
+export type ReservationEndReason = "expired" | "user" | "owner" | "wallbox" | "revoked";
+
+const RESERVATION_SELECT =
+  "SELECT id, producer_id AS producerId, user_id AS userId, starts_at AS startsAt, ends_at AS endsAt FROM reservations";
+
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SETUP_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /**
@@ -286,6 +300,103 @@ export class Repo {
       .prepare("SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?")
       .all(userId) as { endpoint: string; p256dh: string; auth: string }[];
     return rows.map((r) => ({ endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } }));
+  }
+
+  // ---------- Reservierung (ELISA-Modus) ----------
+
+  /** Nur Empfänger mit Freigabe und gesetztem Recht; der Erzeuger selbst reserviert nicht bei sich. */
+  canReserve(producerId: string, userId: string): boolean {
+    return !!this.db.prepare("SELECT 1 FROM shares WHERE producer_id = ? AND recipient_id = ? AND can_reserve = 1").get(producerId, userId);
+  }
+
+  /** false, wenn es keine Freigabe für diesen Empfänger gibt. */
+  setCanReserve(producerId: string, recipientId: string, canReserve: boolean): boolean {
+    return (
+      this.db
+        .prepare("UPDATE shares SET can_reserve = ? WHERE producer_id = ? AND recipient_id = ?")
+        .run(canReserve ? 1 : 0, producerId, recipientId).changes > 0
+    );
+  }
+
+  recipientsOf(producerId: string): { id: string; email: string; displayName: string | null; canReserve: boolean }[] {
+    const rows = this.db
+      .prepare(
+        `SELECT u.id, u.email, u.display_name AS displayName, s.can_reserve AS canReserve
+         FROM shares s JOIN users u ON u.id = s.recipient_id WHERE s.producer_id = ? ORDER BY s.created_at`,
+      )
+      .all(producerId) as { id: string; email: string; displayName: string | null; canReserve: number }[];
+    return rows.map((r) => ({ ...r, canReserve: r.canReserve === 1 }));
+  }
+
+  activeReservation(producerId: string): ReservationRow | undefined {
+    return this.db.prepare(`${RESERVATION_SELECT} WHERE producer_id = ? AND ended_at IS NULL`).get(producerId) as
+      | ReservationRow
+      | undefined;
+  }
+
+  /** Alle noch nicht beendeten Reservierungen, z. B. um nach einem Neustart die Timer wieder zu stellen. */
+  activeReservations(): ReservationRow[] {
+    return this.db.prepare(`${RESERVATION_SELECT} WHERE ended_at IS NULL`).all() as unknown as ReservationRow[];
+  }
+
+  /**
+   * Verbrauchte Millisekunden eines Empfängers bei einem Erzeuger seit dayStart. Beendete zählen mit der tatsächlich
+   * genutzten Zeit, eine laufende mit ihrer ganzen geplanten Dauer (sie kann ja noch bis zum Ende laufen).
+   */
+  reservedMsSince(producerId: string, userId: string, dayStart: number): number {
+    const row = this.db
+      .prepare(
+        `SELECT COALESCE(SUM(MIN(COALESCE(ended_at, ends_at), ends_at) - starts_at), 0) AS ms FROM reservations
+         WHERE producer_id = ? AND user_id = ? AND starts_at >= ?`,
+      )
+      .get(producerId, userId, dayStart) as { ms: number };
+    return row.ms;
+  }
+
+  /** Wirft, wenn beim Erzeuger schon eine läuft (Index reservations_one_active). */
+  createReservation(producerId: string, userId: string, startsAt: number, endsAt: number): ReservationRow {
+    const id = newId();
+    this.db
+      .prepare("INSERT INTO reservations (id, producer_id, user_id, starts_at, ends_at) VALUES (?, ?, ?, ?, ?)")
+      .run(id, producerId, userId, startsAt, endsAt);
+    return { id, producerId, userId, startsAt, endsAt };
+  }
+
+  /** false, wenn sie schon beendet war. */
+  endReservation(id: string, endedAt: number, reason: ReservationEndReason): boolean {
+    return (
+      this.db
+        .prepare("UPDATE reservations SET ended_at = ?, end_reason = ? WHERE id = ? AND ended_at IS NULL")
+        .run(endedAt, reason, id).changes > 0
+    );
+  }
+
+  /** Neues Steuer-Token für Node-RED; ein vorheriges des Erzeugers wird ungültig. Klartext gibt es nur jetzt. */
+  createControlToken(producerId: string): string {
+    const token = newToken();
+    this.db.exec("BEGIN");
+    try {
+      this.db.prepare("DELETE FROM control_tokens WHERE producer_id = ?").run(producerId);
+      this.db.prepare("INSERT INTO control_tokens (token_hash, producer_id, created_at) VALUES (?, ?, ?)").run(hashToken(token), producerId, Date.now());
+      this.db.exec("COMMIT");
+    } catch (err) {
+      this.db.exec("ROLLBACK");
+      throw err;
+    }
+    return token;
+  }
+
+  controlTokenProducer(token: string): ProducerRow | undefined {
+    return this.db
+      .prepare("SELECT p.id, p.name, p.owner_id FROM control_tokens t JOIN producers p ON p.id = t.producer_id WHERE t.token_hash = ?")
+      .get(hashToken(token)) as ProducerRow | undefined;
+  }
+
+  /** Merkt die letzte Nutzung, höchstens einmal pro Stunde: Node-RED fragt alle 15 s, das wären unnötig viele Schreibzugriffe. */
+  touchControlToken(token: string, now = Date.now()): void {
+    this.db
+      .prepare("UPDATE control_tokens SET last_used_at = ?1 WHERE token_hash = ?2 AND (last_used_at IS NULL OR last_used_at < ?1 - 3600000)")
+      .run(now, hashToken(token));
   }
 
   getMeta(key: string): string | undefined {

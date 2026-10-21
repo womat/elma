@@ -2,6 +2,7 @@ import { Bell, Check, SlidersHorizontal, TriangleAlert } from "lucide-react";
 import type { Appliance } from "./appliances.ts";
 import { formatPower } from "./format.ts";
 import { ApplianceIcon } from "./icons.tsx";
+import { NO_BELL_RESERVE_HINT } from "./PushToggle.tsx";
 
 interface Props {
   /** aktueller Überschuss in Watt, null = keine aktuellen Daten */
@@ -11,11 +12,13 @@ interface Props {
   notify: string[];
   /** Push ist auf diesem Gerät aktiv */
   pushOn: boolean;
+  /** darf reservieren: ohne Glocke kein Warnhinweis, sondern ein ruhiger (docs/elisa.md) */
+  canReserve: boolean;
   onEdit: () => void;
 }
 
 /** Zeigt anhand der eigenen Geräte, was mit dem Überschuss gerade betrieben werden kann. */
-export function ApplianceGrid({ watts, appliances, notify, pushOn, onEdit }: Props) {
+export function ApplianceGrid({ watts, appliances, notify, pushOn, canReserve, onEdit }: Props) {
   const surplus = Math.max(0, watts ?? 0);
   const fitting = appliances.filter((a) => a.watts <= surplus).length;
 
@@ -37,7 +40,8 @@ export function ApplianceGrid({ watts, appliances, notify, pushOn, onEdit }: Pro
           <SlidersHorizontal size={16} className="ui-icon" aria-hidden /> Meine Geräte
         </button>
       </div>
-      {pushOn && notify.length === 0 && appliances.length > 0 && (
+      {pushOn && notify.length === 0 && appliances.length > 0 && canReserve && <p className="muted small push-calm">{NO_BELL_RESERVE_HINT}</p>}
+      {pushOn && notify.length === 0 && appliances.length > 0 && !canReserve && (
         <p className="push-warning small">
           <TriangleAlert size={15} className="ui-icon" aria-hidden /> Benachrichtigungen sind aktiv, aber kein Gerät hat{" "}
           <Bell size={14} className="ui-icon" aria-label="Glocke" />.{" "}

@@ -1,6 +1,7 @@
 # ELISA-Modus: Überschuss reservieren
 
-> **Status:** Plan vollständig (2026-10-21). Phase 1 (Anzeigename) ist mit 0.7.0 umgesetzt, der Rest ist offen (siehe [Umsetzungsreihenfolge](#umsetzungsreihenfolge)).
+> **Status:** Plan vollständig (2026-10-21). Phase 1 (Anzeigename) ist mit 0.7.0 umgesetzt, Phase 2 (Reservierung in ELMA) mit 0.8.0. Offen sind Node-RED und MAGGIE (siehe [Umsetzungsreihenfolge](#umsetzungsreihenfolge)).
+> Was bei der Umsetzung vom Plan abweicht oder neu entschieden wurde, steht unter [Umgesetzt in 0.8.0](#umgesetzt-in-080-phase-2).
 > Mockups (Datei im Browser öffnen):
 > - [elisa-mockup.html](elisa-mockup.html): klickbarer Ablauf in ELMA
 > - [elisa-szenarien.html](elisa-szenarien.html): sieben Szenarien nebeneinander für Elisa (ELMA), Wolfgang (ELMA) und Margit (MAGGIE)
@@ -180,11 +181,34 @@ Festgelegt mit Wolfgang am 2026-10-21. Jede Phase ist für sich ausrollbar, ein 
 |---|---|---|---|---|
 | 0 | myhome, maggie | Nur Doku: `KONZEPT-ELISA.md` in myhome, ELISA-Abschnitt in `docs/KONZEPT.md` von maggie | Jedes Repo kennt seinen Teil | erledigt 2026-10-21 |
 | 1 | elma | **Anzeigename** im Konto (`users.display_name`, `PUT /api/me`, Feld im Konto-Sheet) | Klein und auch ohne ELISA nützlich | erledigt 2026-10-21 (0.7.0) |
-| 2 | elma | **Reservierung**: Recht, Budget, Knopf, Sheet, Banner, Push, `POST /api/control/status`, Steuer-Token per CLI | Elisa kann reservieren, der Erzeuger bekommt die Info. Ohne Node-RED steht „Die Sperre wirkt gerade nicht“ da | offen |
+| 2 | elma | **Reservierung**: Recht, Budget, Knopf, Sheet, Banner, Push, `POST /api/control/status`, Steuer-Token per CLI | Elisa kann reservieren, der Erzeuger bekommt die Info. Ohne Node-RED steht „Die Sperre wirkt gerade nicht“ da | umgesetzt 2026-10-21 (0.8.0), Ausrollen offen |
 | 3 | myhome | **Node-RED**: `lib/elisa.js`, `ElisaEVU`/`ElisaHalt` in `lib/aktor.js`, Tab *ELISA*. Zuerst **Probebetrieb** (nur Schaltprotokoll, was es tun würde), danach scharf | Wallbox und WP werden zurückgehalten | offen |
-| 4 | elma, maggie | Bridge veröffentlicht `elma/reservation`. MAGGIE bekommt den Zustand `reserved` und die Push an Margit | Margit sieht die Reservierung | offen |
+| 4 | elma, maggie | Backend sendet `{type:"reservation"}` über `/ingest`, Bridge veröffentlicht `elma/reservation`. MAGGIE bekommt den Zustand `reserved` und die Push an Margit | Margit sieht die Reservierung | offen |
 
 Warum so: Node-RED und MAGGIE reagieren nur auf das, was ELMA liefert, deshalb kommt ELMA zuerst. Das Schalten im Haus greift in Wallbox und WP ein und kommt deshalb spät und zuerst im Probebetrieb, so wie es bei der Entladesperre eine Woche Probebetrieb gab.
+
+## Umgesetzt in 0.8.0 (Phase 2)
+
+Abweichungen vom Plan oben und Entscheidungen, die der Plan offenließ (Claude, 2026-10-21, zur Prüfung durch Wolfgang):
+
+| Entscheidung | Begründung |
+|---|---|
+| Der Stand steckt gebündelt in `ReservationStateDto` (`active`, `canReserve`, `minutesLeft`, `controlConnected`, `blockedReason`), in `ProducerDto.reservation` und in der `/live`-Nachricht `{ type: "reservation", producerId, state }`. Dazu `ReservationDto.mine` und `ProducerDto.ownerName`. | Der Stand hängt vom User ab (Recht, Budget, „Du hast reserviert“). Das Backend berechnet ihn pro Verbindung, dann ist `/live` und `GET /api/producers` dasselbe Objekt. `ownerName` braucht der Hinweis „Wolfgang bekommt nur eine Info“. |
+| `/live` meldet auch Änderungen am Status von Node-RED (verbunden, Grund für grau), auch das Wegfallen nach 60 s | Sonst bliebe der Knopf grau, obwohl die WP längst aus ist, bis die Seite neu geladen wird. Gesendet wird nur, wenn sich für die App etwas ändert, nicht alle 15 s. |
+| `minutesLeft` zählt eine **laufende** Reservierung mit ihrer ganzen geplanten Dauer, eine beendete mit der genutzten Zeit | Damit ist die Zahl während der Reservierung fest („heute danach noch 30 min“). Für die Regeln ändert das nichts, weil nur eine Reservierung gleichzeitig laufen kann. Angezeigt wird abgerundet. |
+| `/ingest` sendet die Reservierung **noch nicht** an die Bridge, das kommt mit Phase 4 | Die Bridge kennt die Nachricht noch nicht und schriebe sie nur als Warnung ins Log. Sender und Empfänger kommen besser zusammen. |
+| Höchstens eine laufende Reservierung pro Erzeuger erzwingt zusätzlich ein eindeutiger Index (`reservations_one_active`) | Zwei gleichzeitige Anfragen kommen sonst beide durch die Prüfung. |
+| Ein neues `control-token` macht das vorherige ungültig (ein Token pro Erzeuger, wie `rotate-token`) | Ein verlorenes Token lässt sich so einfach ersetzen. |
+| `wallboxManual` ist optional (Standard `false`) und wird nur angenommen, nicht ausgewertet | Laut myhome nur für Text und Protokoll gedacht. |
+| `last_used_at` des Steuer-Tokens wird höchstens einmal pro Stunde geschrieben | Node-RED fragt alle 15 s, das wären unnötig viele Schreibzugriffe auf die SD-Karte. |
+| Bleiben **weniger als 15 min**, steht statt des Chips „15 min“ der Rest zur Wahl (z. B. „10 min“) | Sonst wäre der Knopf aktiv („heute noch 10 min frei“), im Blatt aber nichts wählbar. |
+| Das Reservieren-Blatt ist ein Vollbild-Blatt wie „Konto“ und „Einladen“, kein Bottom-Sheet | So sehen alle Blätter der App gleich aus. Der Plan nannte `AccountSheet` als Vorbild, und das ist ein Vollbild-Blatt. |
+| Knopf auch in der Ansicht „Geräte“ (unter dem Raster), nicht nur in „Leistung“ | Manche haben die App in „Geräte“ offen, die Ansicht wird gemerkt. |
+| Die Empfängerliste mit Schalter steht im Blatt „Einladen“ (Personen-Symbol am Erzeuger) | Seit 0.7.2 gibt es den Knopf „Empfänger einladen“ in der Karte nicht mehr, sein Platz ist jetzt dieses Blatt. |
+| Bannertext beim Erzeuger: „Reserviert von Elisa · bis 14:22. Bis dahin bitte keine großen Verbraucher einschalten.“ statt „… bleibt der Überschuss für sie frei“ | Das Recht können auch andere Empfänger bekommen, „für sie“ passt dann nicht immer. Der Satz entspricht außerdem der Zusage an den Haushalt. Andere Empfänger sehen nur „Reserviert von Elisa · bis 14:22.“ |
+| Eigene Push-Titel für „Erzeuger hat beendet“ („🔓 Wolfgang hat den ELISA-Modus beendet“) und „Recht entzogen“ („🔓 ELISA-Modus beendet“, „Das Recht zum Reservieren wurde dir entzogen.“). Der Erzeuger liest „Elisa hat heute noch 30 min übrig“. | Der Plan legte nur Ablauf, vorzeitiges Ende und Ladung fest. |
+| Reservierungen, die während eines Neustarts des Backends abgelaufen sind, enden ohne Push | Eine verspätete „zu Ende“-Nachricht wäre eher verwirrend. |
+| Eine gelöschte Freigabe beendet die Reservierung noch nicht aktiv | Freigaben löschen kann man heute nirgends. Kommt das, muss es `ReservationService` aufrufen (wie `setCanReserve`). |
 
 ## Vor der Umsetzung mitbringen
 

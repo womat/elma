@@ -5,6 +5,7 @@
  *   node src/cli.ts set-name wolfgang@example.com Wolfgang  (Anzeigename, den sonst jeder im Konto-Blatt selbst setzt)
  *   node src/cli.ts create-producer "PV Dach" wolfgang@example.com
  *   node src/cli.ts rotate-token <producerId>                 (neues Geräte-Token, z. B. für den Shelly)
+ *   node src/cli.ts control-token <producerId>                (Steuer-Token für Node-RED, ELISA-Modus)
  *   node src/cli.ts invite <producerId> Margit                (Name ist optional und landet beim Einlösen im Konto)
  */
 import { resolve } from "node:path";
@@ -24,6 +25,7 @@ function usage(): never {
   set-name <email> <name>                -> Anzeigename setzen, z. B. "Elisa" (leerer Name "" löscht ihn)
   create-producer <name> <owner-email>   -> gibt das DEVICE_TOKEN für die Bridge aus
   rotate-token <producerId>              -> neues Geräte-Token, das alte wird ungültig
+  control-token <producerId>             -> Steuer-Token für Node-RED (ELISA-Modus), ein vorheriges wird ungültig
   rename-producer <producerId> <name>    -> Erzeuger umbenennen
   invite <producerId> [name]             -> Einladungslink für einen Empfänger, optional mit seinem Namen
   list <email>                           -> sichtbare Erzeuger eines Users`);
@@ -97,6 +99,18 @@ switch (command) {
     if (!deviceToken) throw new Error(`Erzeuger ${producerId} nicht gefunden`);
     console.log("Neues Geräte-Token erzeugt, das alte ist ab sofort ungültig.");
     printDeviceToken(deviceToken);
+    break;
+  }
+  case "control-token": {
+    const [producerId] = args;
+    if (!producerId) usage();
+    if (!repo.producerById(producerId)) throw new Error(`Erzeuger ${producerId} nicht gefunden`);
+    const token = repo.createControlToken(producerId);
+    console.log(token);
+    console.log("  ↳ in Node-RED als Credential für den Abruf von");
+    console.log(`    POST ${publicUrl}/api/control/status  (Authorization: Bearer <Token>)`);
+    console.log("Wird nur jetzt angezeigt, ein vorheriges Steuer-Token dieses Erzeugers ist ab sofort ungültig.");
+    console.log("Damit lässt sich der Status melden und die Reservierung lesen, aber nichts einspeisen.");
     break;
   }
   case "rename-producer": {

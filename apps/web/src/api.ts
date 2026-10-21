@@ -1,4 +1,13 @@
-import type { ApplianceSettings, HistoryPoint, MeDto, PasskeyDto, PasskeyRegisterStart, ProducerDto } from "@elma/shared";
+import type {
+  ApplianceSettings,
+  HistoryPoint,
+  MeDto,
+  PasskeyDto,
+  PasskeyRegisterStart,
+  ProducerDto,
+  RecipientDto,
+  ReservationStateDto,
+} from "@elma/shared";
 import type {
   AuthenticationResponseJSON,
   PublicKeyCredentialCreationOptionsJSON,
@@ -88,5 +97,13 @@ export const api = {
   pushUnsubscribe: (endpoint: string) =>
     request<{ ok: true }>("/api/push/unsubscribe", { method: "POST", body: JSON.stringify({ endpoint }) }),
   pushTest: () => request<{ ok: true }>("/api/push/test", { method: "POST" }),
+  reserve: (id: string, minutes: number) => post<ReservationStateDto>(`/api/producers/${id}/reservation`, { minutes }),
+  endReservation: (id: string) => request<ReservationStateDto>(`/api/producers/${id}/reservation`, { method: "DELETE" }),
+  recipients: (id: string) => request<RecipientDto[]>(`/api/producers/${id}/recipients`),
+  setCanReserve: (id: string, userId: string, canReserve: boolean) =>
+    request<{ userId: string; canReserve: boolean }>(`/api/producers/${id}/recipients/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({ canReserve }),
+    }),
   acceptInvite: (code: string) => request<{ producerId: string }>(`/api/invites/${code}/accept`, { method: "POST" }),
 };

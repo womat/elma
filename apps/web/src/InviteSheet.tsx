@@ -1,5 +1,6 @@
-import { Check, Copy, Link2, Share } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { Check, Copy, Link2, Lock, Share, UsersRound } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { RESERVATION_DAILY_MINUTES, type RecipientDto } from "@elma/shared";
 import { api } from "./api.ts";
 
 interface Props {
@@ -116,7 +117,66 @@ export function InviteSheet({ producerId, producerName, onClose }: Props) {
           </form>
         )}
         {error && <p className="error">{error}</p>}
+
+        <RecipientList producerId={producerId} />
       </div>
     </div>
+  );
+}
+
+/** Wer den Erzeuger schon sieht, mit dem Schalter für das Recht zum Reservieren (ELISA-Modus). */
+function RecipientList({ producerId }: { producerId: string }) {
+  const [recipients, setRecipients] = useState<RecipientDto[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.recipients(producerId).then(setRecipients, (err: Error) => setError(err.message));
+  }, [producerId]);
+
+  const toggle = async (r: RecipientDto) => {
+    setError(null);
+    try {
+      const { canReserve } = await api.setCanReserve(producerId, r.userId, !r.canReserve);
+      setRecipients((list) => list?.map((x) => (x.userId === r.userId ? { ...x, canReserve } : x)) ?? null);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  if (!recipients?.length && !error) return null;
+  return (
+    <>
+      <h3 className="recipients-head">
+        <span>
+          <UsersRound size={18} className="ui-icon" aria-hidden /> Empfänger
+        </span>
+        <span className="muted small">
+          <Lock size={14} className="ui-icon" aria-hidden /> ELISA-Modus
+        </span>
+      </h3>
+      <ul className="custom-list">
+        {recipients?.map((r) => (
+          <li key={r.userId} className="recipient">
+            <span className="grow">
+              {r.name}
+              <br />
+              <span className="muted small">{r.email}</span>
+            </span>
+            <button
+              className="switch"
+              role="switch"
+              aria-checked={r.canReserve}
+              aria-label={`ELISA-Modus für ${r.name}`}
+              onClick={() => void toggle(r)}
+            />
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">
+        Mit ELISA-Modus darf die Person bis zu {RESERVATION_DAILY_MINUTES} min am Tag den Überschuss für sich reservieren, ohne
+        dass du zustimmen musst. Du bekommst dann eine Nachricht. Ausschalten beendet eine laufende Reservierung sofort.
+      </p>
+      {error && <p className="error">{error}</p>}
+    </>
   );
 }

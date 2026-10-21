@@ -9,12 +9,14 @@ import { PushToggle } from "./PushToggle.tsx";
 
 interface Props {
   initial: ApplianceSettings;
+  /** darf bei einem Erzeuger reservieren: Dann kommen Reservierungs-Nachrichten auch ohne Glocke */
+  canReserve: boolean;
   onSave: (settings: ApplianceSettings) => Promise<void>;
   onClose: () => void;
 }
 
 /** Vollbild-Dialog: Geräte aus dem Katalog an-/abwählen und eigene Geräte anlegen. */
-export function ApplianceEditor({ initial, onSave, onClose }: Props) {
+export function ApplianceEditor({ initial, canReserve, onSave, onClose }: Props) {
   const [selected, setSelected] = useState(() => new Set(initial.selected));
   const [custom, setCustom] = useState<CustomAppliance[]>(initial.custom);
   const [notify, setNotify] = useState(() => new Set(initial.notify));
@@ -188,7 +190,7 @@ export function ApplianceEditor({ initial, onSave, onClose }: Props) {
           <Bell size={18} className="ui-icon" aria-hidden /> Benachrichtigungen
         </h3>
         <div className="custom-form">
-          <PushToggle notifyCount={chosen.filter((a) => notify.has(a.id)).length} />
+          <PushToggle notifyCount={chosen.filter((a) => notify.has(a.id)).length} canReserve={canReserve} />
           <p className="muted small">
             Benachrichtige mich, wenn eines dieser Geräte mit dem Überschuss laufen kann (mindestens 2 Minuten lang):
           </p>

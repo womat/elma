@@ -2,6 +2,35 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.8.0 – 2026-10-21
+
+- **ELISA-Modus: Strom reservieren** (Phase 2 aus [docs/elisa.md](docs/elisa.md)). Bisher kam die Nachricht „viel Überschuss“,
+  der Empfänger schaltete etwas ein, und genau dann sprang beim Erzeuger die Wallbox oder die Wärmepumpe an. Jetzt kann ein Empfänger
+  mit Recht den Überschuss für bis zu 60 min am Tag reservieren, beliebig aufgeteilt (z. B. 2× 30 min).
+  - **Knopf „Strom reservieren · ELISA-Modus“** unter dem Überschuss, darunter „heute noch X min frei“. Ein Tipp öffnet ein Blatt
+    mit 15/30/45/60 min; was über dem Restbudget liegt, ist gesperrt. Bleiben weniger als 15 min, ist der Rest wählbar.
+  - **Banner oben in der Karte**, solange reserviert ist, mit Restzeit und Fortschrittsbalken, für alle, die den Erzeuger sehen.
+    „Beenden“ haben der Reservierende und der Erzeuger. Gezählt wird nur die genutzte Zeit: Wer nach 10 von 30 min beendet, hat noch 50 min.
+  - **Keine Freigabe durch den Erzeuger nötig**, der Überschuss ist meist nur kurz da. Das Recht vergibt er pro Empfänger:
+    Im Blatt „Einladen“ gibt es jetzt die Liste der Empfänger mit einem Schalter „ELISA-Modus“. Ausschalten beendet eine laufende Reservierung sofort.
+  - **Push-Nachrichten** beim Start an den Erzeuger („🔒 Elisa reserviert den Überschuss, bis 14:22 – keine großen Verbraucher einschalten“),
+    beim Ende an beide, mit dem restlichen Budget. Sie kommen unabhängig von den Glocken. Wer reservieren darf, sieht deshalb ohne Glocke
+    keine gelbe Warnung mehr, sondern „Ohne Glocke bekommst du nur die Nachrichten zu deinen Reservierungen.“
+  - Höchstens eine Reservierung pro Erzeuger zur gleichen Zeit. Der Tag zählt nach Wiener Zeit, egal wie der Container eingestellt ist.
+- **Schnittstelle für Node-RED:** `POST /api/control/status` mit eigenem Steuer-Token. Node-RED meldet alle 15 s, ob der Kompressor
+  der Wärmepumpe läuft und ob das Auto lädt, und bekommt zurück, ob und bis wann reserviert ist. Läuft gerade eines davon, ist der Knopf grau
+  („Gerade nicht möglich: Wärmepumpe läuft“ bzw. „… das Auto lädt“) und der Server lehnt ab, ohne Budget zu verbrauchen: Was läuft,
+  ist im angezeigten Überschuss schon abgezogen. Beginnt während der Reservierung eine Ladung, endet sie, die Handbedienung des Erzeugers hat Vorrang.
+  - Node-RED fragt von innen nach außen statt über MQTT: Der Broker ist offen, eine gefälschte Nachricht könnte sonst die Wallbox blockieren,
+    und das Backend erreicht das LAN ohnehin nicht.
+  - Meldet sich Node-RED 60 s nicht, bleibt Reservieren möglich, mit dem Hinweis „Die Sperre wirkt gerade nicht, Wolfgang bekommt nur eine Info“.
+    So ist es auch, bis Node-RED angebunden ist (Phase 3).
+  - Terminal: `node src/cli.ts control-token <producerId>` gibt das Steuer-Token einmal aus, ein vorheriges wird ungültig.
+    Das Token kann nur den Status melden, aber keine Messwerte einspeisen. Das Geräte-Token der Bridge gilt dort nicht.
+- Datenbank: neue Spalte `shares.can_reserve` (kommt beim Start automatisch dazu), neue Tabellen `reservations` und `control_tokens`.
+  Beendete Reservierungen bleiben stehen, darüber läuft das Tagesbudget.
+- Was bei der Umsetzung vom Plan abweicht, steht in [docs/elisa.md](docs/elisa.md) unter „Umgesetzt in 0.8.0“.
+
 ## 0.7.2 – 2026-10-21
 
 - **Einladen im eigenen Blatt:** Das Namensfeld und der Knopf „Empfänger einladen“ standen bisher unten in jeder Erzeuger-Karte,

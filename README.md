@@ -63,6 +63,9 @@ ELMA liefert die Information, *wann* sich das Teilen lohnt.
   Jeder wählt seine eigenen Geräte aus und kann auch eigene anlegen, z. B. eine Poolpumpe mit 800 W.
 - **Push-Nachricht:** z. B. „Jetzt reicht's für 🧺 Waschmaschine“, sobald eines der eigenen Geräte mit dem Überschuss laufen kann.
   Das passiert erst nach 2 Minuten stabilem Überschuss, damit kurze Wolken keinen Fehlalarm auslösen.
+- **Strom reservieren (ELISA-Modus):** Ein Empfänger, dem der Erzeuger das Recht gibt, reserviert den Überschuss für bis zu 60 min am Tag.
+  Der Erzeuger bekommt eine Nachricht, und seine Hausautomation (Node-RED) lässt Wallbox und Wärmepumpe so lange nicht anspringen.
+  Konzept und Entscheidungen: [docs/elisa.md](docs/elisa.md).
 - **Einladung per Link:** Der Erzeuger lädt Empfänger mit einem Link ein, z. B. über WhatsApp.
   Ohne Einladung kann sich niemand registrieren, die Daten bleiben also im kleinen Kreis.
 - **Anmelden mit Passkey:** per Fingerabdruck, Gesicht oder Geräte-PIN. Ein Passwort gibt es nicht.
@@ -225,6 +228,18 @@ Alternativ geht das auch per Kommandozeile, der Name ist optional:
 ```bash
 docker compose exec backend node src/cli.ts invite <producerId> Margit
 ```
+
+## ELISA-Modus: Überschuss reservieren
+
+Das Recht vergibt der Erzeuger im Blatt „Einladen“ (Personen-Symbol am Erzeuger) mit dem Schalter „ELISA-Modus“ neben dem Empfänger.
+Ohne Hausautomation bekommt der Erzeuger nur die Nachricht. Damit Node-RED Wallbox und Wärmepumpe zurückhält, braucht es ein Steuer-Token:
+
+```bash
+docker compose exec backend node src/cli.ts control-token <producerId>
+```
+
+Node-RED schickt damit alle 15 s `POST /api/control/status` (Details in [docs/elisa.md](docs/elisa.md) und `KONZEPT-ELISA.md` im Repo myhome).
+Das Token nur über einen sicheren Kanal weitergeben. Ein neues macht das alte ungültig.
 
 ## Anmeldung mit Passkey
 

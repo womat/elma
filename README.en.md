@@ -33,6 +33,8 @@ ELMA does not do any billing. That stays with the energy community or the grid o
 - **Live surplus:** one big number with a traffic light (plenty / some / none) and a 24-hour chart.
 - **Appliances instead of watts:** "✓ washing machine" or "650 W short of the kettle". Everyone picks their own appliances or adds custom ones.
 - **Push notifications** once one of your appliances can run, after 2 minutes of stable surplus so passing clouds don't trigger false alarms.
+- **Reserve the surplus (ELISA mode):** a recipient the producer trusts can reserve the surplus for up to 60 minutes a day.
+  The producer gets a notification, and their home automation (Node-RED) holds back the wallbox and heat pump meanwhile.
 - **Invite by link:** nobody can sign up without an invitation, so the data stays in a small circle.
 - **Passkey sign-in:** fingerprint, face or device PIN. There are no passwords.
 - **Installable PWA** on Android and iPhone, no app store needed.

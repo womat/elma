@@ -9,9 +9,14 @@ const HINTS: Partial<Record<PushState, string>> = {
   denied: "Benachrichtigungen sind blockiert. Bitte in den Einstellungen des Browsers bzw. Handys für ELMA erlauben.",
 };
 
-/** Push auf diesem Gerät ein-/ausschalten und testen. */
-/** notifyCount = Anzahl der Geräte mit Glocke (für den Hinweis, wenn keines markiert ist) */
-export function PushToggle({ notifyCount }: { notifyCount: number }) {
+export const NO_BELL_RESERVE_HINT = "Ohne Glocke bekommst du nur die Nachrichten zu deinen Reservierungen.";
+
+/**
+ * Push auf diesem Gerät ein-/ausschalten und testen.
+ * notifyCount = Anzahl der Geräte mit Glocke (für den Hinweis, wenn keines markiert ist).
+ * canReserve: Wer reservieren darf, bekommt die Nachrichten zur Reservierung auch ohne Glocke; die Warnung stimmt dann nicht.
+ */
+export function PushToggle({ notifyCount, canReserve }: { notifyCount: number; canReserve: boolean }) {
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -49,7 +54,8 @@ export function PushToggle({ notifyCount }: { notifyCount: number }) {
           <p className="push-on">
             <Check size={16} strokeWidth={3} className="ui-icon" aria-hidden /> Auf diesem Gerät aktiv
           </p>
-          {notifyCount === 0 && (
+          {notifyCount === 0 && canReserve && <p className="muted small">{NO_BELL_RESERVE_HINT}</p>}
+          {notifyCount === 0 && !canReserve && (
             <p className="push-warning small">
               <TriangleAlert size={15} className="ui-icon" aria-hidden /> Markiere unten Geräte mit der Glocke – sonst kommen keine
               automatischen Nachrichten.

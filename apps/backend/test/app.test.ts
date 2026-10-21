@@ -286,3 +286,71 @@ describe("Minutenmittel", () => {
     expect(repo.history(producer.id, 0)).toEqual([{ t: t0, watts: 1500 }]);
   });
 });
+
+describe("ELISA-Modus", () => {
+  async function withRecipient() {
+    const { producer, deviceToken, owner } = await setup();
+    const elisa = repo.createUser("elisa@elma.test");
+    repo.setDisplayName(elisa.id, "Elisa");
+    repo.acceptInvite(repo.createInvite(producer.id).code, elisa.id);
+    return { producer, deviceToken, owner, elisa };
+  }
+
+  it("POST /api/control/status: nur mit Steuer-Token, nicht mit dem Geräte-Token", async () => {
+    const { producer, deviceToken } = await withRecipient();
+    const status = { compressorRunning: false, wallboxCharging: false, wallboxManual: false };
+    const post = (authorization?: string, payload: object = status) =>
+      app.inject({ method: "POST", url: "/api/control/status", headers: authorization ? { authorization } : {}, payload });
+
+    expect((await post()).statusCode).toBe(401);
+    expect((await post("Bearer falsch")).statusCode).toBe(401);
+    expect((await post(`Bearer ${deviceToken}`)).statusCode).toBe(401);
+
+    const old = repo.createControlToken(producer.id);
+    const token = repo.createControlToken(producer.id);
+    expect((await post(`Bearer ${old}`)).statusCode).toBe(401);
+    expect((await post(`Bearer ${token}`, { compressorRunning: "ja" })).statusCode).toBe(400);
+    const ok = await post(`Bearer ${token}`);
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json()).toEqual({ active: false, until: null });
+
+    const list = await app.inject({ url: "/api/producers", headers: { authorization: `Bearer ${await login("elisa@elma.test")}` } });
+    expect(list.json()[0].reservation).toMatchObject({ controlConnected: true, blockedReason: null, canReserve: false, minutesLeft: 60 });
+  });
+
+  it("/live bekommt den Stand nach ready, dann Start und Ende", async () => {
+    const { producer, elisa } = await withRecipient();
+    repo.setCanReserve(producer.id, elisa.id, true);
+    const headers = { authorization: `Bearer ${await login("elisa@elma.test")}` };
+    const owner = await openLive(await login("erzeuger@elma.test"));
+    const reservationsSeen = () => owner.messages.filter((m) => m.type === "reservation");
+    await waitFor(() => reservationsSeen().length === 1);
+    expect(reservationsSeen()[0]).toMatchObject({ producerId: producer.id, state: { active: null } });
+
+    await app.inject({ method: "POST", url: `/api/producers/${producer.id}/reservation`, headers, payload: { minutes: 15 } });
+    await waitFor(() => reservationsSeen().length === 2);
+    expect(reservationsSeen()[1]).toMatchObject({ state: { active: { userName: "Elisa", mine: false } } });
+
+    await app.inject({ method: "DELETE", url: `/api/producers/${producer.id}/reservation`, headers });
+    await waitFor(() => reservationsSeen().length === 3);
+    expect(reservationsSeen()[2]).toMatchObject({ state: { active: null } });
+    owner.ws.close();
+  });
+
+  it("nur der Erzeuger sieht die Empfänger und vergibt das Recht", async () => {
+    const { producer, elisa } = await withRecipient();
+    const auth = async (email: string) => ({ authorization: `Bearer ${await login(email)}` });
+    const put = async (email: string, userId: string, payload: object) =>
+      app.inject({ method: "PUT", url: `/api/producers/${producer.id}/recipients/${userId}`, headers: await auth(email), payload });
+
+    expect((await app.inject({ url: `/api/producers/${producer.id}/recipients`, headers: await auth("elisa@elma.test") })).statusCode).toBe(403);
+    expect((await put("elisa@elma.test", elisa.id, { canReserve: true })).statusCode).toBe(403);
+    expect((await put("erzeuger@elma.test", elisa.id, {})).statusCode).toBe(400);
+    expect((await put("erzeuger@elma.test", "gibt-es-nicht", { canReserve: true })).statusCode).toBe(404);
+
+    expect((await put("erzeuger@elma.test", elisa.id, { canReserve: true })).statusCode).toBe(200);
+    const list = await app.inject({ url: `/api/producers/${producer.id}/recipients`, headers: await auth("erzeuger@elma.test") });
+    expect(list.json()).toEqual([{ userId: elisa.id, name: "Elisa", email: "elisa@elma.test", canReserve: true }]);
+    expect(repo.canReserve(producer.id, elisa.id)).toBe(true);
+  });
+});

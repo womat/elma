@@ -65,7 +65,9 @@ export function Dashboard({ token, me, notice, onMeChange, onSignOut }: Props) {
   };
 
   const initial = useMemo(() => Object.fromEntries((producers ?? []).map((p) => [p.id, p.current])), [producers]);
-  const { readings, status } = useLive(token, initial);
+  const initialReservations = useMemo(() => Object.fromEntries((producers ?? []).map((p) => [p.id, p.reservation])), [producers]);
+  const { readings, reservations, setReservation, status } = useLive(token, initial, initialReservations);
+  const canReserveAny = Object.values(reservations).some((r) => r.canReserve);
 
   // Tick für die Offline-Erkennung (keine neuen Werte mehr)
   const [now, setNow] = useState(Date.now());
@@ -120,6 +122,9 @@ export function Dashboard({ token, me, notice, onMeChange, onSignOut }: Props) {
           key={p.id}
           producer={p}
           reading={readings[p.id] ?? null}
+          reservation={reservations[p.id] ?? p.reservation}
+          onReservation={(state) => setReservation(p.id, state)}
+          canReserveAny={canReserveAny}
           now={now}
           view={view}
           appliances={appliances}
@@ -145,6 +150,7 @@ export function Dashboard({ token, me, notice, onMeChange, onSignOut }: Props) {
       {editing && (
         <ApplianceEditor
           initial={applianceSettings}
+          canReserve={canReserveAny}
           onSave={saveAppliances}
           onClose={() => {
             setEditing(false);

@@ -1,14 +1,24 @@
 import { useEffect, useState } from "react";
-import type { LiveServerMessage, SurplusReading } from "@elma/shared";
+import type { LiveServerMessage, ReservationStateDto, SurplusReading } from "@elma/shared";
 
 export type LiveStatus = "connecting" | "open" | "closed";
 
-/** Live-Werte über WebSocket, mit automatischem Neuverbinden. */
-export function useLive(token: string, initial: Record<string, SurplusReading | null>) {
+/** Live-Werte und Stand der Reservierungen über WebSocket, mit automatischem Neuverbinden. */
+export function useLive(
+  token: string,
+  initial: Record<string, SurplusReading | null>,
+  initialReservations: Record<string, ReservationStateDto>,
+) {
   const [readings, setReadings] = useState<Record<string, SurplusReading | null>>(initial);
+  const [reservations, setReservations] = useState<Record<string, ReservationStateDto>>(initialReservations);
   const [status, setStatus] = useState<LiveStatus>("connecting");
 
   useEffect(() => setReadings((prev) => ({ ...initial, ...stripNull(prev) })), [initial]);
+  // was schon über /live kam, ist neuer als die Liste der Erzeuger
+  useEffect(() => setReservations((prev) => ({ ...initialReservations, ...prev })), [initialReservations]);
+  /** Antwort auf eigenes Reservieren/Beenden sofort übernehmen, nicht erst auf /live warten */
+  const setReservation = (producerId: string, state: ReservationStateDto) =>
+    setReservations((prev) => ({ ...prev, [producerId]: state }));
 
   useEffect(() => {
     let ws: WebSocket | null = null;
@@ -28,6 +38,8 @@ export function useLive(token: string, initial: Record<string, SurplusReading | 
           retryMs = 1000;
         } else if (msg.type === "reading") {
           setReadings((prev) => ({ ...prev, [msg.producerId]: msg.reading }));
+        } else if (msg.type === "reservation") {
+          setReservation(msg.producerId, msg.state);
         }
       };
       ws.onclose = () => {
@@ -57,7 +69,7 @@ export function useLive(token: string, initial: Record<string, SurplusReading | 
     };
   }, [token]);
 
-  return { readings, status };
+  return { readings, reservations, setReservation, status };
 }
 
 function stripNull(obj: Record<string, SurplusReading | null>) {

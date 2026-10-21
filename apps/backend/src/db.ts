@@ -89,12 +89,36 @@ export function openDb(path: string): Db {
       avg_watts   REAL NOT NULL,
       PRIMARY KEY (producer_id, minute)
     );
+
+    -- Reservierungen (ELISA-Modus, docs/elisa.md). Beendete bleiben stehen, darüber läuft das Tagesbudget.
+    CREATE TABLE IF NOT EXISTS reservations (
+      id          TEXT PRIMARY KEY,
+      producer_id TEXT NOT NULL REFERENCES producers(id) ON DELETE CASCADE,
+      user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      starts_at   INTEGER NOT NULL,
+      ends_at     INTEGER NOT NULL,
+      ended_at    INTEGER,
+      end_reason  TEXT
+    );
+    -- höchstens eine laufende Reservierung pro Erzeuger, auch wenn zwei Anfragen gleichzeitig kommen
+    CREATE UNIQUE INDEX IF NOT EXISTS reservations_one_active ON reservations (producer_id) WHERE ended_at IS NULL;
+    CREATE INDEX IF NOT EXISTS reservations_budget ON reservations (producer_id, user_id, starts_at);
+
+    -- Steuer-Token für Node-RED (POST /api/control/status), getrennt vom Geräte-Token; nur als SHA-256 gespeichert
+    CREATE TABLE IF NOT EXISTS control_tokens (
+      token_hash   TEXT PRIMARY KEY,
+      producer_id  TEXT NOT NULL REFERENCES producers(id) ON DELETE CASCADE,
+      created_at   INTEGER NOT NULL,
+      last_used_at INTEGER
+    );
   `);
   // Seit 0.5.0 nur Passkeys: alte Passwort-Hashes löschen (Platzhalter wie in Repo.createUser, Spalte ist NOT NULL)
   db.exec("UPDATE users SET password_hash = 'passkey-only' WHERE password_hash LIKE 'scrypt:%'");
   // 0.7.0: Anzeigename, damit in Banner und Push „Elisa“ steht statt der E-Mail (docs/elisa.md)
   addColumn(db, "users", "display_name", "TEXT");
   addColumn(db, "invites", "display_name", "TEXT");
+  // 0.8.0: Recht zum Reservieren pro Freigabe, vergibt der Erzeuger (docs/elisa.md)
+  addColumn(db, "shares", "can_reserve", "INTEGER NOT NULL DEFAULT 0");
   return db;
 }
 

@@ -6,6 +6,7 @@ import {
   STALE_AFTER_MS,
   type HistoryPoint,
   type ProducerDto,
+  type ReservationStateDto,
   type SurplusReading,
 } from "@elma/shared";
 import { api } from "./api.ts";
@@ -15,6 +16,7 @@ import { ApplianceGrid } from "./ApplianceGrid.tsx";
 import { ApplianceTimeline } from "./ApplianceTimeline.tsx";
 import { ApplianceIcon } from "./icons.tsx";
 import { InviteSheet } from "./InviteSheet.tsx";
+import { ReservationBanner, ReserveButton, ReserveSheet } from "./Reservation.tsx";
 import { biggestFitting, type Appliance } from "./appliances.ts";
 
 export type View = "power" | "appliances";
@@ -22,6 +24,10 @@ export type View = "power" | "appliances";
 interface Props {
   producer: ProducerDto;
   reading: SurplusReading | null;
+  reservation: ReservationStateDto;
+  onReservation: (state: ReservationStateDto) => void;
+  /** darf bei irgendeinem Erzeuger reservieren (für den Glocken-Hinweis) */
+  canReserveAny: boolean;
   now: number;
   view: View;
   appliances: Appliance[];
@@ -46,9 +52,22 @@ const LABELS: Record<Level, string> = {
   lots: "Viel Überschuss – jetzt verbrauchen!",
 };
 
-export function ProducerCard({ producer, reading, now, view, appliances, notify, pushOn, onEditAppliances }: Props) {
+export function ProducerCard({
+  producer,
+  reading,
+  reservation,
+  onReservation,
+  canReserveAny,
+  now,
+  view,
+  appliances,
+  notify,
+  pushOn,
+  onEditAppliances,
+}: Props) {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [inviting, setInviting] = useState(false);
+  const [reserving, setReserving] = useState(false);
   const [name, setName] = useState(producer.name);
   const level = levelOf(reading, now);
   const liveWatts = reading && level !== "offline" ? Math.max(0, reading.watts) : null;
@@ -87,6 +106,15 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
         )}
       </div>
 
+      <ReservationBanner
+        state={reservation}
+        isOwner={producer.isOwner}
+        ownerName={producer.ownerName}
+        now={now}
+        producerId={producer.id}
+        onChange={onReservation}
+      />
+
       {view === "power" ? (
         <>
           <div className="value" aria-live="polite">
@@ -98,10 +126,20 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
               Reicht z. B. für <ApplianceIcon icon={hint.icon} size={22} /> {hint.name}
             </p>
           )}
+          <ReserveButton state={reservation} onOpen={() => setReserving(true)} />
         </>
       ) : (
         <>
-          <ApplianceGrid watts={liveWatts} appliances={appliances} notify={notify} pushOn={pushOn} onEdit={onEditAppliances} />
+          <ApplianceGrid
+            watts={liveWatts}
+            appliances={appliances}
+            notify={notify}
+            pushOn={pushOn}
+            canReserve={canReserveAny}
+            onEdit={onEditAppliances}
+          />
+          {/* auch hier, weil manche die App in der Geräte-Ansicht offen haben */}
+          <ReserveButton state={reservation} onOpen={() => setReserving(true)} />
           <ApplianceTimeline points={history} appliances={appliances} now={now} />
         </>
       )}
@@ -109,6 +147,15 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
       {view === "power" && <HistoryChart points={history} />}
 
       {inviting && <InviteSheet producerId={producer.id} producerName={name} onClose={() => setInviting(false)} />}
+      {reserving && (
+        <ReserveSheet
+          producerId={producer.id}
+          ownerName={producer.ownerName}
+          state={reservation}
+          onDone={onReservation}
+          onClose={() => setReserving(false)}
+        />
+      )}
     </section>
   );
 }

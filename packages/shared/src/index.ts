@@ -24,14 +24,85 @@ export type LiveClientMessage = z.infer<typeof LiveClientMessage>;
 export type LiveServerMessage =
   | { type: "ready"; producerIds: string[] }
   | { type: "reading"; producerId: string; reading: SurplusReading }
+  /** Reservierung (ELISA-Modus), aus Sicht des jeweiligen Users; kommt nach ready und bei jeder Änderung */
+  | { type: "reservation"; producerId: string; state: ReservationStateDto }
   | { type: "error"; message: string };
 
 export interface ProducerDto {
   id: string;
   name: string;
+  /** Name des Erzeugers für Texte wie „Wolfgang bekommt nur eine Info“ (siehe {@link displayNameOf}) */
+  ownerName: string;
   isOwner: boolean;
   current: SurplusReading | null;
+  reservation: ReservationStateDto;
 }
+
+// ---------- Reservierung (ELISA-Modus, docs/elisa.md) ----------
+
+/** So viele Minuten darf ein Empfänger pro Tag (Europe/Vienna) und Erzeuger reservieren, beliebig aufgeteilt. */
+export const RESERVATION_DAILY_MINUTES = 60;
+/** Dauer-Chips im Blatt „Strom reservieren“ */
+export const RESERVATION_DURATIONS = [15, 30, 45, 60] as const;
+
+/** Eine laufende Reservierung. */
+export interface ReservationDto {
+  producerId: string;
+  /** Anzeigename des Reservierenden, nie die E-Mail */
+  userName: string;
+  startsAt: number;
+  endsAt: number;
+  /** true = der angemeldete User hat selbst reserviert */
+  mine: boolean;
+}
+
+/** Warum gerade nicht reserviert werden kann: Was läuft, ist im angezeigten Überschuss schon abgezogen. */
+export type BlockedReason = "heatpump" | "wallbox";
+
+/** Stand der Reservierung eines Erzeugers aus Sicht eines Users. */
+export interface ReservationStateDto {
+  active: ReservationDto | null;
+  /** der User darf bei diesem Erzeuger reservieren (Recht pro Freigabe) */
+  canReserve: boolean;
+  /** heute noch frei; eine laufende Reservierung zählt mit ihrer ganzen geplanten Dauer */
+  minutesLeft: number;
+  /** Node-RED hat sich in den letzten 60 s gemeldet; sonst wirkt die Sperre nicht */
+  controlConnected: boolean;
+  blockedReason: BlockedReason | null;
+}
+
+/** Reservierung anfordern */
+export const ReservationBody = z.object({
+  minutes: z.number().int("Ganze Minuten angeben").min(1, "Mindestens 1 Minute").max(RESERVATION_DAILY_MINUTES, `Höchstens ${RESERVATION_DAILY_MINUTES} Minuten`),
+});
+export type ReservationBody = z.infer<typeof ReservationBody>;
+
+/** Gerätezustand, den Node-RED alle 15 s an POST /api/control/status schickt. */
+export const ControlStatus = z.object({
+  compressorRunning: z.boolean(),
+  /** jede Ladung: von Hand, per Preis-Freigabe oder per Abfahrtsplanung */
+  wallboxCharging: z.boolean(),
+  /** Handbedienung aktiv; nur zur Information, ELMA entscheidet nicht danach */
+  wallboxManual: z.boolean().default(false),
+});
+export type ControlStatus = z.infer<typeof ControlStatus>;
+
+/** Antwort an Node-RED: Ist gerade reserviert, und bis wann (Unix-ms, Uhr des Backends)? */
+export interface ControlResponse {
+  active: boolean;
+  until: number | null;
+  by?: string;
+}
+
+/** Empfänger eines Erzeugers, für die Liste im Blatt „Einladen“ (nur der Erzeuger sieht sie). */
+export interface RecipientDto {
+  userId: string;
+  name: string;
+  email: string;
+  canReserve: boolean;
+}
+
+export const CanReserveBody = z.object({ canReserve: z.boolean() });
 
 export interface HistoryPoint {
   /** Minutenbeginn, Unix-Millisekunden */
