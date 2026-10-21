@@ -1,4 +1,4 @@
-import { KeyRound, Trash2, UserRound } from "lucide-react";
+import { KeyRound, LogOut, Trash2, UserRound } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { displayNameOf, type MeDto, type PasskeyDto } from "@elma/shared";
 import { api } from "./api.ts";
@@ -15,7 +15,7 @@ interface Props {
 
 const date = (t: number) => new Date(t).toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-/** Vollbild-Blatt: Anzeigename ändern, eigene Passkeys ansehen, hinzufügen und löschen. */
+/** Vollbild-Blatt: Anzeigename ändern, eigene Passkeys ansehen, hinzufügen und löschen, abmelden. */
 export function AccountSheet({ me, passkeys, onChange, onMeChange, onSignOut, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -66,11 +66,20 @@ export function AccountSheet({ me, passkeys, onChange, onMeChange, onSignOut, on
       <div className="sheet-body">
         <header className="sheet-head">
           <span />
-          <h2 id="account-title">Anmeldung</h2>
+          <h2 id="account-title">Konto</h2>
           <button onClick={onClose}>Fertig</button>
         </header>
 
-        <p className="muted">Angemeldet als {me.email}</p>
+        <div className="profile">
+          <span className="avatar large" aria-hidden>
+            {displayNameOf(me).charAt(0).toUpperCase()}
+          </span>
+          <span>
+            <strong>{displayNameOf(me)}</strong>
+            <br />
+            <span className="muted small">{me.email}</span>
+          </span>
+        </div>
 
         <h3>
           <UserRound size={18} className="ui-icon" aria-hidden /> Dein Name
@@ -140,9 +149,8 @@ export function AccountSheet({ me, passkeys, onChange, onMeChange, onSignOut, on
         {hint && <p className="muted small">{hint}</p>}
         {error && <p className="error">{error}</p>}
 
-        <h3>Abmelden</h3>
-        <button className="secondary" onClick={onSignOut}>
-          Auf diesem Gerät abmelden
+        <button className="secondary danger sign-out" onClick={onSignOut}>
+          <LogOut size={18} className="ui-icon" aria-hidden /> Auf diesem Gerät abmelden
         </button>
       </div>
     </div>

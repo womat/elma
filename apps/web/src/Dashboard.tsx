@@ -1,8 +1,8 @@
 import { House, KeyRound, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { ApplianceSettings, MeDto, PasskeyDto, ProducerDto } from "@elma/shared";
+import { displayNameOf, type ApplianceSettings, type MeDto, type PasskeyDto, type ProducerDto } from "@elma/shared";
 import { api } from "./api.ts";
-import { useLive } from "./useLive.ts";
+import { useLive, type LiveStatus } from "./useLive.ts";
 import { ProducerCard, type View } from "./ProducerCard.tsx";
 import { ApplianceEditor } from "./ApplianceEditor.tsx";
 import { defaultSettings, resolveAppliances } from "./appliances.ts";
@@ -11,6 +11,8 @@ import { Footer } from "./Footer.tsx";
 import { AccountSheet } from "./AccountSheet.tsx";
 
 const VIEW_KEY = "elma.view";
+
+const LIVE_LABEL: Record<LiveStatus, string> = { open: "Live", connecting: "Verbinde …", closed: "Getrennt" };
 
 function loadView(): View {
   try {
@@ -79,12 +81,12 @@ export function Dashboard({ token, me, notice, onMeChange, onSignOut }: Props) {
           <img src="/icon.svg" alt="" width={32} height={32} />
           <strong>ELMA</strong>
         </div>
-        <span className={`dot ${status}`} title={status === "open" ? "Live verbunden" : "Verbinde …"} />
-        <button className="link account" onClick={() => setAccount(true)} title={me.email} aria-label="Anmeldung und Passkeys">
-          <KeyRound size={18} aria-hidden />
-        </button>
-        <button className="link" onClick={onSignOut} title={me.email}>
-          Abmelden
+        {/* Abmelden liegt im Konto-Blatt: selten gebraucht und so nicht aus Versehen angetippt */}
+        <span className={`live ${status}`} role="status">
+          <span className="dot" aria-hidden /> {LIVE_LABEL[status]}
+        </span>
+        <button className="avatar" onClick={() => setAccount(true)} title={me.email} aria-label={`Konto von ${displayNameOf(me)}`}>
+          {displayNameOf(me).charAt(0).toUpperCase()}
         </button>
       </header>
 

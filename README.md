@@ -246,7 +246,7 @@ und man bestätigt per Fingerabdruck, Gesicht oder Geräte-PIN. Auf dem Server l
 - **Name:** Ebenfalls dort setzt jeder seinen Anzeigenamen, z. B. „Elisa“. Ohne Namen gilt der Teil der E-Mail vor dem @.
   Als Betreiber geht es auch im Terminal: `docker compose exec backend node src/cli.ts set-name <email> Elisa`.
   Der Name ist für Anzeigen bei anderen gedacht (zuerst für den ELISA-Modus, siehe [docs/elisa.md](docs/elisa.md)), damit dort nie die E-Mail-Adresse steht.
-- **Weitere Geräte:** Über das Schlüssel-Symbol oben in der App lassen sich Passkeys ansehen, hinzufügen und löschen.
+- **Weitere Geräte:** Über den Kreis mit dem Anfangsbuchstaben oben rechts öffnet sich das Konto-Blatt. Dort lassen sich Passkeys ansehen, hinzufügen und löschen, und dort steht auch „Abmelden“.
   Über das Google- bzw. Apple-Konto sind sie meist ohnehin auf allen eigenen Geräten.
   Am PC kann man sich auch anmelden, indem man den angezeigten QR-Code mit dem Handy scannt.
 - Passkeys sind an die Domain gebunden (z. B. `elma.example.com`). Bei einem Umzug auf eine andere Domain müssen alle neu angelegt werden.

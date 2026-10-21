@@ -2,9 +2,21 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.7.1 – 2026-10-21
+
+- **Aufgeräumte Kopfzeile:** Rechts oben standen bisher ein grüner Punkt, ein Schlüssel-Symbol und das Wort „Abmelden“,
+  jedes in einer anderen Form und Größe. Jetzt stehen dort nur noch zwei Dinge:
+  - **„● Live“**: Der Punkt bekommt ein Wort („Live“, „Verbinde …“ oder „Getrennt“). Vorher war nicht zu erkennen, was er bedeutet.
+  - **ein Kreis mit dem Anfangsbuchstaben des Namens**, z. B. „W“. Er öffnet das Konto-Blatt, das jetzt „Konto“ heißt statt „Anmeldung“.
+    Oben im Blatt stehen Name und E-Mail.
+- **Abmelden nur noch im Konto-Blatt**, ganz unten als rot umrandeter Knopf. Man braucht es selten, und in der Kopfzeile
+  war es leicht aus Versehen angetippt. Im Blatt stand es ohnehin schon, die Kopfzeile hatte es doppelt.
+- Gewählt aus drei Entwürfen (Kreis mit Buchstabe, Knopf mit ganzem Namen, drei gleiche Symbole). Der Kreis braucht am wenigsten Platz
+  und ist aus anderen Apps vertraut (Wolfgang, 2026-10-21).
+
 ## 0.7.0 – 2026-10-21
 
-- **Anzeigename im Konto:** Im Blatt „Anmeldung“ (Schlüssel-Symbol oben) gibt es das neue Feld „Dein Name“, z. B. „Elisa“.
+- **Anzeigename im Konto:** Im Blatt „Anmeldung“ (Schlüssel-Symbol oben, seit 0.7.1 „Konto“ hinter dem Kreis oben rechts) gibt es das neue Feld „Dein Name“, z. B. „Elisa“.
   Er ist 1 bis 40 Zeichen lang, Leerzeichen am Rand fallen weg. Ein leeres Feld löscht den Namen wieder.
   Ohne Namen gilt der Teil der E-Mail vor dem @. Wo andere den Namen sehen, soll also nie die ganze E-Mail-Adresse stehen.
   Das ist Phase 1 des geplanten ELISA-Modus ([docs/elisa.md](docs/elisa.md)): Banner, Push-Nachrichten und die Strom-Ampel MAGGIE

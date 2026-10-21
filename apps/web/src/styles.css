@@ -63,10 +63,21 @@ input {
 
 .dashboard > header { display: flex; align-items: center; gap: 10px; }
 .brand { display: flex; align-items: center; gap: 8px; flex: 1; font-size: 1.2rem; letter-spacing: 0.08em; }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--none); }
-.dot.open { background: var(--good); }
-.dot.connecting { background: var(--some); }
-.dashboard > header .account { line-height: 0; }
+/* Kopfzeile: Verbindungsstand mit Wort statt nacktem Punkt, rechts nur der Konto-Kreis */
+.live { display: flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--muted); }
+.live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--none); }
+.live.open .dot { background: var(--good); }
+.live.connecting .dot { background: var(--some); }
+.avatar {
+  width: 40px; height: 40px; padding: 0; border-radius: 50%; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--card); color: var(--text); font-weight: 700;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--muted) 35%, transparent);
+}
+.avatar.large { width: 52px; height: 52px; font-size: 1.35rem; background: var(--bg); }
+.profile { display: flex; align-items: center; gap: 14px; background: var(--card); border-radius: 14px; padding: 14px; }
+button.secondary.danger { color: var(--error); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--error) 45%, transparent); }
+.sign-out { width: 100%; margin-top: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .dashboard > .notice { margin: 12px 0 0; }
 
 .producer-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
