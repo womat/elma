@@ -50,6 +50,7 @@ Handy (Elisa) ──HTTPS──► ELMA-Backend ◄──HTTPS, alle 15 s── 
 | **Elisa werden keine Geräte genannt**: „Solange du reservierst, bleibt der Überschuss für dich frei.“ Der Erzeuger liest „keine großen Verbraucher einschalten“. | Zugesagt wird mehr als die Automatik: Der Haushalt des Erzeugers schaltet in der Zeit auch von Hand nichts Großes ein, nicht nur Wallbox und WP (Wolfgang, 2026-10-21). Node-RED hält nur Wallbox und WP zurück, alles andere ist eine Absprache im Haus, dafür benachrichtigt MAGGIE Margit. |
 | **Push** beim Start an den Erzeuger, beim Ende an beide | Der Erzeuger soll wissen, warum Wallbox oder WP nicht anspringen. Der Empfänger erfährt beim Ende, wie viel Budget noch übrig ist. |
 | **Anzeigename im Konto** (`users.display_name`), Fallback: Teil der E-Mail vor dem @ | In Banner, Push und MAGGIE soll „Elisa“ stehen, nie die E-Mail-Adresse. |
+| **Reservierungs-Push unabhängig von den Glocken.** Wer reservieren darf, sieht bei eingeschalteten Benachrichtigungen ohne Glocke keine gelbe Warnung, sondern den ruhigen Hinweis „Ohne Glocke bekommst du nur die Nachrichten zu deinen Reservierungen.“ | Elisa will nur die Nachrichten zur Reservierung, nicht die zum Überschuss. Die Warnung („… kein Gerät hat 🔔“ in `ApplianceGrid.tsx`, „Markiere unten Geräte …“ in `PushToggle.tsx`) stünde bei ihr sonst dauernd da, obwohl alles gewollt ist. Für Empfänger ohne Recht bleibt sie, dort stimmt sie (Wolfgang, 2026-10-21). |
 | Knopf **nur in der App** (unter Status und Hinweis, vor dem Verlauf), nicht in der Push-Nachricht | Knöpfe in Web-Push zeigt nur Android an, das iPhone nicht. Also gibt es überall denselben Weg. |
 | **Steuerweg: Node-RED fragt ELMA per HTTPS** mit eigenem Steuer-Token (alle 15 s), **nicht über MQTT** | In myhome gilt: „Keine eingehende MQTT-Nachricht schaltet etwas.“ Der Broker ist anonym, ohne ACL und TLS, eine gefälschte Reservierung könnte die Wallbox dauerhaft blockieren. Das Backend erreicht das LAN ohnehin nicht. Ein Abruf von innen nach außen über den vorhandenen Cloudflare-Tunnel braucht keine neue Öffnung. |
 | Eigenes **Steuer-Token** pro Erzeuger, nicht das Geräte-Token der Bridge | Das Steuer-Token darf nur den Status austauschen und keine Messwerte einspeisen. |
@@ -140,6 +141,7 @@ Push-Texte:
 ### Web
 - `ProducerCard.tsx`: Knopf (auch grau mit Grund), Sheet, Banner und Empfängerliste wie oben.
 - `AccountSheet.tsx`: Feld „Name“. *(Phase 1, umgesetzt)*
+- `ApplianceGrid.tsx`, `PushToggle.tsx`: Warnung „keine Glocke“ nicht bei Empfängern mit Recht, dort stattdessen „Ohne Glocke bekommst du nur die Nachrichten zu deinen Reservierungen.“ (siehe Entscheidungen).
 - `useLive.ts`: Nachricht `reservation` verarbeiten.
 - `api.ts`: neue Aufrufe.
 
