@@ -1,4 +1,4 @@
-import { Pencil } from "lucide-react";
+import { Pencil, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   LEVEL_LOTS_WATTS,
@@ -14,6 +14,7 @@ import { HistoryChart } from "./HistoryChart.tsx";
 import { ApplianceGrid } from "./ApplianceGrid.tsx";
 import { ApplianceTimeline } from "./ApplianceTimeline.tsx";
 import { ApplianceIcon } from "./icons.tsx";
+import { InviteSheet } from "./InviteSheet.tsx";
 import { biggestFitting, type Appliance } from "./appliances.ts";
 
 export type View = "power" | "appliances";
@@ -47,8 +48,7 @@ const LABELS: Record<Level, string> = {
 
 export function ProducerCard({ producer, reading, now, view, appliances, notify, pushOn, onEditAppliances }: Props) {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
-  const [invite, setInvite] = useState<string | null>(null);
-  const [inviteName, setInviteName] = useState("");
+  const [inviting, setInviting] = useState(false);
   const [name, setName] = useState(producer.name);
   const level = levelOf(reading, now);
   const liveWatts = reading && level !== "offline" ? Math.max(0, reading.watts) : null;
@@ -71,29 +71,20 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
     }
   };
 
-  const createInvite = async () => {
-    let url: string;
-    try {
-      ({ url } = await api.createInvite(producer.id, inviteName.trim() || undefined));
-    } catch (err) {
-      alert((err as Error).message);
-      return;
-    }
-    setInvite(url);
-    if (navigator.share) navigator.share({ title: "ELMA Einladung", text: "Sieh dir meinen Stromüberschuss an:", url }).catch(() => undefined);
-  };
-
   return (
     <section className={`card producer level-${level}`}>
       <div className="producer-head">
-        <h2>
-          {name}
-          {producer.isOwner && (
-            <button className="link small rename" onClick={rename} aria-label="Erzeuger umbenennen" title="Umbenennen">
-              <Pencil size={15} aria-hidden />
+        <h2>{name}</h2>
+        {producer.isOwner && (
+          <>
+            <button className="icon-button" onClick={rename} aria-label="Erzeuger umbenennen" title="Umbenennen">
+              <Pencil size={17} aria-hidden />
             </button>
-          )}
-        </h2>
+            <button className="icon-button framed" onClick={() => setInviting(true)} aria-label="Personen einladen" title="Einladen">
+              <UserPlus size={19} aria-hidden />
+            </button>
+          </>
+        )}
       </div>
 
       {view === "power" ? (
@@ -117,21 +108,7 @@ export function ProducerCard({ producer, reading, now, view, appliances, notify,
 
       {view === "power" && <HistoryChart points={history} />}
 
-      {producer.isOwner && (
-        <div className="owner">
-          <input
-            placeholder="Name der Person, z. B. Margit (optional)"
-            aria-label="Name der eingeladenen Person"
-            maxLength={40}
-            value={inviteName}
-            onChange={(e) => setInviteName(e.target.value)}
-          />
-          <button onClick={createInvite}>Empfänger einladen</button>
-          {invite && (
-            <input readOnly value={invite} onFocus={(e) => e.currentTarget.select()} aria-label="Einladungslink" />
-          )}
-        </div>
-      )}
+      {inviting && <InviteSheet producerId={producer.id} producerName={name} onClose={() => setInviting(false)} />}
     </section>
   );
 }

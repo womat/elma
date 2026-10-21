@@ -80,7 +80,17 @@ button.secondary.danger { color: var(--error); box-shadow: inset 0 0 0 1.5px col
 .sign-out { width: 100%; margin-top: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .dashboard > .notice { margin: 12px 0 0; }
 
-.producer-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.producer-head { display: flex; align-items: center; gap: 4px; }
+.producer-head h2 { flex: 1; margin: 0; }
+/* Runde Symbol-Knöpfe am Erzeugernamen (Umbenennen, Einladen), 40px als Tippfläche */
+button.icon-button {
+  width: 40px; height: 40px; padding: 0; border-radius: 50%; flex: none;
+  display: inline-flex; align-items: center; justify-content: center; background: none; color: var(--muted);
+}
+button.icon-button.framed {
+  background: var(--bg); color: var(--text);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--muted) 35%, transparent);
+}
 .value { font-size: clamp(3rem, 16vw, 4.5rem); font-weight: 700; margin-top: 8px; font-variant-numeric: tabular-nums; }
 .status { font-weight: 600; display: flex; align-items: center; gap: 8px; }
 .status::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--none); }
@@ -102,8 +112,6 @@ button.secondary.danger { color: var(--error); box-shadow: inset 0 0 0 1.5px col
 .chart .line { fill: none; stroke: var(--good); stroke-width: 2; }
 .chart-x { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); }
 .chart-empty { font-size: 0.9rem; margin: 18px 0 0; }
-
-.owner { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
 
 .hint { margin: 10px 0 0; color: var(--muted); }
 
@@ -182,6 +190,12 @@ button.secondary {
 .icon-picker button.on { box-shadow: 0 0 0 3px var(--accent); }
 .custom-inputs { display: grid; grid-template-columns: 1fr 90px; gap: 8px; }
 .name-inputs { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.invite-intro { flex-direction: column; align-items: flex-start; gap: 6px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.invite-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
+.invite-actions button, .invite-create { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.invite-create { width: 100%; margin-top: 14px; }
+.invite-again { width: 100%; margin-top: 24px; }
 
 .appliance-grid li { position: relative; }
 .bell { position: absolute; top: 6px; right: 7px; line-height: 0; color: var(--accent); }
@@ -224,7 +238,6 @@ button.secondary {
 .timeline-legend .some::before { background: var(--some); }
 .timeline-legend .lots::before { background: var(--good); }
 
-.rename { padding: 0 0 0 6px; font-size: 0.9rem; vertical-align: 1px; }
 .push-warning { margin: 0 0 10px; color: var(--some); }
 .push-toggle .push-warning { margin: 0; }
 button.link.inline { padding: 0; color: inherit; text-decoration: underline; font-size: inherit; }

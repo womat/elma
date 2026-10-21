@@ -2,6 +2,18 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.7.2 – 2026-10-21
+
+- **Einladen im eigenen Blatt:** Das Namensfeld und der Knopf „Empfänger einladen“ standen bisher unten in jeder Erzeuger-Karte,
+  in „Leistung“ und in „Geräte“. Man lädt nur selten jemanden ein, das Formular nahm aber bei jedem Blick Platz weg und sah aus
+  wie ein Teil der Stromanzeige. Jetzt sitzt neben dem Namen des Erzeugers ein Personen-Symbol mit Plus, gleich neben dem Bleistift
+  zum Umbenennen. Es öffnet das Blatt „Einladen“: Name (optional), „Einladungslink erstellen“, danach der Link mit „Teilen“ und „Kopieren“
+  und dem Datum, bis zu dem er gilt. Beide Symbole sieht nur der Besitzer des Erzeugers.
+- **Teilen erst auf Tippen:** Bisher ging das Teilen-Fenster des Handys sofort beim Erstellen auf. Jetzt sieht man zuerst, dass der
+  Link erstellt wurde, und teilt oder kopiert ihn dann selbst.
+- Das Symbol sitzt am Erzeuger und nicht im Konto-Blatt, weil eine Einladung genau für diesen Erzeuger gilt. Bei mehreren Erzeugern
+  müsste man im Konto-Blatt sonst erst einen auswählen (Wolfgang, 2026-10-21, nach Mockup).
+
 ## 0.7.1 – 2026-10-21
 
 - **Aufgeräumte Kopfzeile:** Rechts oben standen bisher ein grüner Punkt, ein Schlüssel-Symbol und das Wort „Abmelden“,

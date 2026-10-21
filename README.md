@@ -214,12 +214,12 @@ So lässt sich das Format schnell herausfinden.
 
 ## Empfänger einladen
 
-Melde dich als Erzeuger in der App an und tippe auf **„Empfänger einladen“**.
-Am Handy öffnet sich direkt „Teilen“ (WhatsApp, Signal, Mail usw.).
+Melde dich als Erzeuger in der App an und tippe neben dem Namen des Erzeugers auf das **Personen-Symbol mit Plus**.
+Im Blatt „Einladen“ trägst du optional den Namen der Person ein (z. B. „Margit“) und tippst auf **„Einladungslink erstellen“**.
+Danach teilst du den Link mit **„Teilen“** (WhatsApp, Signal, Mail usw.) oder kopierst ihn.
 Der Link ist 7 Tage gültig und nur einmal verwendbar.
 Der Empfänger legt damit sein Konto an; ohne Einladung ist keine Registrierung möglich.
-Trägst du vorher den Namen der Person ins Feld darüber ein (z. B. „Margit“), steht er gleich in ihrem Konto.
-Sie kann ihn später selbst ändern.
+Der Name steht dann gleich im neuen Konto und lässt sich später selbst ändern.
 Alternativ geht das auch per Kommandozeile, der Name ist optional:
 
 ```bash
