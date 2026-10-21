@@ -199,7 +199,7 @@ function banner(isOwner) {
   const rest = Math.ceil(a.end - state.clock), pct = ((state.clock - a.start) / (a.end - a.start)) * 100;
   return `<div class="banner" role="status">
     <div class="t"><span>🔒 ELISA-Modus aktiv</span><span>noch ${rest} min</span></div>
-    <div class="s">${isOwner ? "Reserviert von Elisa" : "Du hast reserviert"} · bis ${fmt(a.end)}. Wallbox und Wärmepumpe springen nicht an.</div>
+    <div class="s">${isOwner ? "Reserviert von Elisa" : "Du hast reserviert"} · bis ${fmt(a.end)}. ${isOwner ? "Solange Elisa reserviert, bleibt der Überschuss für sie frei." : "Solange du reservierst, bleibt der Überschuss für dich frei."}</div>
     <div class="bar"><i style="width:${pct}%"></i></div>
     <div class="row"><span class="s">${isOwner ? "" : "heute danach noch " + Math.max(0, left() - rest) + " min"}</span><button data-act="end">Beenden</button></div>
   </div>`;
@@ -223,7 +223,7 @@ function sheet() {
     <p class="long"><b>E</b>nergie für die <b>L</b>ieblingstochter: <b>I</b>hr <b>S</b>onnenstrom-<b>A</b>nteil</p>
     <div>Wie lange brauchst du den Überschuss?</div>
     <div class="chips">${DURATIONS.map((d) => `<button data-pick="${d}" aria-pressed="${state.pick === d}" ${d > l ? "disabled" : ""}>${d} min</button>`).join("")}</div>
-    <p class="info">Wallbox und Wärmepumpe springen in der Zeit nicht an. Heute noch ${l} min frei.</p>
+    <p class="info">Solange du reservierst, bleibt der Überschuss für dich frei. Heute noch ${l} min frei.</p>
     <button data-act="start" ${state.pick > l ? "disabled" : ""}>${state.pick} min reservieren, bis ${fmt(state.clock + state.pick)}</button>
   </div></div>`;
 }
@@ -285,7 +285,7 @@ document.addEventListener("click", (e) => {
   if (act === "start") {
     state.active = { start: state.clock, end: state.clock + state.pick };
     state.sheet = false;
-    notify(["wolf"], "🔒 Elisa reserviert den Überschuss", `bis ${fmt(state.active.end)} – Wallbox und WP bleiben aus`);
+    notify(["wolf"], "🔒 Elisa reserviert den Überschuss", `bis ${fmt(state.active.end)} – keine großen Verbraucher einschalten`);
   }
   if (act === "end") endReservation(true);
   if (act === "toggle") state.canReserve = !state.canReserve;
@@ -314,7 +314,7 @@ const STEPS = [
   { n: "Schritt 1", t: "Viel Überschuss, Knopf bereit", d: "Elisa hat die Überschuss-Push bekommen und öffnet die App.", who: "elisa", s: {} },
   { n: "Schritt 2", t: "Knopf gedrückt: Dauer wählen", d: "Bottom-Sheet mit 15/30/45/60 min. Sie wählt 30 min und bestätigt.", who: "elisa", s: { sheet: true, pick: 30 } },
   { n: "Schritt 3", t: "Reservierung läuft", d: "Banner mit Restzeit, der Knopf ist weg. „Beenden“ gibt die Restzeit zurück ins Budget.", who: "elisa", s: { clock: 14 * 60 + 5, active: { start: 13 * 60 + 52, end: 14 * 60 + 22 } } },
-  { n: "Schritt 3 · bei dir", t: "Du bekommst eine Push-Nachricht", d: "Dasselbe Banner bei dir. Node-RED lässt Wallbox und WP nicht anspringen.", who: "wolf", s: { clock: 13 * 60 + 52, active: { start: 13 * 60 + 52, end: 14 * 60 + 22 }, push: { wolf: { title: "🔒 Elisa reserviert den Überschuss", body: "bis 14:22 – Wallbox und WP bleiben aus" } } } },
+  { n: "Schritt 3 · bei dir", t: "Du bekommst eine Push-Nachricht", d: "Dasselbe Banner bei dir. Node-RED lässt Wallbox und WP nicht anspringen.", who: "wolf", s: { clock: 13 * 60 + 52, active: { start: 13 * 60 + 52, end: 14 * 60 + 22 }, push: { wolf: { title: "🔒 Elisa reserviert den Überschuss", body: "bis 14:22 – keine großen Verbraucher einschalten" } } } },
   { n: "Schritt 4", t: "Zeit abgelaufen", d: "Beide bekommen eine Push-Nachricht. Es sind noch 30 min übrig, der Knopf ist wieder da.", who: "elisa", s: { clock: 14 * 60 + 22, used: 30, push: { elisa: { title: "🔓 ELISA-Modus zu Ende", body: "Heute noch 30 min übrig" } } } },
   { n: "Schritt 5", t: "Zweites Mal: nur noch 30 min wählbar", d: "45 und 60 min sind gesperrt, weil das Restbudget nicht reicht.", who: "elisa", s: { clock: 15 * 60 + 40, used: 30, sheet: true, pick: 30 } },
   { n: "Schritt 6", t: "Limit verbraucht", d: "Nach 2× 30 min ist der Knopf grau und nicht tippbar. Ab Mitternacht gibt es wieder 60 min.", who: "elisa", s: { clock: 16 * 60 + 15, used: 60, push: { elisa: { title: "🔓 ELISA-Modus zu Ende", body: "Heute noch 0 min übrig" } } } },

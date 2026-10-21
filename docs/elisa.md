@@ -47,6 +47,7 @@ Handy (Elisa) ──HTTPS──► ELMA-Backend ◄──HTTPS, alle 15 s── 
 | **Beginnt während der Reservierung eine Ladung** (z. B. der Erzeuger steckt das Auto von Hand an), endet die Reservierung sofort, mit Push an beide. Die ungenutzte Zeit geht zurück ins Budget. | Die Handbedienung des Erzeugers hat Vorrang. Die Reservierung schützt dann nichts mehr. |
 | **Knopf auch bei 0 W benutzbar** | Eine Wolke zieht vorbei, der Überschuss kommt gleich wieder. |
 | **Ohne Kontakt zu Node-RED** (seit 60 s kein Status) bleibt Reservieren möglich, mit dem Hinweis „Die Sperre wirkt gerade nicht, Wolfgang bekommt nur eine Info“. Ablehnungen gibt es dann nicht. | Ein Ausfall der Hausautomation soll ELMA nicht blockieren. Der Hinweis verhindert falsche Erwartungen. |
+| **Elisa werden keine Geräte genannt**: „Solange du reservierst, bleibt der Überschuss für dich frei.“ Der Erzeuger liest „keine großen Verbraucher einschalten“. | Zugesagt wird mehr als die Automatik: Der Haushalt des Erzeugers schaltet in der Zeit auch von Hand nichts Großes ein, nicht nur Wallbox und WP (Wolfgang, 2026-10-21). Node-RED hält nur Wallbox und WP zurück, alles andere ist eine Absprache im Haus, dafür benachrichtigt MAGGIE Margit. |
 | **Push** beim Start an den Erzeuger, beim Ende an beide | Der Erzeuger soll wissen, warum Wallbox oder WP nicht anspringen. Der Empfänger erfährt beim Ende, wie viel Budget noch übrig ist. |
 | **Anzeigename im Konto** (`users.display_name`), Fallback: Teil der E-Mail vor dem @ | In Banner, Push und MAGGIE soll „Elisa“ stehen, nie die E-Mail-Adresse. |
 | Knopf **nur in der App** (unter Status und Hinweis, vor dem Verlauf), nicht in der Push-Nachricht | Knöpfe in Web-Push zeigt nur Android an, das iPhone nicht. Also gibt es überall denselben Weg. |
@@ -70,14 +71,16 @@ Die einzelnen Bildschirme zeigen die Mockups.
 3. Ein Tipp öffnet ein Bottom-Sheet (wie `AccountSheet`):
    - die Langform des Namens
    - die Dauer-Chips 15/30/45/60 min, über dem Restbudget gesperrt
-   - der Hinweis „Wallbox und Wärmepumpe springen in der Zeit nicht an“, ohne Node-RED-Kontakt stattdessen „Die Sperre wirkt gerade nicht“
+   - der Hinweis „Solange du reservierst, bleibt der Überschuss für dich frei. Heute noch X min frei.“, ohne Node-RED-Kontakt stattdessen „Die Sperre wirkt gerade nicht, Wolfgang bekommt nur eine Info.“
    - der Bestätigungsknopf mit Endzeit, z. B. „30 min reservieren, bis 14:22“
-4. Während die Reservierung läuft, sehen alle Betrachter oben in der Karte ein Banner: „🔒 ELISA-Modus aktiv · Reserviert von Elisa · bis 14:22 · noch 17 min“, mit Fortschrittsbalken. Reservierender und Erzeuger haben dort „Beenden“.
+4. Während die Reservierung läuft, sehen alle Betrachter oben in der Karte ein Banner: „🔒 ELISA-Modus aktiv · noch 17 min · bis 14:22“, mit Fortschrittsbalken. Reservierender und Erzeuger haben dort „Beenden“.
+   - Bei Elisa: „Du hast reserviert. Solange du reservierst, bleibt der Überschuss für dich frei.“
+   - Beim Erzeuger: „Reserviert von Elisa. Solange Elisa reserviert, bleibt der Überschuss für sie frei.“
 5. Ist das Budget verbraucht, ist der Knopf grau: „Heute schon 60 min reserviert, morgen wieder“.
 6. Der Erzeuger hat unter „Empfänger einladen“ eine Liste der Empfänger (Name und E-Mail) mit je einem Schalter „ELISA-Modus“.
 
 Push-Texte:
-- Start (an den Erzeuger): „🔒 Elisa reserviert den Überschuss, bis 14:22“
+- Start (an den Erzeuger): „🔒 Elisa reserviert den Überschuss, bis 14:22 – keine großen Verbraucher einschalten“
 - Ende (an beide): „🔓 ELISA-Modus zu Ende, heute noch 30 min übrig“ bzw. „… vorzeitig beendet“
 - Ende, weil das Auto lädt (an beide): „⚡ Das Auto lädt, Reservierung beendet, heute noch 40 min übrig“
 

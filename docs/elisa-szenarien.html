@@ -167,7 +167,7 @@ function elma(s) {
   }
   const banner = s.active ? `<div class="banner"><div class="t"><span>🔒 ELISA-Modus aktiv</span><span>noch ${s.active.left} min</span></div>
       <div class="s">${s.owner ? "Reserviert von Elisa" : "Du hast reserviert"} · bis ${s.active.end}</div>
-      ${s.offline ? `<div class="warn">Die Sperre wirkt gerade nicht. ${s.owner ? "Node-RED meldet sich seit 2 min nicht." : "Wolfgang bekommt nur eine Info."}</div>` : `<div class="s">Wallbox und Wärmepumpe springen nicht an.</div>`}
+      ${s.offline ? `<div class="warn">Die Sperre wirkt gerade nicht. ${s.owner ? "Node-RED meldet sich seit 2 min nicht." : "Wolfgang bekommt nur eine Info."}</div>` : `<div class="s">${s.owner ? "Solange Elisa reserviert, bleibt der Überschuss für sie frei." : "Solange du reservierst, bleibt der Überschuss für dich frei."}</div>`}
       <div class="pb"><i style="width:${s.active.pct}%"></i></div><button class="end">Beenden</button></div>` : "";
   const owner = s.owner ? `<div class="owner"><button>Empfänger einladen</button>
       <div class="rcpt"><span>Elisa<small>elisa@…</small></span><span style="display:flex;gap:8px;align-items:center;font-size:.72rem;color:var(--e-muted)">ELISA <i class="tg"></i></span></div></div>` : "";
@@ -175,7 +175,7 @@ function elma(s) {
       <h4>🔒 ELISA-Modus</h4><p class="long"><b>E</b>nergie für die <b>L</b>ieblingstochter: <b>I</b>hr <b>S</b>onnenstrom-<b>A</b>nteil</p>
       <div>Wie lange brauchst du den Überschuss?</div>
       <div class="chips">${[15, 30, 45, 60].map((d) => `<span class="${d === s.sheet.pick ? "on" : ""} ${d > s.budget ? "off" : ""}">${d} min</span>`).join("")}</div>
-      ${s.offline ? `<p class="info" style="color:var(--e-text)">⚠ Die Sperre wirkt gerade nicht, Wolfgang bekommt nur eine Info.</p>` : `<p class="info">Wallbox und Wärmepumpe springen in der Zeit nicht an. Heute noch ${s.budget} min frei.</p>`}
+      ${s.offline ? `<p class="info" style="color:var(--e-text)">⚠ Die Sperre wirkt gerade nicht, Wolfgang bekommt nur eine Info.</p>` : `<p class="info">Solange du reservierst, bleibt der Überschuss für dich frei. Heute noch ${s.budget} min frei.</p>`}
       <button class="go">${s.sheet.pick} min reservieren, bis ${s.sheet.until}</button></div></div>` : "";
   return `<div class="elma">
     <div class="bar-top"><div class="brand"><span class="logo"><i></i></span>ELMA</div><span class="dot"></span><span class="me">${s.me}</span></div>
@@ -204,7 +204,7 @@ const SCENES = [
     d: "Akku voll, 3,2 kW Einspeisung, weder Wallbox noch Kompressor laufen. Elisa reserviert 30 min.",
     li: ["ELMA: Banner bei Elisa und Wolfgang, Push an Wolfgang.", "Node-RED: Wallbox bekommt ElisaHalt, Wärmepumpe die EVU-Sperre (relay2).", "MAGGIE: neuer Zustand „reserved“ in Orange, Vorrang vor „Sonnenstrom übrig“, Push an Margit."],
     elisa: { me: "Elisa", watts: "3,2 kW", level: "lots", active: { end: "14:22", left: 30, pct: 2 }, budget: 60 },
-    wolf: { me: "Wolfgang", owner: true, watts: "3,2 kW", level: "lots", active: { end: "14:22", left: 30, pct: 2 }, push: P("🔒 Elisa reserviert den Überschuss", "bis 14:22 – Wallbox und Wärmepumpe springen nicht an") },
+    wolf: { me: "Wolfgang", owner: true, watts: "3,2 kW", level: "lots", active: { end: "14:22", left: 30, pct: 2 }, push: P("🔒 Elisa reserviert den Überschuss", "bis 14:22 – keine großen Verbraucher einschalten") },
     margit: { ...RES, facts: ["8,1 ct", "100 %", "4,1 kW", "−3,2 kW"], push: P("Strom ist für Elisa reserviert", "Bis 14:22 bitte kein großes Gerät einschalten.", "MAGGIE") },
   },
   {
