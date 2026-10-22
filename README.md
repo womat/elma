@@ -241,6 +241,10 @@ docker compose exec backend node src/cli.ts control-token <producerId>
 Node-RED schickt damit alle 15 s `POST /api/control/status` (Details in [docs/elisa.md](docs/elisa.md) und `KONZEPT-ELISA.md` im Repo myhome).
 Das Token nur über einen sicheren Kanal weitergeben. Ein neues macht das alte ungültig.
 
+Läuft die Bridge, veröffentlicht sie die Reservierung zusätzlich retained auf `elma/reservation` (anderes Topic per `RESERVATION_TOPIC`),
+z. B. für die Strom-Ampel MAGGIE: `{"active":true,"until":<Unix-ms>,"by":"Elisa"}` bzw. `{"active":false}`.
+Das Topic dient nur der Anzeige. Node-RED liest es bewusst nicht, denn der Broker ist offen und eine gefälschte Nachricht soll nichts schalten.
+
 ## Anmeldung mit Passkey
 
 ELMA kennt keine Passwörter. Angemeldet wird mit einem **Passkey**: Das Handy speichert einen Schlüssel für ELMA,

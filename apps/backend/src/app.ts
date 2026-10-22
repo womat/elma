@@ -18,6 +18,7 @@ import {
   Throttle,
   PushSubscriptionBody,
   ReservationBody,
+  type IngestServerMessage,
   type LiveServerMessage,
   type MeDto,
   type ProducerDto,
@@ -325,6 +326,24 @@ export async function buildApp(
       return;
     }
     req.log.info({ producer: producer.name }, "Bridge verbunden");
+
+    // Reservierung für MAGGIE (nur Anzeige). Der Service meldet auch Statusänderungen von Node-RED, die die Bridge
+    // nicht betreffen; deshalb geht nur raus, was sich gegenüber der letzten Nachricht geändert hat.
+    let lastReservation = "";
+    const sendReservation = () => {
+      const { until, by } = reservations.current(producer.id);
+      const msg: IngestServerMessage = by ? { type: "reservation", until, by } : { type: "reservation", until };
+      const json = JSON.stringify(msg);
+      if (json === lastReservation) return;
+      lastReservation = json;
+      socket.send(json);
+    };
+    sendReservation();
+    const offReservations = reservations.subscribe((producerId) => {
+      if (producerId === producer.id) sendReservation();
+    });
+    socket.on("close", offReservations);
+
     socket.on("message", (raw) => {
       let parsed: z.ZodSafeParseResult<IngestMessage>;
       try {

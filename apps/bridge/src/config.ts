@@ -10,6 +10,8 @@ export interface BridgeConfig {
   deviceToken: string;
   minIntervalMs: number;
   deltaWatts: number;
+  /** retained Topic mit der Reservierung (ELISA-Modus) für MAGGIE */
+  reservationTopic: string;
 }
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
@@ -33,5 +35,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
     deviceToken: required(env, "DEVICE_TOKEN"),
     minIntervalMs: Number(env.MIN_INTERVAL_MS ?? 5000),
     deltaWatts: Number(env.DELTA_WATTS ?? 50),
+    reservationTopic: env.RESERVATION_TOPIC?.trim() || "elma/reservation",
   };
 }

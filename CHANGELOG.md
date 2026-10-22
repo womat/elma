@@ -2,6 +2,19 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.9.0 – 2026-10-22
+
+- **ELISA-Modus für MAGGIE** (ELMA-Teil von Phase 4 aus [docs/elisa.md](docs/elisa.md)). Das Backend schickt der Bridge über `/ingest`
+  beim Verbinden und bei jeder Änderung die Reservierung (`{type:"reservation", until, by}`), die Bridge veröffentlicht sie retained auf
+  `elma/reservation`: `{"active":true,"until":<Unix-ms>,"by":"Elisa"}` bzw. `{"active":false}`. So kann die Strom-Ampel MAGGIE im Haus
+  des Erzeugers zeigen, dass gerade reserviert ist, und Margit benachrichtigen. ELMA selbst schreibt Margit keine Push-Nachricht.
+  - Nur zur Anzeige: Node-RED liest das Topic nicht und bekommt die Reservierung weiter über `POST /api/control/status` (unverändert).
+    Der Broker ist offen, eine gefälschte Nachricht ändert so höchstens die Ampel.
+  - Ein Statusbericht von Node-RED erzeugt keine Nachricht an die Bridge, nur eine echte Änderung der Reservierung.
+  - Das Topic lässt sich mit `RESERVATION_TOPIC` ändern. Ist der Broker gerade weg, puffert die Bridge die Nachricht.
+    Bleibt eine alte Nachricht liegen (Bridge oder Backend aus), wirkt sie nicht ewig: MAGGIE prüft `until` selbst.
+  - Die Bridge versteht jetzt die Nachrichten des Backends und schreibt Fehlermeldungen lesbar ins Log statt als rohes JSON.
+
 ## 0.8.0 – 2026-10-21
 
 - **ELISA-Modus: Strom reservieren** (Phase 2 aus [docs/elisa.md](docs/elisa.md)). Bisher kam die Nachricht „viel Überschuss“,

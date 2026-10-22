@@ -14,6 +14,22 @@ export const IngestMessage = z.discriminatedUnion("type", [
 ]);
 export type IngestMessage = z.infer<typeof IngestMessage>;
 
+/**
+ * Nachrichten Backend -> Bridge über WS /ingest. Die Reservierung (ELISA-Modus) kommt beim Verbinden und bei jeder Änderung;
+ * die Bridge gibt sie nur an MAGGIE weiter (retained MQTT), geschaltet wird damit nichts (docs/elisa.md).
+ */
+export const IngestServerMessage = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("reservation"),
+    /** Ende der laufenden Reservierung (Unix-ms, Uhr des Backends), null = nichts reserviert */
+    until: z.number().int().positive().nullable(),
+    /** Anzeigename des Reservierenden */
+    by: z.string().optional(),
+  }),
+  z.object({ type: z.literal("error"), message: z.string() }),
+]);
+export type IngestServerMessage = z.infer<typeof IngestServerMessage>;
+
 /** Nachrichten App -> Backend über WS /live */
 export const LiveClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("auth"), token: z.string().min(1) }),

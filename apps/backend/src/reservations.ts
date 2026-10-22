@@ -188,14 +188,16 @@ export class ReservationService {
     stale.unref?.();
     this.staleTimers.set(producerId, stale);
 
-    let active = this.repo.activeReservation(producerId);
+    const active = this.repo.activeReservation(producerId);
     // Die Handbedienung des Erzeugers hat Vorrang; die Reservierung schützt dann nichts mehr
-    if (active && status.wallboxCharging) {
-      this.finish(active, "wallbox", now);
-      active = undefined;
-    } else if (before !== this.controlSummary(producerId, now)) {
-      this.emit(producerId);
-    }
+    if (active && status.wallboxCharging) this.finish(active, "wallbox", now);
+    else if (before !== this.controlSummary(producerId, now)) this.emit(producerId);
+    return this.current(producerId);
+  }
+
+  /** Ob und bis wann reserviert ist, ohne Sicht eines Users: für Node-RED und die Bridge (MAGGIE). */
+  current(producerId: string): ControlResponse {
+    const active = this.repo.activeReservation(producerId);
     return active ? { active: true, until: active.endsAt, by: this.nameOf(active.userId) } : { active: false, until: null };
   }
 

@@ -1,9 +1,13 @@
 import WebSocket from "ws";
-import type { IngestMessage, SurplusReading } from "@elma/shared";
+import type { IngestMessage, IngestServerMessage, SurplusReading } from "@elma/shared";
+import { parseServerMessage } from "./reservation.ts";
+
+export type ReservationListener = (msg: Extract<IngestServerMessage, { type: "reservation" }>) => void;
 
 /**
  * Hält eine ausgehende WebSocket-Verbindung zum Backend offen (mit Reconnect + Backoff).
  * Solange die Verbindung weg ist, wird nur der letzte Wert gepuffert.
+ * Zurück kommt die Reservierung (beim Verbinden und bei jeder Änderung), sie geht an onReservation.
  */
 export class BackendLink {
   private ws: WebSocket | null = null;
@@ -12,10 +16,12 @@ export class BackendLink {
   private closed = false;
   private readonly url: string;
   private readonly token: string;
+  private readonly onReservation: ReservationListener;
 
-  constructor(url: string, token: string) {
+  constructor(url: string, token: string, onReservation: ReservationListener) {
     this.url = url;
     this.token = token;
+    this.onReservation = onReservation;
   }
 
   start(): void {
@@ -49,7 +55,13 @@ export class BackendLink {
         this.send(reading);
       }
     });
-    ws.on("message", (data) => console.warn(`[backend] ${data.toString()}`));
+    ws.on("message", (data) => {
+      const raw = data.toString();
+      const msg = parseServerMessage(raw);
+      if (msg?.type === "reservation") this.onReservation(msg);
+      else if (msg?.type === "error") console.warn(`[backend] Fehler: ${msg.message}`);
+      else console.warn(`[backend] unbekannte Nachricht: ${raw.slice(0, 200)}`);
+    });
     ws.on("error", (err) => console.warn(`[backend] Fehler: ${err.message}`));
     ws.on("close", (code) => {
       if (this.closed) return;

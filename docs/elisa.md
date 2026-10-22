@@ -1,7 +1,7 @@
 # ELISA-Modus: Überschuss reservieren
 
-> **Status:** Plan vollständig (2026-10-21). Phase 1 (Anzeigename) ist mit 0.7.0 umgesetzt, Phase 2 (Reservierung in ELMA) mit 0.8.0. Offen sind Node-RED und MAGGIE (siehe [Umsetzungsreihenfolge](#umsetzungsreihenfolge)).
-> Was bei der Umsetzung vom Plan abweicht oder neu entschieden wurde, steht unter [Umgesetzt in 0.8.0](#umgesetzt-in-080-phase-2).
+> **Status:** Plan vollständig (2026-10-21). Phase 1 (Anzeigename) ist mit 0.7.0 umgesetzt, Phase 2 (Reservierung in ELMA) mit 0.8.0, der ELMA-Teil von Phase 4 (Bridge → `elma/reservation`) mit 0.9.0. Offen sind Node-RED und MAGGIE (siehe [Umsetzungsreihenfolge](#umsetzungsreihenfolge)).
+> Was bei der Umsetzung vom Plan abweicht oder neu entschieden wurde, steht unter [Umgesetzt in 0.8.0](#umgesetzt-in-080-phase-2) und [Umgesetzt: Phase 4, ELMA-Teil](#umgesetzt-phase-4-elma-teil).
 > Mockups (Datei im Browser öffnen):
 > - [elisa-mockup.html](elisa-mockup.html): klickbarer Ablauf in ELMA
 > - [elisa-szenarien.html](elisa-szenarien.html): sieben Szenarien nebeneinander für Elisa (ELMA), Wolfgang (ELMA) und Margit (MAGGIE)
@@ -183,7 +183,7 @@ Festgelegt mit Wolfgang am 2026-10-21. Jede Phase ist für sich ausrollbar, ein 
 | 1 | elma | **Anzeigename** im Konto (`users.display_name`, `PUT /api/me`, Feld im Konto-Sheet) | Klein und auch ohne ELISA nützlich | erledigt 2026-10-21 (0.7.0) |
 | 2 | elma | **Reservierung**: Recht, Budget, Knopf, Sheet, Banner, Push, `POST /api/control/status`, Steuer-Token per CLI | Elisa kann reservieren, der Erzeuger bekommt die Info. Ohne Node-RED steht „Die Sperre wirkt gerade nicht“ da | erledigt 2026-10-21 (0.8.0), ausgerollt |
 | 3 | myhome | **Node-RED**: `lib/elisa.js`, `ElisaEVU`/`ElisaHalt` in `lib/aktor.js`, Tab *ELISA*. Zuerst **Probebetrieb** (nur Schaltprotokoll, was es tun würde), danach scharf | Wallbox und WP werden zurückgehalten | offen |
-| 4 | elma, maggie | Backend sendet `{type:"reservation"}` über `/ingest`, Bridge veröffentlicht `elma/reservation`. MAGGIE bekommt den Zustand `reserved` und die Push an Margit | Margit sieht die Reservierung | offen |
+| 4 | elma, maggie | Backend sendet `{type:"reservation"}` über `/ingest`, Bridge veröffentlicht `elma/reservation`. MAGGIE bekommt den Zustand `reserved` und die Push an Margit | Margit sieht die Reservierung | ELMA-Teil erledigt 2026-10-22 (0.9.0), MAGGIE offen |
 
 Warum so: Node-RED und MAGGIE reagieren nur auf das, was ELMA liefert, deshalb kommt ELMA zuerst. Das Schalten im Haus greift in Wallbox und WP ein und kommt deshalb spät und zuerst im Probebetrieb, so wie es bei der Entladesperre eine Woche Probebetrieb gab.
 
@@ -209,6 +209,21 @@ Abweichungen vom Plan oben und Entscheidungen, die der Plan offenließ (Claude, 
 | Eigene Push-Titel für „Erzeuger hat beendet“ („🔓 Wolfgang hat den ELISA-Modus beendet“) und „Recht entzogen“ („🔓 ELISA-Modus beendet“, „Das Recht zum Reservieren wurde dir entzogen.“). Der Erzeuger liest „Elisa hat heute noch 30 min übrig“. | Der Plan legte nur Ablauf, vorzeitiges Ende und Ladung fest. |
 | Reservierungen, die während eines Neustarts des Backends abgelaufen sind, enden ohne Push | Eine verspätete „zu Ende“-Nachricht wäre eher verwirrend. |
 | Eine gelöschte Freigabe beendet die Reservierung noch nicht aktiv | Freigaben löschen kann man heute nirgends. Kommt das, muss es `ReservationService` aufrufen (wie `setCanReserve`). |
+
+## Umgesetzt: Phase 4, ELMA-Teil
+
+Entscheidungen, die der Plan offenließ (Claude, 2026-10-22, zur Prüfung durch Wolfgang). `POST /api/control/status` ist dabei unverändert geblieben, Phase 3 in myhome läuft parallel.
+
+| Entscheidung | Begründung |
+|---|---|
+| Node-RED und Bridge bekommen denselben Stand aus `ReservationService.current()`. Die Bridge-Nachricht ist `{type:"reservation", until, by}` mit `until: null` für „nichts reserviert“, wie im Plan. | Eine Quelle für beide, damit Ampel und Sperre nie Verschiedenes zeigen. |
+| `/ingest` schickt nur, wenn sich `until`/`by` gegenüber der letzten Nachricht an diese Bridge geändert haben | Der Service meldet auch Statusänderungen von Node-RED (für den Knopf in der App). Die Bridge soll das Topic nicht alle paar Sekunden neu schreiben, sonst schickt MAGGIE womöglich doppelt. |
+| Nicht an `/ingest/shelly/:token` | Dort hängt ein Shelly, keine Bridge. Ohne Bridge gibt es kein MQTT und damit auch kein MAGGIE. |
+| `IngestServerMessage` kennt zusätzlich `{type:"error", message}` | Das Backend schickt diese Nachricht schon bei ungültigen Eingaben. Die Bridge loggt sie jetzt lesbar, Unbekanntes als Warnung. |
+| Veröffentlicht wird retained mit QoS 1. Die Bridge räumt das Topic beim Beenden oder bei Verbindungsverlust zum Backend **nicht** ab. | MAGGIE prüft `until` selbst, eine liegengebliebene Reservierung läuft also von allein aus. Beim Wiederverbinden schickt das Backend sofort den aktuellen Stand. Ist MQTT gerade weg, puffert mqtt.js die Nachricht. Bestätigt von Wolfgang, 2026-10-22. |
+| **Bewusst nicht:** `{"active":false}` setzen, wenn die Bridge beendet wird oder die Verbindung zum Backend verliert, auch nicht per MQTT Last Will | Das tauscht den harmlosen Fehler „reserviert, obwohl frei“ gegen „frei, obwohl reserviert“. Verliert die Bridge während einer Reservierung kurz die Verbindung, hält Node-RED Wallbox und WP weiter zurück, MAGGIE zeigte aber „frei“. Margit schaltete dann vielleicht etwas Großes ein, und genau das soll der ELISA-Modus verhindern. Bei jedem Deploy oder Neustart spränge die Ampel kurz auf „frei“ und zurück, mit womöglich einer zweiten Push an Margit. Der Preis des Stehenlassens: Beendet Elisa vorzeitig, während die Bridge keine Verbindung hat, oder fällt ELMA aus (Node-RED gibt dann fail-open frei), zeigt MAGGIE noch „reserviert“, bis die Verbindung wieder steht, längstens bis `until` (höchstens 60 min). Margit wartet dann unnötig, das ist in Ordnung (Wolfgang, 2026-10-22). |
+| `RESERVATION_TOPIC` steht in `docker-compose.yml` und `deploy/box/docker-compose.yml`, Standard `elma/reservation`, leer zählt als Standard | Weitere Erzeuger mit eigener ELMA-Box haben ihren eigenen Broker, dort stört das Topic nicht. Wer mehrere ELMA an einem Broker hat, kann es umbenennen. |
+| Der ELMA-Teil geht allein als **0.9.0** raus, ohne auf MAGGIE zu warten (Wolfgang, 2026-10-22) | MAGGIE liest das Topic nur. Solange sie es nicht kennt, stört die retained Nachricht niemanden, und MAGGIE kann danach gegen einen echten Stand entwickelt werden. Neue Funktion, daher Minor statt Patch. |
 
 ## Vor der Umsetzung mitbringen
 

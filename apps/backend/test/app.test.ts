@@ -337,6 +337,38 @@ describe("ELISA-Modus", () => {
     owner.ws.close();
   });
 
+  it("/ingest bekommt den Stand nach dem Verbinden, dann Start und Ende, Node-RED-Status aber nicht", async () => {
+    const { producer, deviceToken, elisa } = await withRecipient();
+    repo.setCanReserve(producer.id, elisa.id, true);
+    const headers = { authorization: `Bearer ${await login("elisa@elma.test")}` };
+    const bridge = new WebSocket(`ws://${baseUrl}/ingest`, { headers: { authorization: `Bearer ${deviceToken}` } });
+    const messages: unknown[] = [];
+    bridge.on("message", (data) => messages.push(JSON.parse(data.toString())));
+    await waitFor(() => messages.length === 1);
+    expect(messages[0]).toEqual({ type: "reservation", until: null });
+
+    const res = await app.inject({ method: "POST", url: `/api/producers/${producer.id}/reservation`, headers, payload: { minutes: 15 } });
+    await waitFor(() => messages.length === 2);
+    expect(messages[1]).toEqual({ type: "reservation", until: res.json().active.endsAt, by: "Elisa" });
+
+    // Node-RED meldet sich: Für die App ändert sich etwas (controlConnected), für die Bridge nicht
+    const token = repo.createControlToken(producer.id);
+    const status = await app.inject({
+      method: "POST",
+      url: "/api/control/status",
+      headers: { authorization: `Bearer ${token}` },
+      payload: { compressorRunning: false, wallboxCharging: false },
+    });
+    expect(status.json()).toEqual({ active: true, until: res.json().active.endsAt, by: "Elisa" });
+
+    await app.inject({ method: "DELETE", url: `/api/producers/${producer.id}/reservation`, headers });
+    await waitFor(() => messages.length === 3);
+    expect(messages[2]).toEqual({ type: "reservation", until: null });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(messages).toHaveLength(3);
+    bridge.close();
+  });
+
   it("nur der Erzeuger sieht die Empfänger und vergibt das Recht", async () => {
     const { producer, elisa } = await withRecipient();
     const auth = async (email: string) => ({ authorization: `Bearer ${await login(email)}` });

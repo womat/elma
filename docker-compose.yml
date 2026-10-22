@@ -43,6 +43,7 @@ services:
       PAYLOAD_INVERT: ${PAYLOAD_INVERT:-false}
       BACKEND_URL: ws://backend:3000
       DEVICE_TOKEN: ${DEVICE_TOKEN:-}
+      RESERVATION_TOPIC: ${RESERVATION_TOPIC:-elma/reservation}
     profiles: [bridge] # erst starten, wenn DEVICE_TOKEN gesetzt ist
 
   cloudflared:

@@ -64,6 +64,7 @@ services:
       PAYLOAD_INVERT: ${PAYLOAD_INVERT:-false}
       BACKEND_URL: ws://backend:3000
       DEVICE_TOKEN: ${DEVICE_TOKEN:-}
+      RESERVATION_TOPIC: ${RESERVATION_TOPIC:-elma/reservation}
     mem_limit: 128m
     profiles: [mqtt]
 
