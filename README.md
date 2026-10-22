@@ -343,7 +343,8 @@ Konzept, Diagramme und Checkliste stehen in **[docs/hosting.md](docs/hosting.md)
 ## Nächste Schritte
 
 - **Konto löschen und Freigabe entfernen (offen):** Heute kann man im Terminal Konten anlegen, aber keines löschen und
-  auch keine Freigabe zurücknehmen. Für den Anfang reichen zwei CLI-Befehle wie bei der übrigen Verwaltung:
+  auch keine Freigabe zurücknehmen. Dafür kommen zwei CLI-Befehle wie bei der übrigen Verwaltung, in der App ändert sich
+  nichts (Wolfgang, 2026-10-22):
   `delete-user <email>` (Konto mit Passkeys, Push-Abos, Geräteauswahl, Freigaben und Reservierungen) und
   `remove-recipient <producerId> <email>` (der Empfänger sieht den Erzeuger nicht mehr, sein Konto bleibt).
   Dazu gehört:
@@ -354,9 +355,7 @@ Konzept, Diagramme und Checkliste stehen in **[docs/hosting.md](docs/hosting.md)
   - `invites.used_by` hat kein `ON DELETE CASCADE`. Ein Konto, das eine Einladung eingelöst hat, lässt sich deshalb nicht löschen,
     ohne die Spalte vorher zu leeren.
   - Ist der User Erzeuger, löscht die Kaskade auch seinen Erzeuger mit dem ganzen Verlauf. Das braucht eine Rückfrage oder
-    eine Weigerung, solange er noch Erzeuger hat.
-  - Ob das später auch in die App kommt (z. B. „Empfänger entfernen“ im Blatt „Einladen“), ist noch nicht entschieden.
-- Android-App im Play Store über Capacitor (gleicher Code)
+    eine Weigerung, solange er noch Erzeuger hat.- Android-App im Play Store über Capacitor (gleicher Code)
 - Mehrere Erzeuger/Empfänger (Energiegemeinschaft); das Datenmodell ist dafür schon vorbereitet
 
 ## Mitmachen
