@@ -342,6 +342,20 @@ Konzept, Diagramme und Checkliste stehen in **[docs/hosting.md](docs/hosting.md)
 
 ## Nächste Schritte
 
+- **Konto löschen und Freigabe entfernen (offen):** Heute kann man im Terminal Konten anlegen, aber keines löschen und
+  auch keine Freigabe zurücknehmen. Für den Anfang reichen zwei CLI-Befehle wie bei der übrigen Verwaltung:
+  `delete-user <email>` (Konto mit Passkeys, Push-Abos, Geräteauswahl, Freigaben und Reservierungen) und
+  `remove-recipient <producerId> <email>` (der Empfänger sieht den Erzeuger nicht mehr, sein Konto bleibt).
+  Dazu gehört:
+  - Eine laufende Reservierung des Users endet über `ReservationService`, mit Push und Ende-Grund, wie beim Entzug des Rechts
+    (Lücke in [docs/elisa.md](docs/elisa.md), „Umgesetzt in 0.8.0“).
+  - Eine offene Live-Verbindung bekommt danach keine Werte mehr. Heute ermittelt `/live` die erlaubten Erzeuger nur beim Verbinden.
+  - Ein noch gültiges JWT nützt nichts mehr. `GET /api/me` liefert dann schon 401, die anderen Routen prüfen nur das JWT.
+  - `invites.used_by` hat kein `ON DELETE CASCADE`. Ein Konto, das eine Einladung eingelöst hat, lässt sich deshalb nicht löschen,
+    ohne die Spalte vorher zu leeren.
+  - Ist der User Erzeuger, löscht die Kaskade auch seinen Erzeuger mit dem ganzen Verlauf. Das braucht eine Rückfrage oder
+    eine Weigerung, solange er noch Erzeuger hat.
+  - Ob das später auch in die App kommt (z. B. „Empfänger entfernen“ im Blatt „Einladen“), ist noch nicht entschieden.
 - Android-App im Play Store über Capacitor (gleicher Code)
 - Mehrere Erzeuger/Empfänger (Energiegemeinschaft); das Datenmodell ist dafür schon vorbereitet
 

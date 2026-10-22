@@ -209,7 +209,7 @@ Abweichungen vom Plan oben und Entscheidungen, die der Plan offenließ (Claude, 
 | Bannertext beim Erzeuger: „Reserviert von Elisa · bis 14:22. Bis dahin bitte keine großen Verbraucher einschalten.“ statt „… bleibt der Überschuss für sie frei“ | Das Recht können auch andere Empfänger bekommen, „für sie“ passt dann nicht immer. Der Satz entspricht außerdem der Zusage an den Haushalt. Andere Empfänger sehen nur „Reserviert von Elisa · bis 14:22.“ |
 | Eigene Push-Titel für „Erzeuger hat beendet“ („🔓 Wolfgang hat den ELISA-Modus beendet“) und „Recht entzogen“ („🔓 ELISA-Modus beendet“, „Das Recht zum Reservieren wurde dir entzogen.“). Der Erzeuger liest „Elisa hat heute noch 30 min übrig“. | Der Plan legte nur Ablauf, vorzeitiges Ende und Ladung fest. |
 | Reservierungen, die während eines Neustarts des Backends abgelaufen sind, enden ohne Push | Eine verspätete „zu Ende“-Nachricht wäre eher verwirrend. |
-| Eine gelöschte Freigabe beendet die Reservierung noch nicht aktiv | Freigaben löschen kann man heute nirgends. Kommt das, muss es `ReservationService` aufrufen (wie `setCanReserve`). |
+| Eine gelöschte Freigabe beendet die Reservierung noch nicht aktiv | Freigaben löschen kann man heute nirgends. Kommt das, muss es `ReservationService` aufrufen (wie `setCanReserve`). Als offener Punkt in der README unter „Nächste Schritte“, „Konto löschen und Freigabe entfernen“ (2026-10-22). |
 
 ## Umgesetzt: Phase 4, ELMA-Teil
 
