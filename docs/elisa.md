@@ -1,6 +1,6 @@
 # ELISA-Modus: Überschuss reservieren
 
-> **Status:** Plan vollständig (2026-10-21). Phase 1 (Anzeigename) ist mit 0.7.0 umgesetzt, Phase 2 (Reservierung in ELMA) mit 0.8.0, der ELMA-Teil von Phase 4 (Bridge → `elma/reservation`) mit 0.9.0. Offen sind Node-RED und MAGGIE (siehe [Umsetzungsreihenfolge](#umsetzungsreihenfolge)).
+> **Status:** Plan vollständig (2026-10-21). Phase 1 (Anzeigename) ist mit 0.7.0 umgesetzt, Phase 2 (Reservierung in ELMA) mit 0.8.0, der ELMA-Teil von Phase 4 (Bridge → `elma/reservation`) mit 0.9.0. Node-RED (Phase 3) ist gebaut und läuft im Probebetrieb. Offen sind das Scharfschalten in Node-RED und MAGGIE (siehe [Umsetzungsreihenfolge](#umsetzungsreihenfolge)).
 > Was bei der Umsetzung vom Plan abweicht oder neu entschieden wurde, steht unter [Umgesetzt in 0.8.0](#umgesetzt-in-080-phase-2) und [Umgesetzt: Phase 4, ELMA-Teil](#umgesetzt-phase-4-elma-teil).
 > Mockups (Datei im Browser öffnen):
 > - [elisa-mockup.html](elisa-mockup.html): klickbarer Ablauf in ELMA
@@ -182,7 +182,7 @@ Festgelegt mit Wolfgang am 2026-10-21. Jede Phase ist für sich ausrollbar, ein 
 | 0 | myhome, maggie | Nur Doku: `KONZEPT-ELISA.md` in myhome, ELISA-Abschnitt in `docs/KONZEPT.md` von maggie | Jedes Repo kennt seinen Teil | erledigt 2026-10-21 |
 | 1 | elma | **Anzeigename** im Konto (`users.display_name`, `PUT /api/me`, Feld im Konto-Sheet) | Klein und auch ohne ELISA nützlich | erledigt 2026-10-21 (0.7.0) |
 | 2 | elma | **Reservierung**: Recht, Budget, Knopf, Sheet, Banner, Push, `POST /api/control/status`, Steuer-Token per CLI | Elisa kann reservieren, der Erzeuger bekommt die Info. Ohne Node-RED steht „Die Sperre wirkt gerade nicht“ da | erledigt 2026-10-21 (0.8.0), ausgerollt |
-| 3 | myhome | **Node-RED**: `lib/elisa.js`, `ElisaEVU`/`ElisaHalt` in `lib/aktor.js`, Tab *ELISA*. Zuerst **Probebetrieb** (nur Schaltprotokoll, was es tun würde), danach scharf | Wallbox und WP werden zurückgehalten | offen |
+| 3 | myhome | **Node-RED**: `lib/elisa.js`, `ElisaEVU`/`ElisaHalt` in `lib/aktor.js`, Tab *ELISA*. Zuerst **Probebetrieb** (nur Schaltprotokoll, was es tun würde), danach scharf | Wallbox und WP werden zurückgehalten | gebaut 2026-10-22, Probebetrieb; scharf offen (myhome `KONZEPT-ELISA.md`) |
 | 4 | elma, maggie | Backend sendet `{type:"reservation"}` über `/ingest`, Bridge veröffentlicht `elma/reservation`. MAGGIE bekommt den Zustand `reserved` und die Push an Margit | Margit sieht die Reservierung | ELMA-Teil erledigt 2026-10-22 (0.9.0), MAGGIE offen |
 
 Warum so: Node-RED und MAGGIE reagieren nur auf das, was ELMA liefert, deshalb kommt ELMA zuerst. Das Schalten im Haus greift in Wallbox und WP ein und kommt deshalb spät und zuerst im Probebetrieb, so wie es bei der Entladesperre eine Woche Probebetrieb gab.
