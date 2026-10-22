@@ -183,7 +183,7 @@ Festgelegt mit Wolfgang am 2026-10-21. Jede Phase ist für sich ausrollbar, ein 
 | 1 | elma | **Anzeigename** im Konto (`users.display_name`, `PUT /api/me`, Feld im Konto-Sheet) | Klein und auch ohne ELISA nützlich | erledigt 2026-10-21 (0.7.0) |
 | 2 | elma | **Reservierung**: Recht, Budget, Knopf, Sheet, Banner, Push, `POST /api/control/status`, Steuer-Token per CLI | Elisa kann reservieren, der Erzeuger bekommt die Info. Ohne Node-RED steht „Die Sperre wirkt gerade nicht“ da | erledigt 2026-10-21 (0.8.0), ausgerollt |
 | 3 | myhome | **Node-RED**: `lib/elisa.js`, `ElisaEVU`/`ElisaHalt` in `lib/aktor.js`, Tab *ELISA*. Zuerst **Probebetrieb** (nur Schaltprotokoll, was es tun würde), danach scharf | Wallbox und WP werden zurückgehalten | gebaut 2026-10-22, Probebetrieb; scharf offen (myhome `KONZEPT-ELISA.md`) |
-| 4 | elma, maggie | Backend sendet `{type:"reservation"}` über `/ingest`, Bridge veröffentlicht `elma/reservation`. MAGGIE bekommt den Zustand `reserved` und die Push an Margit | Margit sieht die Reservierung | ELMA-Teil erledigt 2026-10-22 (0.9.0), MAGGIE offen |
+| 4 | elma, maggie | Backend sendet `{type:"reservation"}` über `/ingest`, Bridge veröffentlicht `elma/reservation`. MAGGIE bekommt den Zustand `reserved` und die Push an Margit | Margit sieht die Reservierung | ELMA-Teil erledigt 2026-10-22 (0.9.0), ausgerollt und am Pi geprüft (Start und Beenden kommen auf `elma/reservation` an), MAGGIE offen |
 
 Warum so: Node-RED und MAGGIE reagieren nur auf das, was ELMA liefert, deshalb kommt ELMA zuerst. Das Schalten im Haus greift in Wallbox und WP ein und kommt deshalb spät und zuerst im Probebetrieb, so wie es bei der Entladesperre eine Woche Probebetrieb gab.
 
