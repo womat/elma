@@ -45,7 +45,7 @@ Backend (`apps/backend/src`):
 
 **Abgeschottetes Backend:** Im Docker-Betrieb hängt das Backend nur in einem internen Netz, ohne Internet und ohne LAN. Ausgehend kommt es nur über `apps/push-proxy` zu den Push-Diensten (Allowlist `isPushHost` in `shared/push.ts`). Neue Funktionen, die vom Backend aus externe Dienste aufrufen, funktionieren produktiv deshalb nicht. Das ist eine bewusste Sicherheitsentscheidung, also nicht als Fehler behandeln.
 
-**Geplant, noch nicht umgesetzt:** ELISA-Modus (Empfänger reserviert Überschuss, Node-RED lässt Wallbox/WP nicht anspringen). Plan, Entscheidungen und Mockups stehen in [docs/elisa.md](docs/elisa.md). Vor der Umsetzung dort nachlesen. Betrifft auch die Repos myhome (Node-RED, `KONZEPT-ELISA.md`) und maggie (Strom-Ampel, `docs/KONZEPT.md`).
+**ELISA-Modus** (Empfänger reserviert Überschuss, Node-RED lässt Wallbox/WP nicht anspringen, MAGGIE zeigt es an): umgesetzt seit 0.8.0/0.9.0, Regeln in `reservations.ts`. Plan, Entscheidungen, Abweichungen und Stand stehen in [docs/elisa.md](docs/elisa.md); vor Änderungen dort nachlesen und neue Entscheidungen dort festhalten. Betrifft auch die Repos myhome (Node-RED, `KONZEPT-ELISA.md`) und maggie (Strom-Ampel, `docs/KONZEPT.md`).
 
 Ein `Dockerfile` mit Zielen `backend`, `bridge`, `push-proxy`. `docker-compose.yml` ist der Produktiv-Stack (Profile `bridge`, `tunnel`), `dev/docker-compose.dev.yml` der lokale Test mit Mosquitto, `deploy/box/` die eigenständige ELMA-Box für weitere Erzeuger.
 
