@@ -2,6 +2,26 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.11.0 – 2026-10-23
+
+- **Vorreservieren im ELISA-Modus.** Elisa wollte nicht nur spontan reservieren, sondern z. B. „heute um 12:00 für 30 min“.
+  Spontan scheiterte das oft daran, dass gerade die Wärmepumpe lief: Dann ist der Knopf grau.
+  - Im Blatt „Strom reservieren“ gibt es jetzt **„Wann? Jetzt | Später“**, mit einer Uhrzeit nur für heute. Die geplante Zeit geht
+    sofort vom Tagesbudget ab. Unter dem Knopf steht „Geplant: heute 12:00–12:30“ mit „Absagen“. Absagen können der Planende
+    und der Erzeuger, es kostet nichts, und der andere bekommt eine Push.
+  - **Die Wärmepumpe wird schon 60 min vor Beginn zurückgehalten**, damit sie zum Start nicht gerade läuft. Node-RED bekommt
+    dafür in der Antwort auf `POST /api/control/status` das neue Feld `heatpumpUntil`. `active`/`until` meinen weiterhin nur die
+    laufende Reservierung, für die Wallbox gibt es keinen Vorlauf. Der Erzeuger sieht „Die Wärmepumpe wird ab 11:00
+    zurückgehalten“ und in der Vorlaufstunde „Wärmepumpe zurückgehalten“.
+  - Eine **spontane Reservierung bleibt daneben möglich**, längstens bis zum Beginn der geplanten. Läuft gerade ein Gerät, geht
+    nur „Später“.
+  - Beim Start bekommt jetzt auch Elisa eine Push („Deine Reservierung läuft“), damit sie ihr Gerät einschaltet. Lädt beim Start
+    das Auto, endet die Reservierung wie bisher sofort.
+  - Den Index `reservations_one_active` gibt es nicht mehr, weil geplante und laufende gleichzeitig offen sein können.
+  - **Damit der Vorlauf wirkt, braucht Node-RED eine Änderung** (myhome): `ElisaEVU` an `heatpumpUntil` hängen und einen laufenden
+    Kompressor erst nach 60 min Laufzeit stoppen. Bis dahin beginnt eine geplante Reservierung zu ihrer Zeit wie eine spontane.
+  - Begründungen und Mockup: [docs/elisa.md](docs/elisa.md#vorreservieren-0110), [docs/elisa-vorreservieren-mockup.html](docs/elisa-vorreservieren-mockup.html).
+
 ## 0.10.1 – 2026-10-23
 
 - **Akku-Kästchen nur noch, wenn der Akku lädt oder voll ist.** In 0.10.0 stand sonst „Akku · 23 %“. Ein Akku, der steht
