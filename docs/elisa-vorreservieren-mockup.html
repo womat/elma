@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Mockup: Vorreservieren im ELISA-Modus, siehe docs/elisa.md „Vorreservieren“. Abgenommen von Wolfgang am 2026-10-23. Kein Teil der App. -->
+<title>ELISA Vorreservieren</title>
+<style>
+:root {
+  --bg: #0f1f17; --card: #172d22; --text: #eaf3ee; --muted: #93a99c;
+  --accent: #f5c542; --good: #4ade80; --none: #64748b;
+  --frame: #08130d; --page: #0a1610; --lock: #f5c542; --plan: #60a5fa;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f7f4; --card: #ffffff; --text: #13241b; --muted: #5b6f63;
+    --good: #16a34a; --none: #94a3b8; --frame: #1d2b23; --page: #e4ece6; --lock: #b7860b; --plan: #2563eb;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f7f4; --card: #ffffff; --text: #13241b; --muted: #5b6f63;
+  --good: #16a34a; --none: #94a3b8; --frame: #1d2b23; --page: #e4ece6; --lock: #b7860b; --plan: #2563eb;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--text);
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding: 24px 16px 40px;
+}
+.intro { max-width: 860px; margin: 0 auto 28px; display: grid; gap: 8px; }
+.intro h1 { margin: 0; font-size: 1.5rem; letter-spacing: .04em; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); max-width: 70ch; }
+.intro b { color: var(--text); }
+.intro ul { margin: 0; padding-left: 1.2em; color: var(--muted); max-width: 70ch; }
+
+.gallery { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 32px 20px; }
+.step { display: grid; gap: 10px; align-content: start; justify-items: center; }
+.cap { display: grid; gap: 2px; width: min(340px, 100%); }
+.cap b { font-size: .95rem; }
+.cap span { font-size: .85rem; color: var(--muted); }
+.cap .n { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--lock); }
+.cap .n.wolf { color: var(--plan); }
+.phone { position: relative; width: min(340px, 100%); height: 700px; overflow: hidden; background: var(--bg); border: 10px solid var(--frame); border-radius: 42px; }
+.screen { height: 100%; overflow-y: auto; padding: 18px 16px 24px; }
+
+button { font: inherit; font-weight: 600; border: 0; border-radius: 12px; padding: 12px 16px; background: var(--accent); color: #1a1a1a; }
+button:disabled { opacity: .45; }
+button.link { background: none; color: var(--muted); padding: 6px; font-weight: 500; }
+button.small { background: none; color: var(--text); border: 1px solid color-mix(in srgb, var(--muted) 50%, transparent); padding: 5px 11px; font-size: .85rem; font-weight: 500; }
+
+header.app { display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 8px; flex: 1; font-size: 1.15rem; letter-spacing: .08em; font-weight: 700; }
+.logo { width: 30px; height: 30px; border-radius: 8px; background: #13241b; display: grid; place-items: center; }
+.logo span { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-size: 11px; color: #13241b; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--good); }
+.who { font-size: .85rem; color: var(--muted); }
+.clock { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.card { background: var(--card); border-radius: 18px; padding: 18px; margin-top: 14px; display: grid; gap: 10px; }
+.card h2 { margin: 0; font-size: 1.05rem; }
+.value { font-size: 3.2rem; font-weight: 700; color: var(--good); font-variant-numeric: tabular-nums; line-height: 1.05; }
+.status { font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.status::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--good); box-shadow: 0 0 12px var(--good); flex: none; }
+
+.reserve { display: grid; gap: 6px; justify-items: center; }
+.reserve button.main { width: 100%; display: grid; gap: 1px; padding: 12px 16px 10px; }
+.reserve button.main small { font-weight: 500; font-size: .78rem; opacity: .75; letter-spacing: .04em; }
+.reserve .left { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.banner { border: 1.5px solid color-mix(in srgb, var(--lock) 70%, transparent); background: color-mix(in srgb, var(--lock) 12%, transparent); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; }
+.banner .t { font-weight: 700; display: flex; justify-content: space-between; gap: 8px; }
+.banner .t span:last-child { color: var(--lock); font-variant-numeric: tabular-nums; }
+.s { font-size: .88rem; color: var(--muted); }
+.bar { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--muted) 25%, transparent); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--lock); }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+/* neu: geplante Reservierung */
+.planned { border: 1.5px dashed color-mix(in srgb, var(--plan) 70%, transparent); background: color-mix(in srgb, var(--plan) 10%, transparent); border-radius: 14px; padding: 10px 12px; display: grid; gap: 4px; width: 100%; }
+.planned .t { font-weight: 700; font-size: .95rem; }
+.new { outline: 2px solid var(--plan); outline-offset: 3px; border-radius: 14px; }
+
+/* Vollbild-Blatt wie in der App */
+.sheet { position: absolute; inset: 0; background: var(--bg); z-index: 5; padding: 18px 16px; display: grid; gap: 14px; align-content: start; overflow-y: auto; }
+.sheet-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.sheet-head h2 { margin: 0; font-size: 1.1rem; }
+.sheet-head .link { justify-self: end; }
+.sheet h3 { margin: 4px 0 0; font-size: .95rem; }
+.intro-box { background: var(--card); border-radius: 14px; padding: 12px; display: grid; gap: 2px; }
+.intro-box span { font-size: .8rem; color: var(--muted); }
+.chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.chips.two { grid-template-columns: 1fr 1fr; }
+.chips button { padding: 12px 4px; background: var(--card); color: var(--text); border: 1.5px solid transparent; }
+.chips button[aria-pressed="true"] { border-color: var(--accent); }
+.chips button:disabled { text-decoration: line-through; }
+.time { display: flex; align-items: center; gap: 10px; }
+.time output { background: var(--card); border: 1.5px solid var(--accent); border-radius: 12px; padding: 10px 14px; font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.info { margin: 0; font-size: .88rem; color: var(--muted); }
+.confirm { width: 100%; }
+
+.push { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 6; background: color-mix(in srgb, var(--card) 92%, var(--text)); border-radius: 16px; padding: 10px 12px; box-shadow: 0 8px 24px rgb(0 0 0 / .35); display: grid; gap: 2px; font-size: .88rem; }
+.push .app { font-size: .75rem; color: var(--muted); letter-spacing: .04em; }
+</style>
+
+<div class="intro">
+  <h1>ELISA-Modus: Vorreservieren</h1>
+  <p>Mockup zum Plan vom 23.10.2026. Feste Bildschirme, nichts ist klickbar. <b>Gelbe</b> Beschriftung zeigt Elisas Handy, <b>blaue</b> Wolfgangs. Was neu ist, hat einen blauen Rahmen.</p>
+  <ul>
+    <li>Elisa plant für heute, z. B. 12:00 für 30 min. Die Zeit geht sofort vom Budget ab.</li>
+    <li>Ab 11:00 hält Node-RED die Wärmepumpe zurück. Eine laufende WP wird erst nach 1 h Laufzeit gestoppt. Die Wallbox wird erst ab 12:00 zurückgehalten.</li>
+    <li>Spontan reservieren geht weiter, längstens bis 12:00. MAGGIE zeigt erst ab 12:00 etwas an.</li>
+  </ul>
+</div>
+
+<section class="gallery" id="gallery"></section>
+
+<script>
+const header = (who, clock) => `<header class="app"><div class="brand"><div class="logo"><span>⚡</span></div>ELMA</div><span class="clock">${clock}</span><span class="dot"></span><span class="who">${who}</span></header>`;
+const card = (owner, inner, kw = "3,1") => `<section class="card"><h2>PV Dach${owner ? " ✎" : ""}</h2>${inner.top ?? ""}
+  <div class="value">${kw} kW</div><div class="status">Viel Überschuss, jetzt verbrauchen!</div>${inner.bottom ?? ""}</section>`;
+const button = (left, disabled = false) => `<div class="reserve"><button class="main" ${disabled ? "disabled" : ""}>🔒 Strom reservieren<small>ELISA-MODUS</small></button><span class="left">${left}</span></div>`;
+const planned = (title, text, cancel = true) => `<div class="planned new"><div class="t">${title}</div><div class="row"><span class="s">${text}</span>${cancel ? `<button class="small">Absagen</button>` : ""}</div></div>`;
+const push = (title, body) => `<div class="push" role="alert"><span class="app">ELMA · PV Dach · jetzt</span><b>${title}</b><span>${body}</span></div>`;
+const banner = (text, rest, pct, foot = "") => `<div class="banner"><div class="t"><span>🔒 ELISA-Modus aktiv</span><span>noch ${rest} min</span></div><div class="s">${text}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="row"><span class="s">${foot}</span><button class="small">Beenden</button></div></div>`;
+const sheet = (body) => `<div class="sheet" role="dialog"><header class="sheet-head"><span></span><h2>Strom reservieren</h2><button class="link">Abbrechen</button></header>
+  <div class="intro-box"><strong>🔒 ELISA-Modus</strong><span><b>E</b>nergie für die <b>L</b>ieblingstochter: <b>I</b>hr <b>S</b>onnenstrom-<b>A</b>nteil</span></div>${body}</div>`;
+const chips = (list, pick, maxOk) => `<div class="chips">${list.map((d) => `<button aria-pressed="${d === pick}" ${d > maxOk ? "disabled" : ""}>${d} min</button>`).join("")}</div>`;
+const when = (later) => `<div class="new"><h3>Wann?</h3><div class="chips two"><button aria-pressed="${!later}">Jetzt</button><button aria-pressed="${later}">Später</button></div></div>`;
+
+const STEPS = [
+  { n: "1 · Elisa, 09:40", t: "Blatt: „Später“ wählen", d: "Neu ist „Wann?“ mit Jetzt und Später. Später zeigt eine Uhrzeit im 5-Minuten-Raster, vorbelegt mit der nächsten halben Stunde. Nur für heute.",
+    html: header("Elisa", "09:40") + card(false, { bottom: button("heute noch 60 min frei") }) + sheet(`${when(true)}
+      <div class="time new"><span>Beginn heute um</span><output>12:00</output></div>
+      <h3>Wie lange brauchst du den Überschuss?</h3>${chips([15, 30, 45, 60], 30, 60)}
+      <p class="info">Solange du reservierst, bleibt der Überschuss für dich frei. Heute noch 60 min übrig.</p>
+      <button class="confirm">30 min reservieren, 12:00–12:30</button>`) },
+  { n: "2 · Elisa, 09:41", t: "Geplant", d: "Unter dem Knopf steht die geplante Zeit mit „Absagen“. Das Budget ist schon um 30 min kleiner. Der Knopf bleibt für spontanes Reservieren.",
+    html: header("Elisa", "09:41") + card(false, { bottom: button("heute noch 30 min frei") + planned("📅 Geplant: heute 12:00–12:30", "Du hast reserviert.") }) },
+  { n: "2 · Wolfgang, 09:41", t: "Push und Hinweis beim Erzeuger", d: "Wolfgang erfährt sofort, dass die WP ab 11:00 nicht anspringt. Absagen kann auch er.", wolf: true,
+    html: header("Wolfgang", "09:41") + card(true, { bottom: planned("📅 Elisa: heute 12:00–12:30", "Die Wärmepumpe wird ab 11:00 zurückgehalten.") }) + push("📅 Elisa reserviert heute 12:00–12:30", "Die Wärmepumpe wird ab 11:00 zurückgehalten.") },
+  { n: "3 · Wolfgang, 11:00–12:00", t: "Vorlaufstunde", d: "Der Hinweis wechselt. Läuft die WP schon (z. B. seit 10:50), stoppt Node-RED sie erst nach 1 h Laufzeit, also um 11:50. Keine Push, MAGGIE zeigt noch nichts.", wolf: true,
+    html: header("Wolfgang", "11:20") + card(true, { bottom: planned("🌡 Wärmepumpe zurückgehalten", "Elisa reserviert ab 12:00, bis 12:30.") }, "2,8") },
+  { n: "4 · Elisa, 11:35", t: "Spontan neben der geplanten", d: "Bei „Jetzt“ geht es nur bis 12:00. Bis dahin sind es 25 min, also ist nur 15 min wählbar. „Später“ ist gesperrt, weil schon eine geplant ist.",
+    html: header("Elisa", "11:35") + card(false, { bottom: button("heute noch 30 min frei") + planned("📅 Geplant: heute 12:00–12:30", "Du hast reserviert.") }) + sheet(`<div class="new"><h3>Wann?</h3><div class="chips two"><button aria-pressed="true">Jetzt</button><button disabled>Später</button></div></div>
+      <h3>Wie lange brauchst du den Überschuss?</h3>${chips([15, 30, 45, 60], 15, 15)}
+      <p class="info new">Ab 12:00 ist schon reserviert, höchstens bis dahin. Heute noch 30 min übrig.</p>
+      <button class="confirm">15 min reservieren, bis 11:50</button>`) },
+  { n: "5 · Elisa, 12:00", t: "Die geplante Reservierung beginnt", d: "Neu ist eine Push auch an Elisa, damit sie ihr Gerät einschaltet. Danach ist alles wie bei der spontanen Reservierung: Banner, Beenden, MAGGIE zeigt „reserviert“.",
+    html: header("Elisa", "12:00") + card(false, { top: banner("Du hast reserviert · bis 12:30. Solange du reservierst, bleibt der Überschuss für dich frei.", 30, 2, "heute danach noch 30 min") }) + push("🔒 Deine Reservierung läuft", "bis 12:30 – jetzt kannst du einschalten") },
+  { n: "5 · Wolfgang, 12:00", t: "Start beim Erzeuger", d: "Dieselbe Push wie bisher beim spontanen Reservieren.", wolf: true,
+    html: header("Wolfgang", "12:00") + card(true, { top: banner("Reserviert von Elisa · bis 12:30. Bis dahin bitte keine großen Verbraucher einschalten.", 30, 2) }) + push("🔒 Elisa reserviert den Überschuss", "bis 12:30 – keine großen Verbraucher einschalten") },
+  { n: "6 · Wolfgang, 10:15", t: "Elisa sagt ab", d: "Absagen kostet nichts, Elisa hat wieder 60 min. Wer absagt, informiert den anderen. Die WP-Sperre fällt sofort weg.", wolf: true,
+    html: header("Wolfgang", "10:15") + card(true, {}) + push("📅 Elisa hat abgesagt", "Die Reservierung um 12:00 fällt weg, die Wärmepumpe ist frei.") },
+  { n: "7 · Elisa, 12:00", t: "Beim Start lädt das Auto", d: "Bisherige Regel: Eine Ladung beendet die Reservierung sofort, die Zeit kommt zurück ins Budget.",
+    html: header("Elisa", "12:00") + card(false, { bottom: button("heute noch 60 min frei", true).replace("</button>", "</button><span class=\"left\" style=\"color:var(--text)\">⏸ Gerade nicht möglich: das Auto lädt</span>") }) + push("⚡ Das Auto lädt, Reservierung beendet", "Heute noch 60 min übrig") },
+];
+
+document.getElementById("gallery").innerHTML = STEPS.map((s) =>
+  `<div class="step"><div class="cap"><span class="n${s.wolf ? " wolf" : ""}">${s.n}</span><b>${s.t}</b><span>${s.d}</span></div><div class="phone" inert><div class="screen">${s.html}</div></div></div>`
+).join("");
+</script>

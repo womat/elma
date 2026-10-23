@@ -260,7 +260,7 @@ export async function buildApp(
       const body = ReservationBody.safeParse(req.body);
       if (!body.success) return reply.code(400).send({ error: body.error.issues[0]?.message ?? "Ungültige Dauer" });
       try {
-        reservations.reserve(req.params.id, req.user.sub, body.data.minutes);
+        reservations.reserve(req.params.id, req.user.sub, body.data.minutes, body.data.startsAt);
       } catch (err) {
         return reservationReply(reply, err);
       }
@@ -272,6 +272,16 @@ export async function buildApp(
     if (!repo.canView(req.user.sub, req.params.id)) return reply.code(404).send({ error: "Nicht gefunden" });
     try {
       reservations.end(req.params.id, req.user.sub);
+    } catch (err) {
+      return reservationReply(reply, err);
+    }
+    return reservations.stateFor(req.params.id, req.user.sub);
+  });
+
+  app.delete<{ Params: { id: string } }>("/api/producers/:id/reservation/planned", { preHandler: authenticate }, async (req, reply) => {
+    if (!repo.canView(req.user.sub, req.params.id)) return reply.code(404).send({ error: "Nicht gefunden" });
+    try {
+      reservations.cancelPlanned(req.params.id, req.user.sub);
     } catch (err) {
       return reservationReply(reply, err);
     }

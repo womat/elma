@@ -296,9 +296,9 @@ button.edit-devices { display: inline-flex; align-items: center; gap: 6px; paddi
 .custom-list .link { line-height: 0; }
 
 /* ELISA-Modus: Reservieren, Banner, Recht pro Empfänger (docs/elisa.md, Mockup docs/elisa-mockup.html) */
-:root { --lock: #f5c542; }
+:root { --lock: #f5c542; --plan: #60a5fa; }
 @media (prefers-color-scheme: light) {
-  :root { --lock: #b7860b; }
+  :root { --lock: #b7860b; --plan: #2563eb; }
 }
 .reserve { display: grid; gap: 6px; justify-items: center; margin-top: 14px; }
 button.reserve-main { width: 100%; display: grid; gap: 1px; padding: 12px 16px 10px; }
@@ -329,6 +329,17 @@ button.reserve-main:disabled { opacity: 1; background: color-mix(in srgb, var(--
 .duration-chips button:disabled { text-decoration: line-through; opacity: 0.45; }
 .reserve-info { margin: 14px 0 0; }
 .reserve-confirm { width: 100%; margin-top: 14px; }
+
+/* Vorreservieren (Mockup docs/elisa-vorreservieren-mockup.html) */
+.reservation-planned {
+  margin-top: 12px; padding: 10px 12px; border-radius: 14px; display: grid; gap: 4px;
+  border: 1.5px dashed color-mix(in srgb, var(--plan) 70%, transparent);
+  background: color-mix(in srgb, var(--plan) 10%, transparent);
+}
+.reservation-planned strong { display: inline-flex; align-items: center; gap: 6px; font-size: 0.95rem; }
+.when-chips { grid-template-columns: 1fr 1fr; }
+.reserve-time { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.reserve-time input { font: inherit; font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; padding: 8px 12px; border-radius: 12px; border: 1.5px solid var(--accent); background: var(--card); color: var(--text); }
 
 .recipients-head { display: flex; justify-content: space-between; align-items: center; }
 .recipients-head span { display: inline-flex; align-items: center; gap: 6px; }

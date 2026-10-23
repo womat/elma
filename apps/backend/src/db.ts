@@ -100,8 +100,6 @@ export function openDb(path: string): Db {
       ended_at    INTEGER,
       end_reason  TEXT
     );
-    -- höchstens eine laufende Reservierung pro Erzeuger, auch wenn zwei Anfragen gleichzeitig kommen
-    CREATE UNIQUE INDEX IF NOT EXISTS reservations_one_active ON reservations (producer_id) WHERE ended_at IS NULL;
     CREATE INDEX IF NOT EXISTS reservations_budget ON reservations (producer_id, user_id, starts_at);
 
     -- Steuer-Token für Node-RED (POST /api/control/status), getrennt vom Geräte-Token; nur als SHA-256 gespeichert
@@ -119,6 +117,10 @@ export function openDb(path: string): Db {
   addColumn(db, "invites", "display_name", "TEXT");
   // 0.8.0: Recht zum Reservieren pro Freigabe, vergibt der Erzeuger (docs/elisa.md)
   addColumn(db, "shares", "can_reserve", "INTEGER NOT NULL DEFAULT 0");
+  // 0.11.0: Eine geplante und eine laufende Reservierung können gleichzeitig offen sein, das kann der eindeutige Index
+  // nicht ausdrücken. Zwei gleichzeitige Anfragen kommen trotzdem nicht beide durch: node:sqlite ist synchron, Prüfen und
+  // Einfügen in ReservationService.reserve laufen ohne Unterbrechung.
+  db.exec("DROP INDEX IF EXISTS reservations_one_active");
   return db;
 }
 

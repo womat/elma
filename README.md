@@ -69,6 +69,7 @@ ELMA liefert die Information, *wann* sich das Teilen lohnt.
   Das passiert erst nach 2 Minuten stabilem Überschuss, damit kurze Wolken keinen Fehlalarm auslösen, und nie, solange er stark schwankt.
 - **Strom reservieren (ELISA-Modus):** Ein Empfänger, dem der Erzeuger das Recht gibt, reserviert den Überschuss für bis zu 60 min am Tag.
   Der Erzeuger bekommt eine Nachricht, und seine Hausautomation (Node-RED) lässt Wallbox und Wärmepumpe so lange nicht anspringen.
+  Reservieren geht sofort oder geplant für später am selben Tag. Dann wird die Wärmepumpe schon eine Stunde vorher zurückgehalten.
   Konzept und Entscheidungen: [docs/elisa.md](docs/elisa.md).
 - **Einladung per Link:** Der Erzeuger lädt Empfänger mit einem Link ein, z. B. über WhatsApp.
   Ohne Einladung kann sich niemand registrieren, die Daten bleiben also im kleinen Kreis.
@@ -248,6 +249,8 @@ docker compose exec backend node src/cli.ts control-token <producerId>
 ```
 
 Node-RED schickt damit alle 15 s `POST /api/control/status` (Details in [docs/elisa.md](docs/elisa.md) und `KONZEPT-ELISA.md` im Repo myhome).
+Die Antwort `{ active, until, by, heatpumpUntil }` trennt Wallbox und Wärmepumpe. `active`/`until` gelten nur für die laufende
+Reservierung. `heatpumpUntil` ist schon 60 min vor einer geplanten gesetzt.
 Das Token nur über einen sicheren Kanal weitergeben. Ein neues macht das alte ungültig.
 
 Läuft die Bridge, veröffentlicht sie die Reservierung zusätzlich retained auf `elma/reservation` (anderes Topic per `RESERVATION_TOPIC`),

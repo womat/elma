@@ -1,10 +1,12 @@
 import {
   displayNameOf,
+  HEATPUMP_LEAD_MINUTES,
   RESERVATION_DAILY_MINUTES,
   type BlockedReason,
   type ControlResponse,
   type ControlStatus,
   type PushPayload,
+  type ReservationDto,
   type ReservationStateDto,
 } from "@elma/shared";
 import type { Repo, ReservationEndReason, ReservationRow } from "./repo.ts";
@@ -26,8 +28,8 @@ export interface ReservationNotifier {
 
 /** Abgelehnte Anfrage; status wird 1:1 zum HTTP-Status. */
 export class ReservationError extends Error {
-  readonly status: 403 | 404 | 409;
-  constructor(status: 403 | 404 | 409, message: string) {
+  readonly status: 400 | 403 | 404 | 409;
+  constructor(status: 400 | 403 | 404 | 409, message: string) {
     super(message);
     this.status = status;
   }
@@ -64,13 +66,15 @@ export function viennaDayStart(t: number): number {
 }
 
 /**
- * Regeln und Ablauf des ELISA-Modus: Recht, Tagesbudget, höchstens eine Reservierung pro Erzeuger, Ablehnung bei laufenden
- * Geräten, automatisches Ende. Der letzte Status von Node-RED liegt nur im Speicher; nach einem Neustart meldet es sich
- * nach spätestens 15 s wieder. Begründungen der Regeln: docs/elisa.md.
+ * Regeln und Ablauf des ELISA-Modus: Recht, Tagesbudget, höchstens eine laufende und eine geplante Reservierung pro
+ * Erzeuger ohne Überschneidung, Ablehnung bei laufenden Geräten, Start und Ende per Timer. Der letzte Status von Node-RED
+ * liegt nur im Speicher; nach einem Neustart meldet es sich nach spätestens 15 s wieder. Begründungen: docs/elisa.md.
  */
 export class ReservationService {
   private readonly repo: Repo;
   private readonly notifier: ReservationNotifier;
+  /** je Reservierungs-ID, weil eine geplante und eine laufende gleichzeitig Timer haben können */
+  private readonly startTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly endTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly control = new Map<string, { status: ControlStatus; at: number }>();
   private readonly staleTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -82,16 +86,17 @@ export class ReservationService {
     this.notifier = notifier;
   }
 
-  /** Stellt die Timer laufender Reservierungen wieder. Was während des Neustarts abgelaufen ist, endet ohne Push. */
+  /** Stellt die Timer offener Reservierungen wieder. Was während des Neustarts begonnen hat oder abgelaufen ist, kommt ohne Push. */
   start(now = Date.now()): void {
     for (const r of this.repo.activeReservations()) {
       if (r.endsAt <= now) this.repo.endReservation(r.id, r.endsAt, "expired");
-      else this.scheduleEnd(r, now);
+      else this.schedule(r, now);
     }
   }
 
   stop(): void {
-    for (const timer of [...this.endTimers.values(), ...this.staleTimers.values()]) clearTimeout(timer);
+    for (const timer of [...this.startTimers.values(), ...this.endTimers.values(), ...this.staleTimers.values()]) clearTimeout(timer);
+    this.startTimers.clear();
     this.endTimers.clear();
     this.staleTimers.clear();
   }
@@ -108,11 +113,11 @@ export class ReservationService {
   }
 
   stateFor(producerId: string, userId: string, now = Date.now()): ReservationStateDto {
-    const active = this.repo.activeReservation(producerId);
+    const running = this.running(producerId, now);
+    const planned = this.planned(producerId, now);
     return {
-      active: active
-        ? { producerId, userName: this.nameOf(active.userId), startsAt: active.startsAt, endsAt: active.endsAt, mine: active.userId === userId }
-        : null,
+      active: running ? this.toDto(running, userId) : null,
+      planned: planned ? this.toDto(planned, userId) : null,
       canReserve: this.repo.canReserve(producerId, userId),
       minutesLeft: this.minutesLeft(producerId, userId, now),
       controlConnected: this.isConnected(producerId, now),
@@ -120,15 +125,45 @@ export class ReservationService {
     };
   }
 
-  reserve(producerId: string, userId: string, minutes: number, now = Date.now()): ReservationRow {
+  /**
+   * Ohne startsAt (oder höchstens eine Minute voraus) beginnt die Reservierung sofort. Sonst ist sie für später heute
+   * geplant; dann prüft niemand die Geräte, denn bis zum Beginn können Stunden vergehen.
+   */
+  reserve(producerId: string, userId: string, minutes: number, startsAt?: number, now = Date.now()): ReservationRow {
     if (!this.repo.canReserve(producerId, userId)) throw new ReservationError(403, "Du darfst hier keinen Strom reservieren");
-    const active = this.repo.activeReservation(producerId);
-    if (active) {
-      throw new ReservationError(
-        409,
-        active.userId === userId ? "Du hast schon reserviert" : `Gerade reserviert von ${this.nameOf(active.userId)} bis ${formatTime(active.endsAt)}`,
-      );
+    if (startsAt !== undefined && startsAt < now - MINUTE) throw new ReservationError(400, "Die Uhrzeit ist schon vorbei");
+    const later = startsAt !== undefined && startsAt > now + MINUTE;
+    const start = later ? startsAt : now;
+    const end = start + minutes * MINUTE;
+    const running = this.running(producerId, now);
+    const planned = this.planned(producerId, now);
+
+    if (later) {
+      if (viennaDayStart(start) !== viennaDayStart(now)) throw new ReservationError(400, "Planen geht nur für heute");
+      if (planned) {
+        throw new ReservationError(
+          409,
+          planned.userId === userId
+            ? `Du hast schon für ${formatTime(planned.startsAt)} geplant`
+            : `Für ${formatTime(planned.startsAt)} hat schon ${this.nameOf(planned.userId)} reserviert`,
+        );
+      }
+      if (running && start < running.endsAt) {
+        throw new ReservationError(409, `Bis ${formatTime(running.endsAt)} ist schon reserviert, frühestens dann`);
+      }
+    } else {
+      if (running) {
+        throw new ReservationError(
+          409,
+          running.userId === userId ? "Du hast schon reserviert" : `Gerade reserviert von ${this.nameOf(running.userId)} bis ${formatTime(running.endsAt)}`,
+        );
+      }
+      // Bis zum Beginn der geplanten darf spontan reserviert werden, auch in deren Vorlaufstunde: Die WP ist dann ohnehin gesperrt
+      if (planned && end > planned.startsAt) {
+        throw new ReservationError(409, `Um ${formatTime(planned.startsAt)} ist schon reserviert, höchstens bis dahin`);
+      }
     }
+
     const left = this.minutesLeft(producerId, userId, now);
     if (minutes > left) {
       throw new ReservationError(
@@ -136,24 +171,23 @@ export class ReservationService {
         left === 0 ? `Heute schon ${RESERVATION_DAILY_MINUTES} min reserviert, morgen wieder` : `Heute sind nur noch ${left} min frei`,
       );
     }
-    // Was gerade läuft, ist im Überschuss schon abgezogen: Die Reservierung würde nur Budget kosten, ohne etwas zu schützen
-    const blocked = this.blockedReason(producerId, now);
-    if (blocked) throw new ReservationError(409, BLOCKED_TEXT[blocked]);
-
-    let row: ReservationRow;
-    try {
-      row = this.repo.createReservation(producerId, userId, now, now + minutes * MINUTE);
-    } catch {
-      // zwei Anfragen gleichzeitig: der eindeutige Index lässt nur eine durch
-      throw new ReservationError(409, "Gerade hat schon jemand reserviert");
+    if (!later) {
+      // Was gerade läuft, ist im Überschuss schon abgezogen: Die Reservierung würde nur Budget kosten, ohne etwas zu schützen
+      const blocked = this.blockedReason(producerId, now);
+      if (blocked) throw new ReservationError(409, BLOCKED_TEXT[blocked]);
     }
-    this.scheduleEnd(row, now);
+
+    const row = this.repo.createReservation(producerId, userId, start, end);
+    this.schedule(row, now);
     const producer = this.repo.producerById(producerId);
-    if (producer) {
+    if (producer && later) {
+      const lead = start - HEATPUMP_LEAD_MINUTES * MINUTE;
       this.push([producer.owner_id], {
-        title: `🔒 ${this.nameOf(userId)} reserviert den Überschuss`,
-        body: `bis ${formatTime(row.endsAt)} – keine großen Verbraucher einschalten`,
+        title: `📅 ${this.nameOf(userId)} reserviert heute ${formatTime(start)}–${formatTime(end)}`,
+        body: `Die Wärmepumpe wird ${lead <= now ? "ab sofort" : `ab ${formatTime(lead)}`} zurückgehalten.`,
       });
+    } else if (producer) {
+      this.pushStart(row, producer.owner_id);
     }
     this.emit(producerId);
     return row;
@@ -161,19 +195,47 @@ export class ReservationService {
 
   /** Beenden dürfen der Reservierende und der Erzeuger. */
   end(producerId: string, userId: string, now = Date.now()): void {
-    const active = this.repo.activeReservation(producerId);
-    if (!active) throw new ReservationError(404, "Gerade ist nichts reserviert");
-    if (active.userId === userId) this.finish(active, "user", now);
-    else if (this.repo.isOwner(userId, producerId)) this.finish(active, "owner", now);
+    const running = this.running(producerId, now);
+    if (!running) throw new ReservationError(404, "Gerade ist nichts reserviert");
+    if (running.userId === userId) this.finish(running, "user", now);
+    else if (this.repo.isOwner(userId, producerId)) this.finish(running, "owner", now);
     else throw new ReservationError(403, "Nur wer reserviert hat und der Erzeuger können beenden");
   }
 
-  /** Recht setzen oder entziehen. Ein entzogenes Recht beendet eine laufende Reservierung sofort, nicht erst nach bis zu einer Stunde. */
+  /** Eine geplante absagen, das dürfen der Planende und der Erzeuger. Sie verbraucht kein Budget; der andere bekommt eine Push. */
+  cancelPlanned(producerId: string, userId: string, now = Date.now()): void {
+    const planned = this.planned(producerId, now);
+    if (!planned) throw new ReservationError(404, "Es ist nichts geplant");
+    const byOwner = planned.userId !== userId;
+    if (byOwner && !this.repo.isOwner(userId, producerId)) {
+      throw new ReservationError(403, "Nur wer geplant hat und der Erzeuger können absagen");
+    }
+    if (!this.close(planned, planned.startsAt, "cancelled")) return;
+
+    const producer = this.repo.producerById(producerId);
+    if (producer) {
+      const range = `${formatTime(planned.startsAt)}–${formatTime(planned.endsAt)}`;
+      if (byOwner) {
+        this.push([planned.userId], {
+          title: `📅 ${this.nameOf(producer.owner_id)} hat deine Reservierung abgesagt`,
+          body: `${range} fällt weg, heute noch ${this.minutesLeft(producerId, planned.userId, now)} min übrig`,
+        });
+      } else {
+        this.push([producer.owner_id], {
+          title: `📅 ${this.nameOf(planned.userId)} hat abgesagt`,
+          body: `Die Reservierung um ${formatTime(planned.startsAt)} fällt weg, die Wärmepumpe ist frei.`,
+        });
+      }
+    }
+    this.emit(producerId);
+  }
+
+  /** Recht setzen oder entziehen. Ein entzogenes Recht beendet laufende und geplante Reservierungen sofort. */
   setCanReserve(producerId: string, recipientId: string, canReserve: boolean, now = Date.now()): void {
     if (!this.repo.setCanReserve(producerId, recipientId, canReserve)) throw new ReservationError(404, "Kein Empfänger dieses Erzeugers");
-    const active = this.repo.activeReservation(producerId);
-    if (!canReserve && active?.userId === recipientId) this.finish(active, "revoked", now);
-    else this.emit(producerId);
+    const own = canReserve ? [] : this.repo.openReservations(producerId).filter((r) => r.userId === recipientId);
+    for (const r of own) this.finish(r, "revoked", now);
+    if (own.length === 0) this.emit(producerId);
   }
 
   /** Status von Node-RED übernehmen und zurückmelden, ob gerade reserviert ist. */
@@ -188,23 +250,64 @@ export class ReservationService {
     stale.unref?.();
     this.staleTimers.set(producerId, stale);
 
-    const active = this.repo.activeReservation(producerId);
+    const running = this.running(producerId, now);
     // Die Handbedienung des Erzeugers hat Vorrang; die Reservierung schützt dann nichts mehr
-    if (active && status.wallboxCharging) this.finish(active, "wallbox", now);
+    if (running && status.wallboxCharging) this.finish(running, "wallbox", now);
     else if (before !== this.controlSummary(producerId, now)) this.emit(producerId);
-    return this.current(producerId);
+    return this.current(producerId, now);
   }
 
   /** Ob und bis wann reserviert ist, ohne Sicht eines Users: für Node-RED und die Bridge (MAGGIE). */
-  current(producerId: string): ControlResponse {
-    const active = this.repo.activeReservation(producerId);
-    return active ? { active: true, until: active.endsAt, by: this.nameOf(active.userId) } : { active: false, until: null };
+  current(producerId: string, now = Date.now()): ControlResponse {
+    const open = this.repo.openReservations(producerId);
+    // Die WP schon HEATPUMP_LEAD_MINUTES vor Beginn zurückhalten, damit sie zum Start nicht gerade läuft
+    const held = open.filter((r) => r.startsAt - HEATPUMP_LEAD_MINUTES * MINUTE <= now);
+    const heatpumpUntil = held.length > 0 ? Math.max(...held.map((r) => r.endsAt)) : null;
+    const running = this.running(producerId, now);
+    return running
+      ? { active: true, until: running.endsAt, by: this.nameOf(running.userId), heatpumpUntil }
+      : { active: false, until: null, heatpumpUntil };
+  }
+
+  /** Die zuletzt begonnene offene Reservierung. Endet eine spontane genau beim Beginn der geplanten, ist das die geplante. */
+  private running(producerId: string, now: number): ReservationRow | undefined {
+    return this.repo.openReservations(producerId).findLast((r) => r.startsAt <= now && now < r.endsAt);
+  }
+
+  private planned(producerId: string, now: number): ReservationRow | undefined {
+    return this.repo.openReservations(producerId).find((r) => r.startsAt > now);
+  }
+
+  private toDto(row: ReservationRow, userId: string): ReservationDto {
+    return { producerId: row.producerId, userName: this.nameOf(row.userId), startsAt: row.startsAt, endsAt: row.endsAt, mine: row.userId === userId };
+  }
+
+  /** Beginn einer geplanten Reservierung. */
+  private begin(row: ReservationRow, now: number): void {
+    this.startTimers.delete(row.id);
+    // Lädt das Auto schon, gilt dieselbe Regel wie bei einer beginnenden Ladung: Die Handbedienung hat Vorrang
+    if (this.isConnected(row.producerId, now) && this.control.get(row.producerId)!.status.wallboxCharging) {
+      this.finish(row, "wallbox", now);
+      return;
+    }
+    const producer = this.repo.producerById(row.producerId);
+    if (producer) {
+      this.pushStart(row, producer.owner_id);
+      this.push([row.userId], { title: "🔒 Deine Reservierung läuft", body: `bis ${formatTime(row.endsAt)} – jetzt kannst du einschalten` });
+    }
+    this.emit(row.producerId);
+  }
+
+  private pushStart(row: ReservationRow, ownerId: string): void {
+    this.push([ownerId], {
+      title: `🔒 ${this.nameOf(row.userId)} reserviert den Überschuss`,
+      body: `bis ${formatTime(row.endsAt)} – keine großen Verbraucher einschalten`,
+    });
   }
 
   private finish(row: ReservationRow, reason: ReservationEndReason, now: number): void {
-    clearTimeout(this.endTimers.get(row.producerId));
-    this.endTimers.delete(row.producerId);
-    if (!this.repo.endReservation(row.id, Math.min(now, row.endsAt), reason)) return;
+    // Eine geplante, die vor dem Beginn endet (Recht entzogen), verbraucht nichts
+    if (!this.close(row, Math.max(row.startsAt, Math.min(now, row.endsAt)), reason)) return;
 
     const producer = this.repo.producerById(row.producerId);
     if (producer) {
@@ -216,6 +319,7 @@ export class ReservationService {
         owner: `🔓 ${this.nameOf(producer.owner_id)} hat den ELISA-Modus beendet`,
         wallbox: "⚡ Das Auto lädt, Reservierung beendet",
         revoked: "🔓 ELISA-Modus beendet",
+        cancelled: "📅 Reservierung abgesagt",
       }[reason];
       if (reason === "revoked") {
         this.push([row.userId], { title, body: "Das Recht zum Reservieren wurde dir entzogen." });
@@ -228,11 +332,24 @@ export class ReservationService {
     this.emit(row.producerId);
   }
 
-  private scheduleEnd(row: ReservationRow, now: number): void {
-    clearTimeout(this.endTimers.get(row.producerId));
-    const timer = setTimeout(() => this.finish(row, "expired", Date.now()), Math.max(0, row.endsAt - now));
-    timer.unref?.();
-    this.endTimers.set(row.producerId, timer);
+  /** Timer abräumen und in der DB beenden; false, wenn sie schon beendet war. */
+  private close(row: ReservationRow, endedAt: number, reason: ReservationEndReason): boolean {
+    for (const timers of [this.startTimers, this.endTimers]) {
+      clearTimeout(timers.get(row.id));
+      timers.delete(row.id);
+    }
+    return this.repo.endReservation(row.id, endedAt, reason);
+  }
+
+  private schedule(row: ReservationRow, now: number): void {
+    if (row.startsAt > now) {
+      const start = setTimeout(() => this.begin(row, Date.now()), row.startsAt - now);
+      start.unref?.();
+      this.startTimers.set(row.id, start);
+    }
+    const end = setTimeout(() => this.finish(row, "expired", Date.now()), Math.max(0, row.endsAt - now));
+    end.unref?.();
+    this.endTimers.set(row.id, end);
   }
 
   private minutesLeft(producerId: string, userId: string, now: number): number {

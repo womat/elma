@@ -97,8 +97,10 @@ export const api = {
   pushUnsubscribe: (endpoint: string) =>
     request<{ ok: true }>("/api/push/unsubscribe", { method: "POST", body: JSON.stringify({ endpoint }) }),
   pushTest: () => request<{ ok: true }>("/api/push/test", { method: "POST" }),
-  reserve: (id: string, minutes: number) => post<ReservationStateDto>(`/api/producers/${id}/reservation`, { minutes }),
+  reserve: (id: string, minutes: number, startsAt?: number) =>
+    post<ReservationStateDto>(`/api/producers/${id}/reservation`, { minutes, startsAt }),
   endReservation: (id: string) => request<ReservationStateDto>(`/api/producers/${id}/reservation`, { method: "DELETE" }),
+  cancelPlanned: (id: string) => request<ReservationStateDto>(`/api/producers/${id}/reservation/planned`, { method: "DELETE" }),
   recipients: (id: string) => request<RecipientDto[]>(`/api/producers/${id}/recipients`),
   setCanReserve: (id: string, userId: string, canReserve: boolean) =>
     request<{ userId: string; canReserve: boolean }>(`/api/producers/${id}/recipients/${userId}`, {

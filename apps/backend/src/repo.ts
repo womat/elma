@@ -30,8 +30,11 @@ export interface ReservationRow {
   endsAt: number;
 }
 
-/** expired = Zeit abgelaufen, user/owner = vorzeitig beendet, wallbox = Ladung begonnen, revoked = Recht entzogen */
-export type ReservationEndReason = "expired" | "user" | "owner" | "wallbox" | "revoked";
+/**
+ * expired = Zeit abgelaufen, user/owner = vorzeitig beendet, wallbox = Ladung begonnen, revoked = Recht entzogen,
+ * cancelled = geplante vor dem Beginn abgesagt
+ */
+export type ReservationEndReason = "expired" | "user" | "owner" | "wallbox" | "revoked" | "cancelled";
 
 const RESERVATION_SELECT =
   "SELECT id, producer_id AS producerId, user_id AS userId, starts_at AS startsAt, ends_at AS endsAt FROM reservations";
@@ -328,10 +331,11 @@ export class Repo {
     return rows.map((r) => ({ ...r, canReserve: r.canReserve === 1 }));
   }
 
-  activeReservation(producerId: string): ReservationRow | undefined {
-    return this.db.prepare(`${RESERVATION_SELECT} WHERE producer_id = ? AND ended_at IS NULL`).get(producerId) as
-      | ReservationRow
-      | undefined;
+  /** Laufende und geplante Reservierungen eines Erzeugers, nach Beginn sortiert. */
+  openReservations(producerId: string): ReservationRow[] {
+    return this.db
+      .prepare(`${RESERVATION_SELECT} WHERE producer_id = ? AND ended_at IS NULL ORDER BY starts_at`)
+      .all(producerId) as unknown as ReservationRow[];
   }
 
   /** Alle noch nicht beendeten Reservierungen, z. B. um nach einem Neustart die Timer wieder zu stellen. */
@@ -341,7 +345,7 @@ export class Repo {
 
   /**
    * Verbrauchte Millisekunden eines Empfängers bei einem Erzeuger seit dayStart. Beendete zählen mit der tatsächlich
-   * genutzten Zeit, eine laufende mit ihrer ganzen geplanten Dauer (sie kann ja noch bis zum Ende laufen).
+   * genutzten Zeit, eine laufende oder geplante mit ihrer ganzen Dauer (sie kann ja noch bis zum Ende laufen).
    */
   reservedMsSince(producerId: string, userId: string, dayStart: number): number {
     const row = this.db
@@ -353,7 +357,7 @@ export class Repo {
     return row.ms;
   }
 
-  /** Wirft, wenn beim Erzeuger schon eine läuft (Index reservations_one_active). */
+  /** Die Regeln (Überschneidung, Budget) prüft ReservationService vorher. */
   createReservation(producerId: string, userId: string, startsAt: number, endsAt: number): ReservationRow {
     const id = newId();
     this.db

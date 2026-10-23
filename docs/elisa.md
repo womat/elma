@@ -1,10 +1,12 @@
 # ELISA-Modus: Überschuss reservieren
 
 > **Status:** Plan vollständig (2026-10-21). Phase 1 (Anzeigename) ist mit 0.7.0 umgesetzt, Phase 2 (Reservierung in ELMA) mit 0.8.0, der ELMA-Teil von Phase 4 (Bridge → `elma/reservation`) mit 0.9.0, der MAGGIE-Teil mit MAGGIE v0.4.0. Node-RED (Phase 3) ist gebaut und läuft im Probebetrieb. Offen ist das Scharfschalten in Node-RED (siehe [Umsetzungsreihenfolge](#umsetzungsreihenfolge)).
+> [Vorreservieren](#vorreservieren-0110) ist in ELMA mit 0.11.0 umgesetzt. Der Node-RED-Teil dazu (Phase 5) ist offen.
 > Was bei der Umsetzung vom Plan abweicht oder neu entschieden wurde, steht unter [Umgesetzt in 0.8.0](#umgesetzt-in-080-phase-2) und [Umgesetzt: Phase 4, ELMA-Teil](#umgesetzt-phase-4-elma-teil).
 > Mockups (Datei im Browser öffnen):
 > - [elisa-mockup.html](elisa-mockup.html): klickbarer Ablauf in ELMA
 > - [elisa-szenarien.html](elisa-szenarien.html): sieben Szenarien nebeneinander für Elisa (ELMA), Wolfgang (ELMA) und Margit (MAGGIE)
+> - [elisa-vorreservieren-mockup.html](elisa-vorreservieren-mockup.html): Vorreservieren, Schritt für Schritt (0.11.0)
 
 **ELISA** = **E**nergie für die **L**ieblingstochter: **I**hr **S**onnenstrom-**A**nteil.
 Der Name gehört zur Widmung von ELMA an Elisa. Sie hat sich die Funktion gewünscht.
@@ -56,7 +58,7 @@ Handy (Elisa) ──HTTPS──► ELMA-Backend ◄──HTTPS, alle 15 s── 
 | **Steuerweg: Node-RED fragt ELMA per HTTPS** mit eigenem Steuer-Token (alle 15 s), **nicht über MQTT** | In myhome gilt: „Keine eingehende MQTT-Nachricht schaltet etwas.“ Der Broker ist anonym, ohne ACL und TLS, eine gefälschte Reservierung könnte die Wallbox dauerhaft blockieren. Das Backend erreicht das LAN ohnehin nicht. Ein Abruf von innen nach außen über den vorhandenen Cloudflare-Tunnel braucht keine neue Öffnung. |
 | Eigenes **Steuer-Token** pro Erzeuger, nicht das Geräte-Token der Bridge | Das Steuer-Token darf nur den Status austauschen und keine Messwerte einspeisen. |
 | **Fail-open:** Antwortet ELMA nicht oder ist `until` vorbei, sperrt Node-RED nichts. | Ein Ausfall von Internet, Tunnel oder ELMA darf Wallbox und WP nie dauerhaft blockieren. |
-| **Wärmepumpe über die EVU-Sperre (`relay2`)**, für die ganze Dauer | In myhome hat die WP kein LM, sie startet nach ihrer eigenen Regelung. Zurückhalten geht nur über EVU. Weil bei laufendem Kompressor abgelehnt wird, wird nie ein laufender Kompressor gestoppt. |
+| **Wärmepumpe über die EVU-Sperre (`relay2`)**, für die ganze Dauer | In myhome hat die WP kein LM, sie startet nach ihrer eigenen Regelung. Zurückhalten geht nur über EVU. Weil bei laufendem Kompressor abgelehnt wird, wird nie ein laufender Kompressor gestoppt. **Ausnahme seit 0.11.0:** Bei einer geplanten Reservierung stoppt Node-RED einen laufenden Kompressor nach mindestens 60 min Laufzeit, siehe [Vorreservieren](#vorreservieren-0110). |
 | **Wallbox:** Einschalten durch die Preis-Freigabe (LM) wird zurückgehalten. Ist die Steckdose beim Start per LM an, lädt aber nicht, wird sie für die Dauer ausgeschaltet. | Es wird keine laufende Ladung abgebrochen, aber ein angestecktes Auto soll nicht gleich lossaugen (Wolfgang, 2026-10-21). Nach dem Ende gilt wieder die Preis-Freigabe. |
 | **Vorrang vor ELISA:** Handbedienung des Erzeugers und Abfahrtsplanung | Der Erzeuger entscheidet in seinem Haus selbst. Eine geplante Abfahrt soll nicht an einer Reservierung scheitern. |
 | Gesperrt werden **nur Wallbox und WP** | Trockner und E-Bike hängen seit 2026-10-03 nicht mehr an Node-RED. Ein Heizstab am Smartfox ist laut Wolfgang nicht relevant. |
@@ -184,6 +186,7 @@ Festgelegt mit Wolfgang am 2026-10-21. Jede Phase ist für sich ausrollbar, ein 
 | 1 | elma | **Anzeigename** im Konto (`users.display_name`, `PUT /api/me`, Feld im Konto-Sheet) | Klein und auch ohne ELISA nützlich | erledigt 2026-10-21 (0.7.0) |
 | 2 | elma | **Reservierung**: Recht, Budget, Knopf, Sheet, Banner, Push, `POST /api/control/status`, Steuer-Token per CLI | Elisa kann reservieren, der Erzeuger bekommt die Info. Ohne Node-RED steht „Die Sperre wirkt gerade nicht“ da | erledigt 2026-10-21 (0.8.0), ausgerollt |
 | 3 | myhome | **Node-RED**: `lib/elisa.js`, `ElisaEVU`/`ElisaHalt` in `lib/aktor.js`, Tab *ELISA*. Zuerst **Probebetrieb** (nur Schaltprotokoll, was es tun würde), danach scharf | Wallbox und WP werden zurückgehalten | gebaut 2026-10-22, Probebetrieb; scharf offen (myhome `KONZEPT-ELISA.md`) |
+| 5 | elma, myhome | **Vorreservieren**: ELMA plant und liefert `heatpumpUntil`. Node-RED hängt `ElisaEVU` daran und stoppt einen laufenden Kompressor erst nach 60 min Laufzeit | Die WP ist zum geplanten Start aus | ELMA-Teil erledigt 2026-10-23 (0.11.0). Node-RED offen (myhome `KONZEPT-ELISA.md` ergänzen) |
 | 4 | elma, maggie | Backend sendet `{type:"reservation"}` über `/ingest`, Bridge veröffentlicht `elma/reservation`. MAGGIE bekommt den Zustand `reserved` und die Push an Margit | Margit sieht die Reservierung | ELMA-Teil erledigt 2026-10-22 (0.9.0), ausgerollt und am Pi geprüft (Start und Beenden kommen auf `elma/reservation` an). MAGGIE-Teil erledigt 2026-10-22 (MAGGIE v0.4.0), ausgerollt und mit einer echten Reservierung geprüft |
 
 Warum so: Node-RED und MAGGIE reagieren nur auf das, was ELMA liefert, deshalb kommt ELMA zuerst. Das Schalten im Haus greift in Wallbox und WP ein und kommt deshalb spät und zuerst im Probebetrieb, so wie es bei der Entladesperre eine Woche Probebetrieb gab.
@@ -225,6 +228,41 @@ Entscheidungen, die der Plan offenließ (Claude, 2026-10-22, zur Prüfung durch 
 | **Bewusst nicht:** `{"active":false}` setzen, wenn die Bridge beendet wird oder die Verbindung zum Backend verliert, auch nicht per MQTT Last Will | Das tauscht den harmlosen Fehler „reserviert, obwohl frei“ gegen „frei, obwohl reserviert“. Verliert die Bridge während einer Reservierung kurz die Verbindung, hält Node-RED Wallbox und WP weiter zurück, MAGGIE zeigte aber „frei“. Margit schaltete dann vielleicht etwas Großes ein, und genau das soll der ELISA-Modus verhindern. Bei jedem Deploy oder Neustart spränge die Ampel kurz auf „frei“ und zurück, mit womöglich einer zweiten Push an Margit. Der Preis des Stehenlassens: Beendet Elisa vorzeitig, während die Bridge keine Verbindung hat, oder fällt ELMA aus (Node-RED gibt dann fail-open frei), zeigt MAGGIE noch „reserviert“, bis die Verbindung wieder steht, längstens bis `until` (höchstens 60 min). Margit wartet dann unnötig, das ist in Ordnung (Wolfgang, 2026-10-22). |
 | `RESERVATION_TOPIC` steht in `docker-compose.yml` und `deploy/box/docker-compose.yml`, Standard `elma/reservation`, leer zählt als Standard | Weitere Erzeuger mit eigener ELMA-Box haben ihren eigenen Broker, dort stört das Topic nicht. Wer mehrere ELMA an einem Broker hat, kann es umbenennen. |
 | Der ELMA-Teil geht allein als **0.9.0** raus, ohne auf MAGGIE zu warten (Wolfgang, 2026-10-22) | MAGGIE liest das Topic nur. Solange sie es nicht kennt, stört die retained Nachricht niemanden, und MAGGIE kann danach gegen einen echten Stand entwickelt werden. Neue Funktion, daher Minor statt Patch. |
+
+## Vorreservieren (0.11.0)
+
+Elisa wollte nicht nur spontan reservieren, sondern z. B. „heute um 12:00 für 30 min“. Spontan scheiterte das oft daran, dass
+gerade die Wärmepumpe lief. Mockup: [elisa-vorreservieren-mockup.html](elisa-vorreservieren-mockup.html), abgenommen von Wolfgang am 2026-10-23.
+
+Festgelegt mit Wolfgang am 2026-10-23:
+
+| Entscheidung | Begründung |
+|---|---|
+| Planen geht **nur für heute** (Europe/Vienna), mit einer Uhrzeit im 5-Minuten-Raster. Die geplante Zeit geht **sofort vom Tagesbudget** ab. | Überschuss lässt sich kaum über den Tag hinaus vorhersagen. Das Budget bleibt so derselbe Tagesrahmen wie bisher. |
+| **Die Wärmepumpe wird 60 min vor Beginn zurückgehalten** (`HEATPUMP_LEAD_MINUTES`), die Wallbox erst ab Beginn | Die WP startet nach ihrer eigenen Regelung und läuft dann lange. Ohne Vorlauf liefe sie zum Start womöglich gerade. Beim Autoladen ist das egal (Wolfgang). |
+| **Läuft die WP im Vorlauf oder beim Start noch, wird sie gestoppt, aber erst nach mindestens 60 min Laufzeit.** Das gilt nur für geplante Reservierungen. Die spontane lehnt bei laufendem Kompressor weiter ab. | Wolfgang, 2026-10-23. Die Mindestlaufzeit schützt den Kompressor. Damit fällt bei geplanten Reservierungen der Grundsatz „nie einen laufenden Kompressor stoppen“. |
+| Eine **spontane Reservierung bleibt neben einer geplanten möglich**, solange sie sich nicht überschneiden | Der Knopf soll nicht für Stunden gesperrt sein, nur weil für später etwas geplant ist. |
+| **MAGGIE zeigt erst ab Start** etwas an. Bridge und `elma/reservation` bleiben unverändert. | In der Vorlaufstunde wird nur die WP zurückgehalten, Margit darf noch alles einschalten. |
+
+Entscheidungen, die die Rückfrage offenließ (Claude, 2026-10-23, zur Prüfung durch Wolfgang):
+
+| Entscheidung | Begründung |
+|---|---|
+| Eine spontane darf **bis zum Beginn** der geplanten laufen, auch in deren Vorlaufstunde (Meldung sonst: „Um 12:00 ist schon reserviert, höchstens bis dahin“). In der Rückfrage stand noch „vor der Vorlaufstunde enden“. | In der Vorlaufstunde ist die WP ohnehin gesperrt, die Überschneidung schadet also nicht. |
+| **Höchstens eine geplante** Reservierung je Erzeuger, egal von welchem Empfänger. Während einer laufenden gibt es keinen Knopf, also auch kein Planen (die API erlaubt es ab deren Ende). | Hält die Regeln und die Anzeige einfach. Heute gibt es ohnehin nur einen Empfänger mit Recht. |
+| Beim Planen wird **nicht** auf laufende Geräte geprüft. Läuft gerade ein Gerät, ist im Blatt nur „Später“ wählbar, mit dem Grund darüber. | Bis zum Beginn können Stunden vergehen. Der graue Knopf hätte sonst auch das Planen verhindert. |
+| **Lädt beim Start das Auto**, endet die Reservierung sofort (`end_reason = "wallbox"`), ohne Verbrauch, mit Push an beide | Dieselbe Regel wie bei einer Ladung während der Reservierung: Die Handbedienung des Erzeugers hat Vorrang. |
+| **Absagen** können der Planende und der Erzeuger (`DELETE /api/producers/:id/reservation/planned`, `end_reason = "cancelled"`). Das kostet nichts (`ended_at = starts_at`), und der jeweils andere bekommt eine Push. | Ein eigener Pfad, damit `DELETE …/reservation` weiter „laufende beenden“ heißt. |
+| **Push:** beim Planen an den Erzeuger („📅 Elisa reserviert heute 12:00–12:30 / Die Wärmepumpe wird ab 11:00 zurückgehalten.“). Beim Start wie bisher an den Erzeuger und **neu auch an Elisa** („🔒 Deine Reservierung läuft“). | Der Erzeuger soll früh wissen, warum die WP nicht anspringt. Elisa hat vielleicht vergessen, dass sie geplant hat, und soll ihr Gerät einschalten. |
+| Beim Erzeuger steht in der Karte „Elisa: heute 12:00–12:30 / Die Wärmepumpe wird ab 11:00 zurückgehalten“, in der Vorlaufstunde „Wärmepumpe zurückgehalten“. Elisa liest nur „Geplant: heute 12:00–12:30“. | Elisa werden weiterhin keine Geräte genannt (siehe oben). |
+| `ControlResponse` bekommt **`heatpumpUntil`**. `active`/`until`/`by` meinen weiterhin nur die laufende Reservierung. | Node-RED kann Wallbox und WP getrennt behandeln, und die Bridge (MAGGIE) braucht keine Änderung. Fail-open wie bisher: `heatpumpUntil` vorbei oder keine Antwort heißt keine Sperre. |
+| Der eindeutige Index `reservations_one_active` ist weg (`DROP INDEX IF EXISTS` in `openDb`) | Geplant und laufend sind gleichzeitig offen, und das kann ein Partial Index nicht ausdrücken. Zwei gleichzeitige Anfragen kommen trotzdem nicht beide durch, weil `node:sqlite` synchron ist. |
+| Nach einem Neustart des Backends gilt der Start-Timer wieder. Ist der Beginn während des Neustarts verstrichen, läuft die Reservierung ohne Start-Push. | Wie beim Ende: Eine verspätete Nachricht verwirrt eher. |
+
+**Node-RED (Phase 5, offen, myhome):** `ElisaEVU` hängt an `heatpumpUntil > jetzt` statt an `active`/`until`. Läuft der
+Kompressor, wird `ElisaEVU` erst gesetzt, wenn er mindestens 60 min läuft. Woher Node-RED die Laufzeit nimmt
+(`myhome/heatpump/runtime`?), ist ungeprüft. `ElisaHalt` (Wallbox) bleibt an `active`/`until`. Bis das umgesetzt ist, beginnt
+eine geplante Reservierung zu ihrer Zeit wie eine spontane, aber ohne Vorlauf für die WP.
 
 ## Vor der Umsetzung mitbringen
 

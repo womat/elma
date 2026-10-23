@@ -327,7 +327,7 @@ describe("ELISA-Modus", () => {
     expect((await post(`Bearer ${token}`, { compressorRunning: "ja" })).statusCode).toBe(400);
     const ok = await post(`Bearer ${token}`);
     expect(ok.statusCode).toBe(200);
-    expect(ok.json()).toEqual({ active: false, until: null });
+    expect(ok.json()).toEqual({ active: false, until: null, heatpumpUntil: null });
 
     const list = await app.inject({ url: "/api/producers", headers: { authorization: `Bearer ${await login("elisa@elma.test")}` } });
     expect(list.json()[0].reservation).toMatchObject({ controlConnected: true, blockedReason: null, canReserve: false, minutesLeft: 60 });
@@ -374,7 +374,7 @@ describe("ELISA-Modus", () => {
       headers: { authorization: `Bearer ${token}` },
       payload: { compressorRunning: false, wallboxCharging: false },
     });
-    expect(status.json()).toEqual({ active: true, until: res.json().active.endsAt, by: "Elisa" });
+    expect(status.json()).toEqual({ active: true, until: res.json().active.endsAt, by: "Elisa", heatpumpUntil: res.json().active.endsAt });
 
     await app.inject({ method: "DELETE", url: `/api/producers/${producer.id}/reservation`, headers });
     await waitFor(() => messages.length === 3);

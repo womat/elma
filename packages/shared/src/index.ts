@@ -79,6 +79,11 @@ export interface ProducerDto {
 export const RESERVATION_DAILY_MINUTES = 60;
 /** Dauer-Chips im Blatt „Strom reservieren“ */
 export const RESERVATION_DURATIONS = [15, 30, 45, 60] as const;
+/**
+ * So lange vor einer geplanten Reservierung hält Node-RED die Wärmepumpe schon zurück, damit sie zum Start nicht gerade
+ * läuft. Die Wallbox braucht keinen Vorlauf. Begründung: docs/elisa.md, „Vorreservieren“.
+ */
+export const HEATPUMP_LEAD_MINUTES = 60;
 
 /** Eine laufende Reservierung. */
 export interface ReservationDto {
@@ -97,6 +102,8 @@ export type BlockedReason = "heatpump" | "wallbox";
 /** Stand der Reservierung eines Erzeugers aus Sicht eines Users. */
 export interface ReservationStateDto {
   active: ReservationDto | null;
+  /** für später heute geplant (höchstens eine pro Erzeuger); zählt schon mit ihrer ganzen Dauer zum Budget */
+  planned: ReservationDto | null;
   /** der User darf bei diesem Erzeuger reservieren (Recht pro Freigabe) */
   canReserve: boolean;
   /** heute noch frei; eine laufende Reservierung zählt mit ihrer ganzen geplanten Dauer */
@@ -109,6 +116,8 @@ export interface ReservationStateDto {
 /** Reservierung anfordern */
 export const ReservationBody = z.object({
   minutes: z.number().int("Ganze Minuten angeben").min(1, "Mindestens 1 Minute").max(RESERVATION_DAILY_MINUTES, `Höchstens ${RESERVATION_DAILY_MINUTES} Minuten`),
+  /** Beginn (Unix-ms) einer geplanten Reservierung, nur heute; fehlt er, beginnt sie sofort */
+  startsAt: z.number().int("Ungültiger Beginn").optional(),
 });
 export type ReservationBody = z.infer<typeof ReservationBody>;
 
@@ -124,9 +133,15 @@ export type ControlStatus = z.infer<typeof ControlStatus>;
 
 /** Antwort an Node-RED: Ist gerade reserviert, und bis wann (Unix-ms, Uhr des Backends)? */
 export interface ControlResponse {
+  /** nur die laufende Reservierung: hält die Wallbox zurück, MAGGIE zeigt sie an */
   active: boolean;
   until: number | null;
   by?: string;
+  /**
+   * Bis wann die Wärmepumpe zurückgehalten wird: während einer laufenden Reservierung und schon HEATPUMP_LEAD_MINUTES vor
+   * einer geplanten, jeweils bis zu deren Ende. Einen laufenden Kompressor stoppt Node-RED erst nach 60 min Laufzeit.
+   */
+  heatpumpUntil: number | null;
 }
 
 /** Empfänger eines Erzeugers, für die Liste im Blatt „Einladen“ (nur der Erzeuger sieht sie). */

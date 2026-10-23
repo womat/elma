@@ -32,4 +32,18 @@ describe("openDb", () => {
     // zweites Öffnen darf die Spalte nicht noch einmal anlegen wollen
     expect(new Repo(openDb(path)).userById("u1")?.displayName).toBe("Elisa");
   });
+
+  it("entfernt den Index reservations_one_active, damit geplante und laufende gleichzeitig offen sein können (0.11.0)", () => {
+    dir = mkdtempSync(join(tmpdir(), "elma-db-"));
+    const path = join(dir, "elma.db");
+    openDb(path).close();
+    const old = new DatabaseSync(path);
+    old.exec("CREATE UNIQUE INDEX reservations_one_active ON reservations (producer_id) WHERE ended_at IS NULL");
+    old.close();
+
+    const db = openDb(path);
+    const indexes = db.prepare("PRAGMA index_list(reservations)").all() as { name: string }[];
+    expect(indexes.map((i) => i.name)).not.toContain("reservations_one_active");
+    db.close();
+  });
 });

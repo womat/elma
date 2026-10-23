@@ -19,7 +19,7 @@ import { ApplianceGrid } from "./ApplianceGrid.tsx";
 import { ApplianceTimeline } from "./ApplianceTimeline.tsx";
 import { ApplianceIcon } from "./icons.tsx";
 import { InviteSheet } from "./InviteSheet.tsx";
-import { ReservationBanner, ReserveButton, ReserveSheet } from "./Reservation.tsx";
+import { PlannedNote, ReservationBanner, ReserveButton, ReserveSheet } from "./Reservation.tsx";
 import { biggestFitting, type Appliance } from "./appliances.ts";
 
 export type View = "power" | "appliances";
@@ -140,6 +140,10 @@ export function ProducerCard({
     }
   };
 
+  const planned = (
+    <PlannedNote state={reservation} isOwner={producer.isOwner} now={now} producerId={producer.id} onChange={onReservation} />
+  );
+
   return (
     <section className={`card producer level-${level}`}>
       <div className="producer-head">
@@ -179,7 +183,8 @@ export function ProducerCard({
               Reicht z. B. für <ApplianceIcon icon={hint.icon} size={22} /> {hint.name}
             </p>
           )}
-          <ReserveButton state={reservation} onOpen={() => setReserving(true)} />
+          <ReserveButton state={reservation} now={now} onOpen={() => setReserving(true)} />
+          {planned}
         </>
       ) : (
         <>
@@ -192,7 +197,8 @@ export function ProducerCard({
             onEdit={onEditAppliances}
           />
           {/* auch hier, weil manche die App in der Geräte-Ansicht offen haben */}
-          <ReserveButton state={reservation} onOpen={() => setReserving(true)} />
+          <ReserveButton state={reservation} now={now} onOpen={() => setReserving(true)} />
+          {planned}
           <ApplianceTimeline points={history} appliances={appliances} now={now} />
         </>
       )}
