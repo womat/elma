@@ -3,9 +3,9 @@ import {
   defaultSettings,
   notifyAppliances,
   type Appliance,
+  type LiveReading,
   type PushPayload,
   type PushSubscriptionBody,
-  type SurplusReading,
 } from "@elma/shared";
 import type { Repo } from "./repo.ts";
 
@@ -48,7 +48,7 @@ export class PushNotifier {
   }
 
   /** Liefert die Versprechen der gesendeten Nachrichten (für Tests); im Betrieb wird nicht darauf gewartet. */
-  onReading(producerId: string, reading: SurplusReading): Promise<void>[] {
+  onReading(producerId: string, reading: LiveReading): Promise<void>[] {
     const producer = this.repo.producerById(producerId);
     if (!producer) return [];
     const sends: Promise<void>[] = [];
@@ -76,12 +76,13 @@ export class PushNotifier {
   }
 
   /** true = für dieses Gerät jetzt benachrichtigen. */
-  private update(key: string, appliance: Appliance, reading: SurplusReading): boolean {
+  private update(key: string, appliance: Appliance, reading: LiveReading): boolean {
     const now = reading.timestamp;
     const s = this.state.get(key) ?? { fitSince: null, notifiedThisPhase: false, lastNotifiedAt: 0 };
     this.state.set(key, s);
 
-    if (reading.watts >= appliance.watts) {
+    // Schwankt der Wert, gilt das Gerät als "passt nicht"; ohne Ampel (stable fehlt) zählt nur der Wert.
+    if (reading.watts >= appliance.watts && reading.stable !== false) {
       s.fitSince ??= now;
       if (!s.notifiedThisPhase && now - s.fitSince >= this.holdMs && now - s.lastNotifiedAt >= this.cooldownMs) {
         s.notifiedThisPhase = true;

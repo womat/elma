@@ -12,6 +12,8 @@ export interface BridgeConfig {
   deltaWatts: number;
   /** retained Topic mit der Reservierung (ELISA-Modus) für MAGGIE */
   reservationTopic: string;
+  /** Topic mit dem Akku-Telegramm von ecoflowd; leer = kein Akku-Hinweis in der App */
+  batteryTopic?: string;
 }
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
@@ -36,5 +38,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
     minIntervalMs: Number(env.MIN_INTERVAL_MS ?? 5000),
     deltaWatts: Number(env.DELTA_WATTS ?? 50),
     reservationTopic: env.RESERVATION_TOPIC?.trim() || "elma/reservation",
+    batteryTopic: env.BATTERY_TOPIC?.trim() || undefined,
   };
 }

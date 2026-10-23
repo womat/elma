@@ -8,9 +8,28 @@ export const SurplusReading = z.object({
 });
 export type SurplusReading = z.infer<typeof SurplusReading>;
 
+/** Zustand des Hausakkus beim Erzeuger (bei uns aus `myhome/ecoflow/state`), nur zur Anzeige. */
+export const BatteryReading = z.object({
+  watts: z.number().finite(), // positiv = lädt
+  soc: z.number().min(0).max(100), // Ladestand in %
+  timestamp: z.number().int().positive(), // Messzeit, Unix-Millisekunden
+});
+export type BatteryReading = z.infer<typeof BatteryReading>;
+
+/**
+ * Verteilter Live-Wert: der geglättete Überschuss, dazu, ob er in diesem Fenster stabil war, und der letzte Akkuwert.
+ * `stable` fehlt, wenn es keine Ampel gibt (kein Überschuss, zu wenig Daten, Glättung aus); `battery`, wenn kein
+ * aktueller Akkuwert da ist.
+ */
+export interface LiveReading extends SurplusReading {
+  stable?: boolean;
+  battery?: BatteryReading;
+}
+
 /** Nachrichten Bridge -> Backend über WS /ingest */
 export const IngestMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("reading"), reading: SurplusReading }),
+  z.object({ type: z.literal("battery"), battery: BatteryReading }),
 ]);
 export type IngestMessage = z.infer<typeof IngestMessage>;
 
@@ -39,7 +58,7 @@ export type LiveClientMessage = z.infer<typeof LiveClientMessage>;
 /** Nachrichten Backend -> App über WS /live */
 export type LiveServerMessage =
   | { type: "ready"; producerIds: string[] }
-  | { type: "reading"; producerId: string; reading: SurplusReading }
+  | { type: "reading"; producerId: string; reading: LiveReading }
   /** Reservierung (ELISA-Modus), aus Sicht des jeweiligen Users; kommt nach ready und bei jeder Änderung */
   | { type: "reservation"; producerId: string; state: ReservationStateDto }
   | { type: "error"; message: string };
@@ -50,7 +69,7 @@ export interface ProducerDto {
   /** Name des Erzeugers für Texte wie „Wolfgang bekommt nur eine Info“ (siehe {@link displayNameOf}) */
   ownerName: string;
   isOwner: boolean;
-  current: SurplusReading | null;
+  current: LiveReading | null;
   reservation: ReservationStateDto;
 }
 
@@ -179,6 +198,21 @@ export const LEVEL_LOTS_WATTS = 1000;
 
 /** Nach so vielen Millisekunden ohne neuen Wert gilt ein Erzeuger als "offline". */
 export const STALE_AFTER_MS = 60_000;
+
+/**
+ * Stabilitätsampel (Wolfgang, 23.10.2026): "stabil", wenn der Rohwert im Glättungsfenster mindestens
+ * STABLE_TIME_SHARE der Zeit bei wenigstens STABLE_LEVEL_RATIO des angezeigten Mittelwerts lag. Ein Mittelwert allein
+ * zeigt bei 0 ↔ 4 kW "2 kW" an, und genau darauf verlässt sich der Empfänger dann. Push gibt es nur bei "stabil".
+ */
+export const STABLE_TIME_SHARE = 0.8;
+export const STABLE_LEVEL_RATIO = 0.7;
+
+/** Ein älterer Akkuwert wird nicht mehr angezeigt: ecoflowd kann einfrieren (myhome, KONZEPT-ECOFLOW.md). */
+export const BATTERY_STALE_MS = 5 * 60_000;
+/** Ab dieser Ladeleistung steht "Lädt"; kleines Nachladen erklärt keine Schwankung (Wolfgang, 23.10.2026). */
+export const BATTERY_CHARGING_WATTS = 200;
+/** Ab diesem Ladestand steht "Akku voll"; der EcoFlow erreicht oben nicht sicher 100 % (Wolfgang, 23.10.2026). */
+export const BATTERY_FULL_SOC = 98;
 
 /** Ein selbst angelegtes Gerät des Empfängers. */
 export const CustomAppliance = z.object({

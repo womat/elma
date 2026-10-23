@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import type { LiveServerMessage, ReservationStateDto, SurplusReading } from "@elma/shared";
+import type { LiveServerMessage, ReservationStateDto, LiveReading } from "@elma/shared";
 
 export type LiveStatus = "connecting" | "open" | "closed";
 
 /** Live-Werte und Stand der Reservierungen über WebSocket, mit automatischem Neuverbinden. */
 export function useLive(
   token: string,
-  initial: Record<string, SurplusReading | null>,
+  initial: Record<string, LiveReading | null>,
   initialReservations: Record<string, ReservationStateDto>,
 ) {
-  const [readings, setReadings] = useState<Record<string, SurplusReading | null>>(initial);
+  const [readings, setReadings] = useState<Record<string, LiveReading | null>>(initial);
   const [reservations, setReservations] = useState<Record<string, ReservationStateDto>>(initialReservations);
   const [status, setStatus] = useState<LiveStatus>("connecting");
 
@@ -72,6 +72,6 @@ export function useLive(
   return { readings, reservations, setReservation, status };
 }
 
-function stripNull(obj: Record<string, SurplusReading | null>) {
+function stripNull(obj: Record<string, LiveReading | null>) {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== null));
 }

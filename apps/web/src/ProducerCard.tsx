@@ -1,13 +1,16 @@
-import { Pencil, UserPlus } from "lucide-react";
+import { Activity, AudioWaveform, Battery, BatteryCharging, BatteryFull, Pencil, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
+  BATTERY_CHARGING_WATTS,
+  BATTERY_FULL_SOC,
   LEVEL_LOTS_WATTS,
   LEVEL_SOME_WATTS,
   STALE_AFTER_MS,
   type HistoryPoint,
   type ProducerDto,
+  type BatteryReading,
+  type LiveReading,
   type ReservationStateDto,
-  type SurplusReading,
 } from "@elma/shared";
 import { api } from "./api.ts";
 import { formatPower } from "./format.ts";
@@ -23,7 +26,7 @@ export type View = "power" | "appliances";
 
 interface Props {
   producer: ProducerDto;
-  reading: SurplusReading | null;
+  reading: LiveReading | null;
   reservation: ReservationStateDto;
   onReservation: (state: ReservationStateDto) => void;
   /** darf bei irgendeinem Erzeuger reservieren (für den Glocken-Hinweis) */
@@ -38,7 +41,7 @@ interface Props {
 
 type Level = "offline" | "none" | "some" | "lots";
 
-function levelOf(reading: SurplusReading | null, now: number): Level {
+function levelOf(reading: LiveReading | null, now: number): Level {
   if (!reading || now - reading.timestamp > STALE_AFTER_MS) return "offline";
   if (reading.watts >= LEVEL_LOTS_WATTS) return "lots";
   if (reading.watts > LEVEL_SOME_WATTS) return "some";
@@ -51,6 +54,54 @@ const LABELS: Record<Level, string> = {
   some: "Etwas Überschuss verfügbar",
   lots: "Viel Überschuss – jetzt verbrauchen!",
 };
+
+/** Ampel: ist der Überschuss der letzten Minuten gleichmäßig? Ohne `stable` (kein Überschuss, zu wenig Daten) nichts. */
+function Stability({ stable }: { stable: boolean | undefined }) {
+  if (stable === undefined) return null;
+  return stable ? (
+    <div className="live-box stable">
+      <Activity size={20} aria-hidden />
+      <span><strong>Stabil</strong> · seit Minuten gleichmäßig</span>
+    </div>
+  ) : (
+    <div className="live-box unsteady">
+      <AudioWaveform size={20} aria-hidden />
+      <span><strong>Schwankt stark</strong> · kann sinken</span>
+    </div>
+  );
+}
+
+/** Akku des Erzeugers, immer wenn ein aktueller Wert da ist: Laden geht vor "voll", sonst nur der Ladestand. */
+function BatteryBox({ battery }: { battery: BatteryReading }) {
+  const soc = Math.round(battery.soc);
+  const charging = battery.watts >= BATTERY_CHARGING_WATTS;
+  const full = !charging && battery.soc >= BATTERY_FULL_SOC;
+  return (
+    <div className={`live-box battery ${charging ? "charging" : full ? "full" : ""}`}>
+      <div className="battery-line">
+        {charging ? (
+          <>
+            <BatteryCharging size={20} aria-hidden />
+            <span><strong>Lädt</strong> {formatPower(battery.watts)} · {soc} %</span>
+          </>
+        ) : full ? (
+          <>
+            <BatteryFull size={20} aria-hidden />
+            <strong>Akku voll</strong>
+          </>
+        ) : (
+          <>
+            <Battery size={20} aria-hidden />
+            <span><strong>Akku</strong> · {soc} %</span>
+          </>
+        )}
+      </div>
+      <div className="battery-bar" role="img" aria-label={`Ladestand ${soc} %`}>
+        <div style={{ width: `${full ? 100 : soc}%` }} />
+      </div>
+    </div>
+  );
+}
 
 export function ProducerCard({
   producer,
@@ -120,7 +171,10 @@ export function ProducerCard({
           <div className="value" aria-live="polite">
             {liveWatts !== null ? formatPower(liveWatts) : "–"}
           </div>
+          {liveWatts !== null && <div className="value-note">Mittel der letzten Minuten</div>}
           <div className="status">{LABELS[level]}</div>
+          {liveWatts !== null && <Stability stable={reading?.stable} />}
+          {liveWatts !== null && reading?.battery && <BatteryBox battery={reading.battery} />}
           {hint && (
             <p className="hint">
               Reicht z. B. für <ApplianceIcon icon={hint.icon} size={22} /> {hint.name}

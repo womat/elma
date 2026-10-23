@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizePayload } from "../src/normalize.ts";
+import { normalizePayload, parseBattery } from "../src/normalize.ts";
 import { Throttle } from "@elma/shared";
 
 const base = { payloadPath: undefined, payloadUnit: "W" as const, payloadInvert: false };
@@ -32,5 +32,23 @@ describe("Throttle", () => {
     expect(t.shouldSend(120, 1000)).toBe(false);
     expect(t.shouldSend(200, 1000)).toBe(true);
     expect(t.shouldSend(120, 5000)).toBe(true);
+  });
+});
+
+describe("parseBattery", () => {
+  const now = 1_800_000_000_000;
+
+  it("liest das Telegramm von ecoflowd mit seiner Messzeit", () => {
+    const payload = '{"sn":"HC31","timestamp":"2026-09-22T09:13:16Z","pv":975,"house":-459,"battery":515,"grid":0,"soc":63}';
+    expect(parseBattery(payload, now)).toEqual({ watts: 515, soc: 63, timestamp: Date.parse("2026-09-22T09:13:16Z") });
+  });
+  it("nimmt ohne Zeitstempel die Empfangszeit", () => {
+    expect(parseBattery('{"battery":-300,"soc":40}', now)).toEqual({ watts: -300, soc: 40, timestamp: now });
+  });
+  it("verwirft ungültige Telegramme", () => {
+    expect(parseBattery("kein json", now)).toBeNull();
+    expect(parseBattery('{"battery":515}', now)).toBeNull();
+    expect(parseBattery('{"battery":"viel","soc":63}', now)).toBeNull();
+    expect(parseBattery('{"battery":515,"soc":140}', now)).toBeNull();
   });
 });

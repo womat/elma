@@ -355,7 +355,8 @@ export async function buildApp(
         socket.send(JSON.stringify({ type: "error", message: "Ungültige Nachricht" }));
         return;
       }
-      hub.publish(producer.id, parsed.data.reading);
+      if (parsed.data.type === "battery") hub.publishBattery(producer.id, parsed.data.battery);
+      else hub.publish(producer.id, parsed.data.reading);
     });
   });
 

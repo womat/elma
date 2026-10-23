@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SurplusReading } from "@elma/shared";
+import { BATTERY_STALE_MS, type BatteryReading, type LiveReading, type SurplusReading } from "@elma/shared";
 import { LiveHub } from "../src/hub.ts";
 import { openDb } from "../src/db.ts";
 import { Repo } from "../src/repo.ts";
@@ -54,5 +54,69 @@ describe("Glättung", () => {
 
   it("Fenster 0 schaltet die Glättung ab", async () => {
     expect(await run([[0, 0], [5, 680], [10, 0]], 0)).toEqual([0, 680, 0]);
+  });
+});
+
+/** Wie run, liefert aber die ganzen verteilten Werte (mit stable und battery). */
+function runFull(samples: [number, number][], windowMs = 120 * S, battery?: BatteryReading): LiveReading[] {
+  const repo = new Repo(openDb(":memory:"));
+  const owner = repo.createUser("a@elma.test");
+  const { producer } = repo.createProducer("P", owner.id);
+  const hub = new LiveHub(repo, windowMs);
+  const out: LiveReading[] = [];
+  hub.subscribe((_id, r) => out.push(r));
+  if (battery) hub.publishBattery(producer.id, battery);
+  for (const [sec, watts] of samples) hub.publish(producer.id, { watts, timestamp: T0 + sec * S });
+  return out;
+}
+
+function every(seconds: number, step: number, watts: (s: number) => number): [number, number][] {
+  const samples: [number, number][] = [];
+  for (let s = 0; s <= seconds; s += step) samples.push([s, watts(s)]);
+  return samples;
+}
+
+describe("Stabilitätsampel", () => {
+  it("ein gleichmäßiger Wert ist stabil", () => {
+    expect(runFull(every(120, 5, () => 1000)).at(-1)!.stable).toBe(true);
+  });
+
+  it("ein Wert, der zwischen 0 und 4000 W springt, schwankt", () => {
+    const last = runFull(every(120, 10, (s) => (s % 20 === 0 ? 4000 : 0))).at(-1)!;
+    expect(last.watts).toBeGreaterThan(1500);
+    expect(last.stable).toBe(false);
+  });
+
+  it("kurze Einbrüche unter 20 % der Zeit lassen ihn stabil", () => {
+    // alle 60 s für 10 s auf 0 W: 1/6 der Zeit
+    expect(runFull(every(120, 10, (s) => (s % 60 === 50 ? 0 : 2000))).at(-1)!.stable).toBe(true);
+  });
+
+  it("ohne Überschuss gibt es keine Ampel", () => {
+    expect(runFull(every(120, 5, () => 30)).at(-1)!.stable).toBeUndefined();
+  });
+
+  it("deckt die Historie weniger als das halbe Fenster ab, gibt es keine Ampel", () => {
+    expect(runFull(every(50, 5, () => 1000)).at(-1)!.stable).toBeUndefined();
+    expect(runFull(every(60, 5, () => 1000)).at(-1)!.stable).toBe(true);
+  });
+
+  it("Fenster 0 schaltet auch die Ampel ab", () => {
+    expect(runFull(every(120, 5, () => 1000), 0).at(-1)).toEqual({ watts: 1000, timestamp: T0 + 120 * S });
+  });
+});
+
+describe("Akku", () => {
+  const battery = { watts: 1200, soc: 92, timestamp: T0 };
+
+  it("der letzte Akkuwert geht mit dem nächsten Überschusswert hinaus", () => {
+    expect(runFull([[5, 800]], 0, battery).at(-1)!.battery).toEqual(battery);
+  });
+
+  it("ein veralteter Akkuwert wird weggelassen", () => {
+    const late = BATTERY_STALE_MS / S + 1;
+    const out = runFull([[late - 2, 800], [late, 800]], 0, battery);
+    expect(out[0]!.battery).toEqual(battery);
+    expect(out[1]!.battery).toBeUndefined();
   });
 });

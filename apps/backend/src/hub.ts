@@ -1,7 +1,15 @@
-import type { SurplusReading } from "@elma/shared";
+import {
+  BATTERY_STALE_MS,
+  LEVEL_SOME_WATTS,
+  STABLE_LEVEL_RATIO,
+  STABLE_TIME_SHARE,
+  type BatteryReading,
+  type LiveReading,
+  type SurplusReading,
+} from "@elma/shared";
 import type { Repo } from "./repo.ts";
 
-type Listener = (producerId: string, reading: SurplusReading) => void;
+type Listener = (producerId: string, reading: LiveReading) => void;
 
 interface MinuteBucket {
   minute: number;
@@ -10,7 +18,8 @@ interface MinuteBucket {
 }
 
 const MINUTE = 60_000;
-export const DEFAULT_SMOOTH_WINDOW_MS = 2 * MINUTE;
+/** 5 statt 2 min (Wolfgang, 23.10.2026): ruhigere Zahl, über dasselbe Fenster läuft die Stabilitätsampel. */
+export const DEFAULT_SMOOTH_WINDOW_MS = 5 * MINUTE;
 
 /**
  * Hält den aktuellen Wert je Erzeuger im Speicher, verteilt ihn an Live-Clients
@@ -18,9 +27,11 @@ export const DEFAULT_SMOOTH_WINDOW_MS = 2 * MINUTE;
  *
  * Angezeigt und verteilt wird ein über `smoothWindowMs` geglätteter Wert, damit kurze Regelspitzen
  * (z. B. der Batterie) die Anzeige nicht springen lassen. Die Minutenmittel nutzen die Rohwerte.
+ * Dazu kommen die Stabilitätsampel und der letzte Akkuwert; beide gehen nicht in die DB.
  */
 export class LiveHub {
-  private readonly current = new Map<string, SurplusReading>();
+  private readonly current = new Map<string, LiveReading>();
+  private readonly batteries = new Map<string, BatteryReading>();
   private readonly samples = new Map<string, SurplusReading[]>();
   private readonly buckets = new Map<string, MinuteBucket>();
   private readonly listeners = new Set<Listener>();
@@ -35,11 +46,19 @@ export class LiveHub {
   publish(producerId: string, raw: SurplusReading): void {
     this.aggregate(producerId, raw);
     const reading = this.smooth(producerId, raw);
+    // Kein eigener Broadcast für den Akku: Überschusswerte kommen ohnehin etwa alle 5 s.
+    const battery = this.batteries.get(producerId);
+    if (battery && raw.timestamp - battery.timestamp <= BATTERY_STALE_MS) reading.battery = battery;
     this.current.set(producerId, reading);
     for (const listener of this.listeners) listener(producerId, reading);
   }
 
-  get(producerId: string): SurplusReading | null {
+  /** Merkt sich den letzten Akkuwert; er geht mit dem nächsten Überschusswert hinaus. */
+  publishBattery(producerId: string, battery: BatteryReading): void {
+    this.batteries.set(producerId, battery);
+  }
+
+  get(producerId: string): LiveReading | null {
     return this.current.get(producerId) ?? null;
   }
 
@@ -68,9 +87,10 @@ export class LiveHub {
   /**
    * Zeitgewichteter Mittelwert über das Fenster vor dem neuen Wert: Jeder Wert gilt bis zum nächsten.
    * Nötig, weil die Bridge unregelmäßig sendet (alle paar Sekunden, bei Sprüngen sofort).
+   * `stable` nur, wenn es Überschuss gibt und die Werte mindestens das halbe Fenster abdecken (nach Start oder Lücke).
    */
-  private smooth(producerId: string, raw: SurplusReading): SurplusReading {
-    if (this.smoothWindowMs <= 0) return raw;
+  private smooth(producerId: string, raw: SurplusReading): LiveReading {
+    if (this.smoothWindowMs <= 0) return { ...raw };
     let list = this.samples.get(producerId) ?? [];
     const last = list.at(-1);
     // Lücke länger als das Fenster (z. B. Bridge war offline) oder Zeit läuft rückwärts -> neu beginnen
@@ -92,7 +112,17 @@ export class LiveHub {
         duration += to - from;
       }
     }
-    return { watts: duration > 0 ? Math.round(sum / duration) : raw.watts, timestamp: raw.timestamp };
+    const watts = duration > 0 ? Math.round(sum / duration) : raw.watts;
+    const reading: LiveReading = { watts, timestamp: raw.timestamp };
+    if (watts <= LEVEL_SOME_WATTS || duration < this.smoothWindowMs / 2) return reading;
+
+    let steady = 0;
+    for (let i = 0; i < list.length - 1; i++) {
+      if (list[i]!.watts < watts * STABLE_LEVEL_RATIO) continue;
+      steady += Math.max(0, list[i + 1]!.timestamp - Math.max(list[i]!.timestamp, start));
+    }
+    reading.stable = steady >= duration * STABLE_TIME_SHARE;
+    return reading;
   }
 
   private aggregate(producerId: string, reading: SurplusReading): void {

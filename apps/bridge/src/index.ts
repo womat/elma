@@ -1,6 +1,6 @@
 import mqtt from "mqtt";
 import { loadConfig } from "./config.ts";
-import { normalizePayload } from "./normalize.ts";
+import { normalizePayload, parseBattery } from "./normalize.ts";
 import { Throttle } from "@elma/shared";
 import { BackendLink } from "./backend-link.ts";
 import { reservationPayload } from "./reservation.ts";
@@ -27,8 +27,9 @@ const backend = new BackendLink(`${config.backendUrl.replace(/\/$/, "")}/ingest`
 backend.start();
 
 client.on("connect", () => {
-  console.log(`[mqtt] verbunden mit ${config.mqttUrl}, abonniere "${config.mqttTopic}"`);
-  client.subscribe(config.mqttTopic, (err) => {
+  const topics = config.batteryTopic ? [config.mqttTopic, config.batteryTopic] : [config.mqttTopic];
+  console.log(`[mqtt] verbunden mit ${config.mqttUrl}, abonniere ${topics.map((t) => `"${t}"`).join(", ")}`);
+  client.subscribe(topics, (err) => {
     if (err) console.error(`[mqtt] Abo fehlgeschlagen: ${err.message}`);
   });
 });
@@ -37,6 +38,13 @@ client.on("offline", () => console.warn("[mqtt] offline, versuche erneut ..."));
 
 client.on("message", (topic, message) => {
   const payload = message.toString();
+  // Akkuwerte ungedrosselt: Sie kommen selten und gehen erst mit dem nächsten Überschusswert an die App.
+  if (topic === config.batteryTopic) {
+    const battery = parseBattery(payload, Date.now());
+    if (battery) backend.send({ type: "battery", battery });
+    else console.warn(`[mqtt] ${topic}: kein Akkuwert in Payload ${JSON.stringify(payload.slice(0, 200))}`);
+    return;
+  }
   const watts = normalizePayload(payload, config);
   if (watts === null) {
     console.warn(`[mqtt] ${topic}: kein Zahlenwert in Payload ${JSON.stringify(payload.slice(0, 200))}`);
@@ -46,7 +54,7 @@ client.on("message", (topic, message) => {
   if (!throttle.shouldSend(watts, now)) return;
   throttle.markSent(watts, now);
   console.log(`[mqtt] ${topic}: ${watts} W`);
-  backend.send({ watts, timestamp: now });
+  backend.send({ type: "reading", reading: { watts, timestamp: now } });
 });
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

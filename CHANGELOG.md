@@ -2,6 +2,25 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## Unveröffentlicht
+
+- **Stabilitätsampel und Akku beim Empfänger.** Empfänger sahen z. B. „2 kW“, schalteten etwas ein, und kurz danach war der
+  Überschuss weg, oft weil der Akku des Erzeugers wieder voll lud. Ob es die nächsten Minuten reicht, ließ sich nicht einschätzen.
+  - **Ruhigere Zahl:** Das Mittel läuft jetzt über 5 statt 2 Minuten (`SMOOTH_WINDOW_MS`). Unter der Zahl steht „Mittel der letzten Minuten“.
+  - **Ampel „Stabil“ / „Schwankt stark · kann sinken“** über dasselbe Fenster. Stabil heißt: Der Rohwert lag mindestens 80 % der Zeit
+    bei wenigstens 70 % des angezeigten Mittels. Ein vorsichtigerer Wert (z. B. das Minimum) als Hauptzahl war die Alternative;
+    gewählt wurde Mittel plus Ampel (Wolfgang, 23.10.2026). Ohne Überschuss und solange die Werte weniger als das halbe Fenster
+    abdecken (nach dem Start, nach einer Lücke), gibt es keine Ampel.
+  - **Push nur bei „stabil“:** Schwankt der Wert, gilt ein Gerät als „passt nicht“, die 2 Minuten Wartezeit beginnen neu.
+    So kommt kein „Jetzt reicht's“, während der Wert wackelt.
+  - **Akku des Erzeugers**, immer wenn ein aktueller Wert da ist: „Lädt 1,2 kW · 92 %“ ab 200 W Ladeleistung, sonst „Akku voll“
+    ab 98 % (der EcoFlow erreicht oben nicht sicher 100 %), sonst nur der Ladestand, jeweils mit Balken. Die Bridge liest dafür
+    das neue `BATTERY_TOPIC` (bei uns `myhome/ecoflow/state` von ecoflowd) und schickt `{type:"battery"}` über `/ingest`. Der Wert
+    geht mit dem nächsten Überschusswert an die App, nicht in die Datenbank. Älter als 5 Minuten wird er weggelassen, weil ecoflowd
+    einfrieren kann. Erzeuger mit Shelly haben keinen Akkuwert, bei ihnen fehlt der Hinweis.
+  - Ausrollen: erst das Backend, dann die Bridge. Ein altes Backend antwortet auf Akkuwerte mit „Ungültige Nachricht“.
+  - Mockup: <https://claude.ai/artifact/EnJCj4Qu1d8dNSKdRRzLJo> (privat)
+
 ## 0.9.0 – 2026-10-22
 
 - **ELISA-Modus für MAGGIE** (ELMA-Teil von Phase 4 aus [docs/elisa.md](docs/elisa.md)). Das Backend schickt der Bridge über `/ingest`

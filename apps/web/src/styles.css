@@ -8,6 +8,8 @@
   --some: #facc15;
   --none: #64748b;
   --error: #f87171;
+  --unsteady: #fb923c;
+  --battery: #38bdf8;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -20,6 +22,8 @@
     --some: #ca8a04;
     --none: #94a3b8;
     --error: #dc2626;
+    --unsteady: #c2410c;
+    --battery: #0369a1;
     color-scheme: light;
   }
 }
@@ -114,6 +118,23 @@ button.icon-button.framed {
 .chart-empty { font-size: 0.9rem; margin: 18px 0 0; }
 
 .hint { margin: 10px 0 0; color: var(--muted); }
+
+/* Stabilitätsampel und Akku unter dem Status (Mockup: https://claude.ai/artifact/EnJCj4Qu1d8dNSKdRRzLJo) */
+.value-note { margin: -4px 0 8px; font-size: 0.8rem; color: var(--muted); }
+.live-box {
+  --tone: var(--muted);
+  display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 10px 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--tone) 14%, transparent); border: 1px solid color-mix(in srgb, var(--tone) 33%, transparent);
+}
+.live-box > svg, .live-box strong { color: var(--tone); flex: none; }
+.live-box.stable, .live-box.battery.full { --tone: var(--good); }
+.live-box.unsteady { --tone: var(--unsteady); }
+.live-box.battery { flex-direction: column; align-items: stretch; gap: 8px; }
+.live-box.battery.charging { --tone: var(--battery); }
+.battery-line { display: flex; align-items: center; gap: 10px; }
+.battery-line > svg { color: var(--tone); flex: none; }
+.battery-bar { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--muted) 25%, transparent); overflow: hidden; }
+.battery-bar > div { height: 100%; border-radius: 3px; background: var(--tone); }
 
 .view-switch {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 16px; padding: 4px;

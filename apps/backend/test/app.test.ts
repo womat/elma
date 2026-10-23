@@ -119,6 +119,21 @@ describe("Live-Daten", () => {
     for (const ws of [bridge, allowed.ws, stranger.ws]) ws.close();
   });
 
+  it("der Akkuwert der Bridge geht mit dem nächsten Überschusswert hinaus", async () => {
+    const { producer, deviceToken } = await setup();
+    const live = await openLive(await login("erzeuger@elma.test"));
+    const bridge = new WebSocket(`ws://${baseUrl}/ingest`, { headers: { authorization: `Bearer ${deviceToken}` } });
+    await new Promise((r) => bridge.once("open", r));
+    const battery = { watts: 1200, soc: 92, timestamp: Date.now() };
+    bridge.send(JSON.stringify({ type: "battery", battery }));
+    const reading = { watts: 800, timestamp: Date.now() };
+    bridge.send(JSON.stringify({ type: "reading", reading }));
+
+    await waitFor(() => live.messages.some((m) => m.type === "reading"));
+    expect(live.messages.at(-1)).toEqual({ type: "reading", producerId: producer.id, reading: { ...reading, battery } });
+    for (const ws of [bridge, live.ws]) ws.close();
+  });
+
   it("Bridge mit falschem Token wird abgewiesen", async () => {
     const bridge = new WebSocket(`ws://${baseUrl}/ingest`, { headers: { authorization: "Bearer falsch" } });
     const code = await new Promise<number>((r) => bridge.once("close", (c) => r(c)));

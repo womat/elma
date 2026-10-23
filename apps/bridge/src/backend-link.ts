@@ -1,17 +1,17 @@
 import WebSocket from "ws";
-import type { IngestMessage, IngestServerMessage, SurplusReading } from "@elma/shared";
+import type { IngestMessage, IngestServerMessage } from "@elma/shared";
 import { parseServerMessage } from "./reservation.ts";
 
 export type ReservationListener = (msg: Extract<IngestServerMessage, { type: "reservation" }>) => void;
 
 /**
  * Hält eine ausgehende WebSocket-Verbindung zum Backend offen (mit Reconnect + Backoff).
- * Solange die Verbindung weg ist, wird nur der letzte Wert gepuffert.
+ * Solange die Verbindung weg ist, wird je Nachrichtentyp (Überschuss, Akku) nur der letzte Wert gepuffert.
  * Zurück kommt die Reservierung (beim Verbinden und bei jeder Änderung), sie geht an onReservation.
  */
 export class BackendLink {
   private ws: WebSocket | null = null;
-  private pending: SurplusReading | null = null;
+  private readonly pending = new Map<IngestMessage["type"], IngestMessage>();
   private backoffMs = 1000;
   private closed = false;
   private readonly url: string;
@@ -33,13 +33,9 @@ export class BackendLink {
     this.ws?.close();
   }
 
-  send(reading: SurplusReading): void {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      const msg: IngestMessage = { type: "reading", reading };
-      this.ws.send(JSON.stringify(msg));
-    } else {
-      this.pending = reading;
-    }
+  send(msg: IngestMessage): void {
+    if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(msg));
+    else this.pending.set(msg.type, msg);
   }
 
   private connect(): void {
@@ -49,11 +45,9 @@ export class BackendLink {
     ws.on("open", () => {
       console.log(`[backend] verbunden mit ${this.url}`);
       this.backoffMs = 1000;
-      if (this.pending) {
-        const reading = this.pending;
-        this.pending = null;
-        this.send(reading);
-      }
+      const pending = [...this.pending.values()];
+      this.pending.clear();
+      for (const msg of pending) this.send(msg);
     });
     ws.on("message", (data) => {
       const raw = data.toString();

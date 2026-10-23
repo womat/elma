@@ -1,3 +1,4 @@
+import { BatteryReading } from "@elma/shared";
 import type { BridgeConfig } from "./config.ts";
 
 type NormalizeOptions = Pick<BridgeConfig, "payloadPath" | "payloadUnit" | "payloadInvert">;
@@ -14,6 +15,25 @@ export function normalizePayload(payload: string, opts: NormalizeOptions): numbe
   let watts = opts.payloadUnit === "kW" ? raw * 1000 : raw;
   if (opts.payloadInvert) watts = -watts;
   return Math.round(watts);
+}
+
+/**
+ * Liest ein Telegramm von ecoflowd (`myhome/ecoflow/state`): `battery` in W (positiv = lädt), `soc` in %, `timestamp`
+ * als Messzeit des Geräts (RFC 3339). Die Feldnamen sind fest, es gibt nur diese eine Quelle. Ohne gültigen
+ * Zeitstempel gilt die Empfangszeit. Null, wenn kein gültiger Akkuwert drinsteht.
+ */
+export function parseBattery(payload: string, now: number): BatteryReading | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(payload);
+  } catch {
+    return null;
+  }
+  if (json === null || typeof json !== "object") return null;
+  const { battery, soc, timestamp } = json as Record<string, unknown>;
+  const measured = typeof timestamp === "string" ? Date.parse(timestamp) : NaN;
+  const parsed = BatteryReading.safeParse({ watts: battery, soc, timestamp: Number.isFinite(measured) ? measured : now });
+  return parsed.success ? parsed.data : null;
 }
 
 function extract(payload: string, path: string | undefined): number | null {

@@ -43,8 +43,8 @@ beforeEach(async () => {
 });
 
 /** Schickt einen Messwert durch und wartet, bis alle Nachrichten verschickt sind. */
-async function reading(watts: number, t: number) {
-  await Promise.all(notifier.onReading(producerId, { watts, timestamp: t }));
+async function reading(watts: number, t: number, stable?: boolean) {
+  await Promise.all(notifier.onReading(producerId, stable === undefined ? { watts, timestamp: t } : { watts, timestamp: t, stable }));
 }
 
 describe("Push-Benachrichtigungen", () => {
@@ -64,6 +64,17 @@ describe("Push-Benachrichtigungen", () => {
     await reading(600, T0 + 2 * MIN);
     expect(sent).toHaveLength(0);
     await reading(600, T0 + 4 * MIN);
+    expect(sent).toHaveLength(1);
+  });
+
+  it("solange der Wert schwankt, kommt keine Nachricht, und die Wartezeit beginnt erst bei stabil", async () => {
+    await reading(600, T0, false);
+    await reading(600, T0 + 3 * MIN, false);
+    expect(sent).toHaveLength(0);
+    await reading(600, T0 + 4 * MIN, true);
+    await reading(600, T0 + 5 * MIN, true);
+    expect(sent).toHaveLength(0);
+    await reading(600, T0 + 6 * MIN, true);
     expect(sent).toHaveLength(1);
   });
 

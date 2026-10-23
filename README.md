@@ -58,11 +58,15 @@ ELMA liefert die Information, *wann* sich das Teilen lohnt.
 ### Was die App kann
 
 - **Live-Anzeige des Überschusses:** eine große Zahl mit Ampel (viel / etwas / kein Überschuss) und dem Verlauf der letzten 24 Stunden.
+  Die Zahl ist das Mittel der letzten 5 Minuten (`SMOOTH_WINDOW_MS`). Darunter steht, ob der Überschuss in dieser Zeit
+  **stabil** war oder **stark schwankt**: Stabil heißt, er lag mindestens 80 % der Zeit bei wenigstens 70 % des Mittels.
+- **Akku des Erzeugers:** „Lädt 1,2 kW · 92 %“, „Akku voll“ (ab 98 %) oder nur der Ladestand. So sieht der Empfänger, warum gerade
+  nichts frei ist oder dass bald mehr kommt. Die Bridge liest dafür `BATTERY_TOPIC` (siehe [Payload-Format](#payload-format-einstellen)).
 - **Geräte statt Watt:** Viele können mit „1,4 kW“ wenig anfangen.
   Deshalb zeigt ELMA mit Symbolen, was gerade möglich ist, z. B. „✓ 🧺 Waschmaschine“ oder „noch 650 W bis 🫖 Wasserkocher“.
   Jeder wählt seine eigenen Geräte aus und kann auch eigene anlegen, z. B. eine Poolpumpe mit 800 W.
 - **Push-Nachricht:** z. B. „Jetzt reicht's für 🧺 Waschmaschine“, sobald eines der eigenen Geräte mit dem Überschuss laufen kann.
-  Das passiert erst nach 2 Minuten stabilem Überschuss, damit kurze Wolken keinen Fehlalarm auslösen.
+  Das passiert erst nach 2 Minuten stabilem Überschuss, damit kurze Wolken keinen Fehlalarm auslösen, und nie, solange er stark schwankt.
 - **Strom reservieren (ELISA-Modus):** Ein Empfänger, dem der Erzeuger das Recht gibt, reserviert den Überschuss für bis zu 60 min am Tag.
   Der Erzeuger bekommt eine Nachricht, und seine Hausautomation (Node-RED) lässt Wallbox und Wärmepumpe so lange nicht anspringen.
   Konzept und Entscheidungen: [docs/elisa.md](docs/elisa.md).
@@ -215,6 +219,11 @@ Die laufende Version steht in der App ganz unten.
 Findet die Bridge keine Zahl, schreibt sie eine Warnung mit der Payload ins Log.
 So lässt sich das Format schnell herausfinden.
 
+Für den Akku-Hinweis liest die Bridge zusätzlich `BATTERY_TOPIC` (z. B. `myhome/ecoflow/state`). Das Format ist fest, das von ecoflowd:
+`{"battery":515,"soc":63,"timestamp":"2026-09-22T09:13:16Z"}`, `battery` in W und positiv beim Laden, `soc` in %, `timestamp` als Messzeit.
+Ein Akkuwert, der älter als 5 Minuten ist, wird nicht mehr angezeigt. Leer lassen, wenn es keinen Akku gibt.
+Neues Backend zuerst ausrollen, dann die Bridge: Ein altes Backend antwortet auf Akkuwerte mit „Ungültige Nachricht“.
+
 ## Empfänger einladen
 
 Melde dich als Erzeuger in der App an und tippe neben dem Namen des Erzeugers auf das **Personen-Symbol mit Plus**.
@@ -300,6 +309,7 @@ Aktiviert werden sie in der App unter **Geräte → ⚙️ Meine Geräte → �
 Dort markiert man die Geräte, für die man benachrichtigt werden will, z. B. „Jetzt reicht's für 🧺 Waschmaschine“.
 
 - Eine Nachricht kommt erst, wenn das Gerät **2 Minuten durchgehend** laufen könnte. Kurze Wolken lösen also nichts aus.
+- Zeigt die Ampel **„Schwankt stark“**, gilt das Gerät als „passt nicht“, und die 2 Minuten beginnen neu.
 - Pro Überschuss-Phase kommt höchstens eine Nachricht, und frühestens nach 1 Stunde wieder.
   Eine neue Phase beginnt erst, wenn der Überschuss unter 80 % der Geräteleistung gefallen ist.
 - Die Schlüssel (VAPID) erzeugt das Backend beim ersten Start selbst und speichert sie in der Datenbank.
