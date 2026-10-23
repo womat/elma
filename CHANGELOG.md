@@ -2,7 +2,7 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
-## Unveröffentlicht
+## 0.10.0 – 2026-10-23
 
 - **Stabilitätsampel und Akku beim Empfänger.** Empfänger sahen z. B. „2 kW“, schalteten etwas ein, und kurz danach war der
   Überschuss weg, oft weil der Akku des Erzeugers wieder voll lud. Ob es die nächsten Minuten reicht, ließ sich nicht einschätzen.
