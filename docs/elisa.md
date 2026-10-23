@@ -1,7 +1,7 @@
 # ELISA-Modus: Überschuss reservieren
 
 > **Status:** Plan vollständig (2026-10-21). Phase 1 (Anzeigename) ist mit 0.7.0 umgesetzt, Phase 2 (Reservierung in ELMA) mit 0.8.0, der ELMA-Teil von Phase 4 (Bridge → `elma/reservation`) mit 0.9.0, der MAGGIE-Teil mit MAGGIE v0.4.0. Node-RED (Phase 3) ist gebaut und läuft im Probebetrieb. Offen ist das Scharfschalten in Node-RED (siehe [Umsetzungsreihenfolge](#umsetzungsreihenfolge)).
-> [Vorreservieren](#vorreservieren-0110) ist in ELMA mit 0.11.0 umgesetzt. Der Node-RED-Teil dazu (Phase 5) ist offen.
+> [Vorreservieren](#vorreservieren-0110) ist in ELMA mit 0.11.0 umgesetzt. Der Node-RED-Teil dazu (Phase 5) ist gebaut und läuft mit Phase 3 im Probebetrieb.
 > Was bei der Umsetzung vom Plan abweicht oder neu entschieden wurde, steht unter [Umgesetzt in 0.8.0](#umgesetzt-in-080-phase-2) und [Umgesetzt: Phase 4, ELMA-Teil](#umgesetzt-phase-4-elma-teil).
 > Mockups (Datei im Browser öffnen):
 > - [elisa-mockup.html](elisa-mockup.html): klickbarer Ablauf in ELMA
@@ -186,7 +186,7 @@ Festgelegt mit Wolfgang am 2026-10-21. Jede Phase ist für sich ausrollbar, ein 
 | 1 | elma | **Anzeigename** im Konto (`users.display_name`, `PUT /api/me`, Feld im Konto-Sheet) | Klein und auch ohne ELISA nützlich | erledigt 2026-10-21 (0.7.0) |
 | 2 | elma | **Reservierung**: Recht, Budget, Knopf, Sheet, Banner, Push, `POST /api/control/status`, Steuer-Token per CLI | Elisa kann reservieren, der Erzeuger bekommt die Info. Ohne Node-RED steht „Die Sperre wirkt gerade nicht“ da | erledigt 2026-10-21 (0.8.0), ausgerollt |
 | 3 | myhome | **Node-RED**: `lib/elisa.js`, `ElisaEVU`/`ElisaHalt` in `lib/aktor.js`, Tab *ELISA*. Zuerst **Probebetrieb** (nur Schaltprotokoll, was es tun würde), danach scharf | Wallbox und WP werden zurückgehalten | gebaut 2026-10-22, Probebetrieb; scharf offen (myhome `KONZEPT-ELISA.md`) |
-| 5 | elma, myhome | **Vorreservieren**: ELMA plant und liefert `heatpumpUntil`. Node-RED hängt `ElisaEVU` daran und stoppt einen laufenden Kompressor erst nach 60 min Laufzeit | Die WP ist zum geplanten Start aus | ELMA-Teil erledigt 2026-10-23 (0.11.0). Node-RED offen (myhome `KONZEPT-ELISA.md` ergänzen) |
+| 5 | elma, myhome | **Vorreservieren**: ELMA plant und liefert `heatpumpUntil`. Node-RED hängt `ElisaEVU` daran und stoppt einen laufenden Kompressor erst nach 60 min Laufzeit | Die WP ist zum geplanten Start aus | ELMA-Teil erledigt 2026-10-23 (0.11.0). Node-RED gebaut 2026-10-23, Probebetrieb; scharf zusammen mit Phase 3 (myhome `KONZEPT-ELISA.md`, *Vorreservieren*) |
 | 4 | elma, maggie | Backend sendet `{type:"reservation"}` über `/ingest`, Bridge veröffentlicht `elma/reservation`. MAGGIE bekommt den Zustand `reserved` und die Push an Margit | Margit sieht die Reservierung | ELMA-Teil erledigt 2026-10-22 (0.9.0), ausgerollt und am Pi geprüft (Start und Beenden kommen auf `elma/reservation` an). MAGGIE-Teil erledigt 2026-10-22 (MAGGIE v0.4.0), ausgerollt und mit einer echten Reservierung geprüft |
 
 Warum so: Node-RED und MAGGIE reagieren nur auf das, was ELMA liefert, deshalb kommt ELMA zuerst. Das Schalten im Haus greift in Wallbox und WP ein und kommt deshalb spät und zuerst im Probebetrieb, so wie es bei der Entladesperre eine Woche Probebetrieb gab.
@@ -259,10 +259,11 @@ Entscheidungen, die die Rückfrage offenließ (Claude, 2026-10-23, zur Prüfung 
 | Der eindeutige Index `reservations_one_active` ist weg (`DROP INDEX IF EXISTS` in `openDb`) | Geplant und laufend sind gleichzeitig offen, und das kann ein Partial Index nicht ausdrücken. Zwei gleichzeitige Anfragen kommen trotzdem nicht beide durch, weil `node:sqlite` synchron ist. |
 | Nach einem Neustart des Backends gilt der Start-Timer wieder. Ist der Beginn während des Neustarts verstrichen, läuft die Reservierung ohne Start-Push. | Wie beim Ende: Eine verspätete Nachricht verwirrt eher. |
 
-**Node-RED (Phase 5, offen, myhome):** `ElisaEVU` hängt an `heatpumpUntil > jetzt` statt an `active`/`until`. Läuft der
-Kompressor, wird `ElisaEVU` erst gesetzt, wenn er mindestens 60 min läuft. Woher Node-RED die Laufzeit nimmt
-(`myhome/heatpump/runtime`?), ist ungeprüft. `ElisaHalt` (Wallbox) bleibt an `active`/`until`. Bis das umgesetzt ist, beginnt
-eine geplante Reservierung zu ihrer Zeit wie eine spontane, aber ohne Vorlauf für die WP.
+**Node-RED (Phase 5, gebaut 2026-10-23, myhome):** `ElisaEVU` hängt an `heatpumpUntil > jetzt` statt an `active`/`until`.
+Läuft der Kompressor, wird `ElisaEVU` erst gesetzt, wenn er mindestens 60 min läuft. Die Laufzeit misst Node-RED selbst
+am Energiezähler der WP (Leistung über 2 kW), gezählt ab der ersten frischen Meldung „läuft“. Ist der Wert veraltet,
+gibt es keine Sperre. `ElisaHalt` (Wallbox) bleibt an `active`/`until`. Läuft wie Phase 3 zuerst im Probebetrieb,
+Einzelheiten in myhome `KONZEPT-ELISA.md`, *Vorreservieren*.
 
 ## Vor der Umsetzung mitbringen
 
