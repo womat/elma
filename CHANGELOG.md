@@ -2,6 +2,11 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## 0.10.1 – 2026-10-23
+
+- **Akku-Kästchen nur noch, wenn der Akku lädt oder voll ist.** In 0.10.0 stand sonst „Akku · 23 %“. Ein Akku, der steht
+  oder entlädt, erklärt aber nichts am Überschuss, das Kästchen hat den Empfänger nur verwirrt (Wolfgang, nach dem ersten Tag).
+
 ## 0.10.0 – 2026-10-23
 
 - **Stabilitätsampel und Akku beim Empfänger.** Empfänger sahen z. B. „2 kW“, schalteten etwas ein, und kurz danach war der

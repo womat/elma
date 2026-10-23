@@ -60,8 +60,8 @@ ELMA liefert die Information, *wann* sich das Teilen lohnt.
 - **Live-Anzeige des Überschusses:** eine große Zahl mit Ampel (viel / etwas / kein Überschuss) und dem Verlauf der letzten 24 Stunden.
   Die Zahl ist das Mittel der letzten 5 Minuten (`SMOOTH_WINDOW_MS`). Darunter steht, ob der Überschuss in dieser Zeit
   **stabil** war oder **stark schwankt**: Stabil heißt, er lag mindestens 80 % der Zeit bei wenigstens 70 % des Mittels.
-- **Akku des Erzeugers:** „Lädt 1,2 kW · 92 %“, „Akku voll“ (ab 98 %) oder nur der Ladestand. So sieht der Empfänger, warum gerade
-  nichts frei ist oder dass bald mehr kommt. Die Bridge liest dafür `BATTERY_TOPIC` (siehe [Payload-Format](#payload-format-einstellen)).
+- **Akku des Erzeugers:** „Lädt 1,2 kW · 92 %“ (ab 200 W) oder „Akku voll“ (ab 98 %). So sieht der Empfänger, warum gerade
+  nichts frei ist oder dass bald mehr kommt. Steht oder entlädt der Akku, erscheint nichts. Die Bridge liest dafür `BATTERY_TOPIC` (siehe [Payload-Format](#payload-format-einstellen)).
 - **Geräte statt Watt:** Viele können mit „1,4 kW“ wenig anfangen.
   Deshalb zeigt ELMA mit Symbolen, was gerade möglich ist, z. B. „✓ 🧺 Waschmaschine“ oder „noch 650 W bis 🫖 Wasserkocher“.
   Jeder wählt seine eigenen Geräte aus und kann auch eigene anlegen, z. B. eine Poolpumpe mit 800 W.

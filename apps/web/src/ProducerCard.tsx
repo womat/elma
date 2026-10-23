@@ -1,4 +1,4 @@
-import { Activity, AudioWaveform, Battery, BatteryCharging, BatteryFull, Pencil, UserPlus } from "lucide-react";
+import { Activity, AudioWaveform, BatteryCharging, BatteryFull, Pencil, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   BATTERY_CHARGING_WATTS,
@@ -71,28 +71,27 @@ function Stability({ stable }: { stable: boolean | undefined }) {
   );
 }
 
-/** Akku des Erzeugers, immer wenn ein aktueller Wert da ist: Laden geht vor "voll", sonst nur der Ladestand. */
+/**
+ * Akku des Erzeugers, nur wenn er lädt oder voll ist; Laden geht vor "voll". Steht oder entlädt er, erklärt er nichts
+ * am Überschuss, das Kästchen fällt dann weg (Wolfgang, 23.10.2026, nach dem ersten Tag mit 0.10.0).
+ */
 function BatteryBox({ battery }: { battery: BatteryReading }) {
   const soc = Math.round(battery.soc);
   const charging = battery.watts >= BATTERY_CHARGING_WATTS;
   const full = !charging && battery.soc >= BATTERY_FULL_SOC;
+  if (!charging && !full) return null;
   return (
-    <div className={`live-box battery ${charging ? "charging" : full ? "full" : ""}`}>
+    <div className={`live-box battery ${charging ? "charging" : "full"}`}>
       <div className="battery-line">
         {charging ? (
           <>
             <BatteryCharging size={20} aria-hidden />
             <span><strong>Lädt</strong> {formatPower(battery.watts)} · {soc} %</span>
           </>
-        ) : full ? (
+        ) : (
           <>
             <BatteryFull size={20} aria-hidden />
             <strong>Akku voll</strong>
-          </>
-        ) : (
-          <>
-            <Battery size={20} aria-hidden />
-            <span><strong>Akku</strong> · {soc} %</span>
           </>
         )}
       </div>
