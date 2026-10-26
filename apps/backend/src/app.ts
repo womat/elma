@@ -35,21 +35,21 @@ import { parseShellyFrame } from "./shelly.ts";
 export interface AppOptions {
   db: Db;
   jwtSecret: string;
-  /** Basis-URL für Einladungslinks, z. B. https://elma.example.com */
+  /** Base URL for invite links, e.g. https://elma.example.com */
   publicUrl: string;
-  /** Ordner mit dem gebauten PWA-Frontend (optional) */
+  /** Directory with the built PWA frontend (optional) */
   webDir?: string;
   logger?: boolean;
-  /** Kontakt für Push-Dienste (mailto: oder https:), Pflicht laut Web-Push-Standard */
+  /** Contact for push services (mailto: or https:), required by the Web Push standard */
   vapidSubject?: string;
-  /** Ausgangs-Proxy für Web-Push, z. B. http://push-proxy:3128 (ohne: direkt) */
+  /** Outbound proxy for Web Push, e.g. http://push-proxy:3128 (without: direct) */
   pushProxy?: string;
-  /** Für Tests: eigener Sender statt echtem Web-Push */
+  /** For tests: own sender instead of real Web Push */
   pushSender?: PushSender;
   pushOptions?: NotifierOptions;
-  /** Glättungsfenster für angezeigte Werte; 0 = ungeglättet */
+  /** Smoothing window for displayed values; 0 = unsmoothed */
   smoothWindowMs?: number;
-  /** Angezeigte Version (aus dem Build), z. B. v0.2.0 */
+  /** Displayed version (from the build), e.g. v0.2.0 */
   version?: string;
 }
 
@@ -62,20 +62,20 @@ declare module "@fastify/jwt" {
 
 const HISTORY_RANGES: Record<string, number> = { "1h": 3_600_000, "24h": 86_400_000, "7d": 604_800_000 };
 const JWT_TTL = "30d";
-/** Drossel für Shelly-Werte, wie bei der Bridge: sofort ab 50 W Änderung, sonst höchstens alle 5 s */
+/** Throttle for Shelly values, as in the bridge: immediately on a change of 50 W, otherwise at most every 5 s */
 const SHELLY_MIN_INTERVAL_MS = 5000;
 const SHELLY_DELTA_WATTS = 50;
 
 /**
- * Echte Adresse des Clients. Hinter dem Cloudflare Tunnel steht sie in CF-Connecting-IP; den Header setzt Cloudflare
- * selbst und überschreibt dabei einen mitgeschickten. X-Forwarded-For dagegen kann der Client vorne mit Fantasiewerten füllen.
+ * Real address of the client. Behind the Cloudflare Tunnel it is in CF-Connecting-IP; Cloudflare sets that header
+ * itself, overwriting one sent by the client. X-Forwarded-For, in contrast, the client can prefix with made-up values.
  */
 export function clientIp(req: FastifyRequest): string {
   const cf = req.headers["cf-connecting-ip"];
   return typeof cf === "string" && isIP(cf) ? cf : req.ip;
 }
 
-/** Der Shelly trägt sein Geräte-Token im Pfad – das darf nicht im Log landen. */
+/** The Shelly carries its device token in the path – it must not end up in the log. */
 export function redactUrl(url: string): string {
   return url.replace(/^(\/ingest\/shelly\/)[^/?#]+/, "$1***");
 }
@@ -107,13 +107,13 @@ export async function buildApp(
           },
         }
       : false,
-    // nur Proxys im eigenen Netz vertrauen (cloudflared im Docker-Netz), nicht jedem Eintrag in X-Forwarded-For
+    // trust only proxies in the own network (cloudflared in the Docker network), not every entry in X-Forwarded-For
     trustProxy: "loopback, linklocal, uniquelocal",
   });
 
   await app.register(fastifyJwt, { secret: opts.jwtSecret });
-  // normalizeIP fasst IPv6 auf das /64 zusammen, wie es das Plugin ohne eigenen keyGenerator tut; ein Anschluss hat
-  // meist ein ganzes /64, sonst bekäme jede seiner Adressen ein eigenes Kontingent
+  // normalizeIP collapses IPv6 to the /64, as the plugin does without a custom keyGenerator; a connection usually has
+  // a whole /64, otherwise each of its addresses would get its own quota
   await app.register(fastifyRateLimit, { global: false, keyGenerator: (req) => normalizeIP(clientIp(req)) });
   await app.register(fastifyWebsocket);
   app.addHook("onClose", async () => reservations.stop());
@@ -137,7 +137,7 @@ export async function buildApp(
 
   // ---------- Auth ----------
 
-  // Anmeldung nur mit Passkey; neue Konten nur mit gültiger Einladung – so bleibt die Instanz privat.
+  // Login only with passkey; new accounts only with a valid invite – this keeps the instance private.
   registerPasskeyRoutes(app, { repo, publicUrl: opts.publicUrl, authenticate, loginResponse, rateLimit: authRateLimit });
 
   app.get("/api/me", { preHandler: authenticate }, async (req, reply) => {
@@ -155,7 +155,7 @@ export async function buildApp(
     return meDto(user);
   });
 
-  // ---------- Persönliche Geräteauswahl ----------
+  // ---------- Personal appliance selection ----------
 
   app.get("/api/me/appliances", { preHandler: authenticate }, async (req) => {
     return { settings: repo.applianceSettings(req.user.sub) };
@@ -168,7 +168,7 @@ export async function buildApp(
     return { settings: body.data };
   });
 
-  // ---------- Push-Benachrichtigungen ----------
+  // ---------- Push notifications ----------
 
   app.get("/api/push/key", async () => ({ publicKey: vapid.publicKey }));
 
@@ -194,7 +194,7 @@ export async function buildApp(
     return { ok: true };
   });
 
-  // ---------- Erzeuger ----------
+  // ---------- Producers ----------
 
   const ownerName = (ownerId: string) => {
     const owner = repo.userById(ownerId);
@@ -242,8 +242,8 @@ export async function buildApp(
   });
 
   app.post<{ Params: { code: string } }>("/api/invites/:code/accept", { preHandler: authenticate }, async (req, reply) => {
-    // Öffnet der Erzeuger seinen eigenen Link (oder ein Empfänger einen zweiten), bliebe die Einladung sonst verbraucht,
-    // und der Erzeuger stünde als Empfänger bei sich selbst, mit dem Namen aus der Einladung
+    // If the producer opens their own link (or a recipient a second one), the invite would otherwise be used up,
+    // and the producer would be listed as a recipient of themselves, with the name from the invite
     const invite = repo.validInvite(req.params.code);
     if (invite && repo.canView(req.user.sub, invite.producer_id)) return reply.code(409).send({ error: "Du siehst diesen Erzeuger schon" });
     const producerId = repo.acceptInvite(req.params.code, req.user.sub);
@@ -251,7 +251,7 @@ export async function buildApp(
     return { producerId };
   });
 
-  // ---------- Reservierung (ELISA-Modus, docs/elisa.md) ----------
+  // ---------- Reservation (ELISA mode, docs/elisa.md) ----------
 
   const reservationReply = (reply: FastifyReply, err: unknown) => {
     if (err instanceof ReservationError) return reply.code(err.status).send({ error: err.message });
@@ -317,9 +317,9 @@ export async function buildApp(
     },
   );
 
-  // Node-RED fragt von innen nach außen (über den Cloudflare-Tunnel), statt dass ELMA ins LAN schaltet: Das Backend
-  // erreicht das LAN nicht, und in myhome schaltet keine eingehende MQTT-Nachricht etwas. Eigenes Token, damit es keine
-  // Messwerte einspeisen kann; das Geräte-Token der Bridge gilt hier nicht.
+  // Node-RED polls from inside out (via the Cloudflare tunnel) instead of ELMA switching into the LAN: the backend
+  // cannot reach the LAN, and in myhome no incoming MQTT message switches anything. Separate token so it cannot
+  // feed in readings; the bridge's device token is not valid here.
   app.post("/api/control/status", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (req, reply) => {
     const token = req.headers.authorization?.replace(/^Bearer\s+/i, "") ?? "";
     const producer = token ? repo.controlTokenProducer(token) : undefined;
@@ -343,8 +343,8 @@ export async function buildApp(
     }
     req.log.info({ producer: producer.name }, "Bridge verbunden");
 
-    // Reservierung für MAGGIE (nur Anzeige). Der Service meldet auch Statusänderungen von Node-RED, die die Bridge
-    // nicht betreffen; deshalb geht nur raus, was sich gegenüber der letzten Nachricht geändert hat.
+    // Reservation for MAGGIE (display only). The service also reports Node-RED status changes that don't concern the
+    // bridge; so only what changed compared to the last message is sent.
     let lastReservation = "";
     const sendReservation = () => {
       const { until, by } = reservations.current(producer.id);
@@ -376,7 +376,7 @@ export async function buildApp(
     });
   });
 
-  // Shelly Gen2+ (Outbound WebSocket) kann keinen Authorization-Header setzen, daher Token im Pfad.
+  // Shelly Gen2+ (outbound WebSocket) cannot set an Authorization header, hence the token in the path.
   app.get<{ Params: { token: string } }>("/ingest/shelly/:token", { websocket: true }, (socket, req) => {
     const producer = repo.producerByDeviceToken(req.params.token);
     if (!producer) {
@@ -396,7 +396,7 @@ export async function buildApp(
   });
 
   // ---------- WebSocket: Backend -> App ----------
-  // Erste Nachricht muss {type:"auth", token} sein, damit das JWT nicht in der URL (und damit in Logs) landet.
+  // First message must be {type:"auth", token} so the JWT doesn't end up in the URL (and thus in logs).
 
   app.get("/live", { websocket: true }, (socket) => {
     let unsubscribe: (() => void) | null = null;
@@ -444,11 +444,11 @@ export async function buildApp(
     });
   });
 
-  // ---------- PWA ausliefern ----------
+  // ---------- Serve PWA ----------
 
   if (opts.webDir && existsSync(opts.webDir)) {
     await app.register(fastifyStatic, { root: opts.webDir, wildcard: false });
-    // Single-Page-App: unbekannte Pfade auf index.html
+    // Single-page app: unknown paths go to index.html
     app.setNotFoundHandler((req, reply) => {
       if (req.method === "GET" && !req.url.startsWith("/api/")) return reply.sendFile("index.html");
       return reply.code(404).send({ error: "Nicht gefunden" });

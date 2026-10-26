@@ -14,9 +14,9 @@ const LEVEL_LABEL: Record<HourLevel, string> = { none: "nix", some: "ein wenig",
 
 const hour = (t: number) => new Date(t).getHours();
 
-/** Verlauf der letzten 24 h als Stunden-Balken in den Stufen nix / ein wenig / viel – passend zu den eigenen Geräten. */
+/** History of the last 24 h as hourly bars in the levels none / some / lots – matched to the user's own appliances. */
 export function ApplianceTimeline({ points, appliances, now }: Props) {
-  // nur einmal pro Minute neu rechnen, nicht bei jedem 10-s-Tick des Dashboards
+  // recompute only once per minute, not on every 10 s tick of the dashboard
   const minute = Math.floor(now / 60_000);
   const buckets = useMemo(() => bucketByHour(points, now, appliances), [points, appliances, minute]);
   const span = useMemo(() => bestSpan(buckets), [buckets]);

@@ -30,7 +30,7 @@ export function setToken(token: string | null): void {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
   } catch {
-    // z. B. privater Modus – dann nur für diese Sitzung angemeldet
+    // e.g. private mode – then logged in for this session only
   }
 }
 

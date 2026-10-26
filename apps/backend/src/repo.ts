@@ -31,8 +31,8 @@ export interface ReservationRow {
 }
 
 /**
- * expired = Zeit abgelaufen, user/owner = vorzeitig beendet, wallbox = Ladung begonnen, revoked = Recht entzogen,
- * cancelled = geplante vor dem Beginn abgesagt
+ * expired = time ran out, user/owner = ended early, wallbox = charging started, revoked = permission withdrawn,
+ * cancelled = planned one called off before its start
  */
 export type ReservationEndReason = "expired" | "user" | "owner" | "wallbox" | "revoked" | "cancelled";
 
@@ -42,12 +42,12 @@ const RESERVATION_SELECT =
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SETUP_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /**
- * Platzhalter für die alte Spalte password_hash (NOT NULL). Versionen vor 0.5.0 erkennen das Format nicht
- * und lehnen jede Passwort-Anmeldung ab.
+ * Placeholder for the old column password_hash (NOT NULL). Versions before 0.5.0 don't recognize the format
+ * and reject every password login.
  */
 const NO_PASSWORD = "passkey-only";
 
-/** Datenzugriff an einer Stelle, damit Berechtigungsregeln nicht in den Routen verstreut sind. */
+/** Data access in one place so permission rules are not scattered across the routes. */
 export class Repo {
   private readonly db: Db;
 
@@ -71,12 +71,12 @@ export class Repo {
     return this.db.prepare("SELECT id, email, display_name AS displayName FROM users WHERE id = ?").get(id) as UserRow | undefined;
   }
 
-  /** null löscht den Namen, dann gilt wieder der Teil der E-Mail vor dem @. */
+  /** null deletes the name; then the part of the email before the @ applies again. */
   setDisplayName(userId: string, displayName: string | null): void {
     this.db.prepare("UPDATE users SET display_name = ? WHERE id = ?").run(displayName, userId);
   }
 
-  /** Alle User mit Anzahl ihrer Passkeys, z. B. um zu sehen, wer noch umstellen muss. */
+  /** All users with the number of their passkeys, e.g. to see who still has to switch over. */
   usersWithPasskeyCount(): { email: string; displayName: string | null; passkeys: number }[] {
     return this.db
       .prepare(
@@ -104,7 +104,7 @@ export class Repo {
     return { ...row, public_key: new Uint8Array(row.public_key), transports: JSON.parse(row.transports ?? "[]") as string[] };
   }
 
-  /** Nach erfolgreicher Anmeldung: Zähler (Schutz gegen geklonte Schlüssel) und Zeitpunkt merken. */
+  /** After a successful login: remember counter (protection against cloned keys) and time. */
   touchPasskey(id: string, counter: number): void {
     this.db.prepare("UPDATE passkeys SET counter = ?, last_used_at = ? WHERE id = ?").run(counter, Date.now(), id);
   }
@@ -117,7 +117,7 @@ export class Repo {
       .all(userId) as unknown as PasskeyDto[];
   }
 
-  /** IDs und Transportwege der Passkeys eines Users, damit dasselbe Gerät nicht doppelt registriert wird. */
+  /** IDs and transports of a user's passkeys so the same device is not registered twice. */
   passkeyDescriptorsOf(userId: string): { id: string; transports: string[] }[] {
     const rows = this.db.prepare("SELECT id, transports FROM passkeys WHERE user_id = ?").all(userId) as {
       id: string;
@@ -130,9 +130,9 @@ export class Repo {
     return this.db.prepare("DELETE FROM passkeys WHERE id = ? AND user_id = ?").run(id, userId).changes > 0;
   }
 
-  // ---------- Einrichtungslinks ----------
+  // ---------- Setup links ----------
 
-  /** Erzeugt einen Einmal-Link zum Einrichten eines Passkeys; das Token gibt es nur jetzt im Klartext. */
+  /** Creates a one-time link to set up a passkey; the token is available in plain text only now. */
   createSetupLink(userId: string): { token: string; expiresAt: number } {
     const token = newToken();
     const expiresAt = Date.now() + SETUP_LINK_TTL_MS;
@@ -140,7 +140,7 @@ export class Repo {
     return { token, expiresAt };
   }
 
-  /** User zu einem noch gültigen Einrichtungslink, ohne ihn zu verbrauchen. */
+  /** User of a still valid setup link, without consuming it. */
   userBySetupToken(token: string): UserRow | undefined {
     return this.db
       .prepare(
@@ -150,7 +150,7 @@ export class Repo {
       .get(hashToken(token), Date.now()) as UserRow | undefined;
   }
 
-  /** Verbraucht den Einrichtungslink; false, wenn er inzwischen benutzt oder abgelaufen ist. */
+  /** Consumes the setup link; false if it has been used or has expired in the meantime. */
   useSetupLink(token: string): boolean {
     return (
       this.db
@@ -159,7 +159,7 @@ export class Repo {
     );
   }
 
-  /** Legt einen Erzeuger an und gibt das Geräte-Token einmalig im Klartext zurück. */
+  /** Creates a producer and returns the device token once in plain text. */
   createProducer(name: string, ownerId: string): { producer: ProducerRow; deviceToken: string } {
     const deviceToken = newToken();
     const producer = { id: newId(), name, owner_id: ownerId };
@@ -169,7 +169,7 @@ export class Repo {
     return { producer, deviceToken };
   }
 
-  /** Ersetzt das Geräte-Token (z. B. wenn die Shelly-URL weitergegeben wurde); das alte ist sofort ungültig. */
+  /** Replaces the device token (e.g. if the Shelly URL was passed on); the old one is invalid immediately. */
   rotateDeviceToken(producerId: string): string | undefined {
     const deviceToken = newToken();
     const { changes } = this.db
@@ -184,7 +184,7 @@ export class Repo {
       .get(hashToken(token)) as ProducerRow | undefined;
   }
 
-  /** Alle Erzeuger, die ein User sehen darf: eigene und freigegebene. */
+  /** All producers a user may see: own and shared ones. */
   visibleProducers(userId: string): ProducerRow[] {
     return this.db
       .prepare(
@@ -204,7 +204,7 @@ export class Repo {
     return !!this.db.prepare("SELECT 1 FROM producers WHERE id = ? AND owner_id = ?").get(producerId, userId);
   }
 
-  /** displayName: Name der eingeladenen Person, landet beim Einlösen im Konto (siehe acceptInvite). */
+  /** displayName: name of the invited person, goes into the account on redemption (see acceptInvite). */
   createInvite(producerId: string, displayName: string | null = null): { code: string; expiresAt: number } {
     const code = newInviteCode();
     const expiresAt = Date.now() + INVITE_TTL_MS;
@@ -214,7 +214,7 @@ export class Repo {
     return { code, expiresAt };
   }
 
-  /** Prüft, ob ein Einladungscode noch einlösbar ist, ohne ihn zu verbrauchen. */
+  /** Checks whether an invite code can still be redeemed, without consuming it. */
   validInvite(code: string): { producer_id: string; display_name: string | null } | undefined {
     return this.db
       .prepare("SELECT producer_id, display_name FROM invites WHERE code = ? AND used_by IS NULL AND expires_at > ?")
@@ -222,8 +222,9 @@ export class Repo {
   }
 
   /**
-   * Löst eine Einladung ein und legt die Freigabe an. Gibt die producerId zurück oder null.
-   * Der Name aus der Einladung kommt nur in ein Konto ohne Namen: Was jemand selbst gewählt hat, überschreibt keine Einladung.
+   * Redeems an invite and creates the share. Returns the producerId or null.
+   * The name from the invite only goes into an account without a name: an invite never overrides what someone chose
+   * themselves.
    */
   acceptInvite(code: string, userId: string): string | null {
     const invite = this.validInvite(code);
@@ -245,13 +246,13 @@ export class Repo {
     return invite.producer_id;
   }
 
-  /** Geräteauswahl, null = noch nichts gespeichert (Standardauswahl). */
+  /** Appliance selection, null = nothing saved yet (default selection). */
   applianceSettings(userId: string): ApplianceSettings | null {
     const row = this.db.prepare("SELECT appliances FROM user_settings WHERE user_id = ?").get(userId) as
       | { appliances: string | null }
       | undefined;
     if (!row?.appliances) return null;
-    // parse ergänzt Felder, die in älteren Einträgen fehlen (z. B. notify)
+    // parse fills in fields missing in older entries (e.g. notify)
     const parsed = ApplianceSettings.safeParse(JSON.parse(row.appliances));
     return parsed.success ? parsed.data : null;
   }
@@ -273,7 +274,7 @@ export class Repo {
     return this.db.prepare("SELECT id, name, owner_id FROM producers WHERE id = ?").get(id) as ProducerRow | undefined;
   }
 
-  /** Alle User, die einen Erzeuger sehen dürfen (Eigentümer + Empfänger). */
+  /** All users who may see a producer (owner + recipients). */
   viewersOf(producerId: string): string[] {
     const rows = this.db
       .prepare(
@@ -305,14 +306,14 @@ export class Repo {
     return rows.map((r) => ({ endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } }));
   }
 
-  // ---------- Reservierung (ELISA-Modus) ----------
+  // ---------- Reservation (ELISA mode) ----------
 
-  /** Nur Empfänger mit Freigabe und gesetztem Recht; der Erzeuger selbst reserviert nicht bei sich. */
+  /** Only recipients with a share and the permission set; the owner does not reserve on their own producer. */
   canReserve(producerId: string, userId: string): boolean {
     return !!this.db.prepare("SELECT 1 FROM shares WHERE producer_id = ? AND recipient_id = ? AND can_reserve = 1").get(producerId, userId);
   }
 
-  /** false, wenn es keine Freigabe für diesen Empfänger gibt. */
+  /** false if there is no share for this recipient. */
   setCanReserve(producerId: string, recipientId: string, canReserve: boolean): boolean {
     return (
       this.db
@@ -331,21 +332,21 @@ export class Repo {
     return rows.map((r) => ({ ...r, canReserve: r.canReserve === 1 }));
   }
 
-  /** Laufende und geplante Reservierungen eines Erzeugers, nach Beginn sortiert. */
+  /** Running and planned reservations of a producer, sorted by start. */
   openReservations(producerId: string): ReservationRow[] {
     return this.db
       .prepare(`${RESERVATION_SELECT} WHERE producer_id = ? AND ended_at IS NULL ORDER BY starts_at`)
       .all(producerId) as unknown as ReservationRow[];
   }
 
-  /** Alle noch nicht beendeten Reservierungen, z. B. um nach einem Neustart die Timer wieder zu stellen. */
+  /** All reservations not yet ended, e.g. to set the timers again after a restart. */
   activeReservations(): ReservationRow[] {
     return this.db.prepare(`${RESERVATION_SELECT} WHERE ended_at IS NULL`).all() as unknown as ReservationRow[];
   }
 
   /**
-   * Verbrauchte Millisekunden eines Empfängers bei einem Erzeuger seit dayStart. Beendete zählen mit der tatsächlich
-   * genutzten Zeit, eine laufende oder geplante mit ihrer ganzen Dauer (sie kann ja noch bis zum Ende laufen).
+   * Milliseconds used by a recipient at a producer since dayStart. Ended ones count with the time actually used,
+   * a running or planned one with its full duration (it may still run until its end).
    */
   reservedMsSince(producerId: string, userId: string, dayStart: number): number {
     const row = this.db
@@ -357,7 +358,7 @@ export class Repo {
     return row.ms;
   }
 
-  /** Die Regeln (Überschneidung, Budget) prüft ReservationService vorher. */
+  /** The rules (overlap, budget) are checked by ReservationService beforehand. */
   createReservation(producerId: string, userId: string, startsAt: number, endsAt: number): ReservationRow {
     const id = newId();
     this.db
@@ -366,7 +367,7 @@ export class Repo {
     return { id, producerId, userId, startsAt, endsAt };
   }
 
-  /** false, wenn sie schon beendet war. */
+  /** false if it had already ended. */
   endReservation(id: string, endedAt: number, reason: ReservationEndReason): boolean {
     return (
       this.db
@@ -375,7 +376,7 @@ export class Repo {
     );
   }
 
-  /** Neues Steuer-Token für Node-RED; ein vorheriges des Erzeugers wird ungültig. Klartext gibt es nur jetzt. */
+  /** New control token for Node-RED; a previous one of the producer becomes invalid. Plain text only now. */
   createControlToken(producerId: string): string {
     const token = newToken();
     this.db.exec("BEGIN");
@@ -396,7 +397,7 @@ export class Repo {
       .get(hashToken(token)) as ProducerRow | undefined;
   }
 
-  /** Merkt die letzte Nutzung, höchstens einmal pro Stunde: Node-RED fragt alle 15 s, das wären unnötig viele Schreibzugriffe. */
+  /** Records the last use, at most once per hour: Node-RED polls every 15 s, that would be needlessly many writes. */
   touchControlToken(token: string, now = Date.now()): void {
     this.db
       .prepare("UPDATE control_tokens SET last_used_at = ?1 WHERE token_hash = ?2 AND (last_used_at IS NULL OR last_used_at < ?1 - 3600000)")

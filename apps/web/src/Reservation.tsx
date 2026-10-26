@@ -13,21 +13,21 @@ import { formatTime } from "./format.ts";
 
 const MIN = 60_000;
 
-/** Hinweis, wenn Node-RED sich nicht meldet: Dann hält im Haus des Erzeugers nichts die Geräte zurück. */
+/** Hint when Node-RED does not report: then nothing in the producer's house holds the appliances back. */
 const noLockHint = (ownerName: string) => `Die Sperre wirkt gerade nicht, ${ownerName} bekommt nur eine Info.`;
 
-/** Ganze Minuten bis zum Beginn der geplanten; ohne geplante unbegrenzt. So lange darf eine spontane höchstens dauern. */
+/** Whole minutes until the planned one starts; unlimited without one. A spontaneous one may last at most this long. */
 const minutesUntil = (planned: ReservationDto | null, now: number) =>
   planned ? Math.floor((planned.startsAt - now) / MIN) : Number.POSITIVE_INFINITY;
 
-/** 30 min, wenn möglich, sonst die längste erlaubte Dauer */
+/** 30 min if possible, otherwise the longest allowed duration */
 function defaultPick(max: number): number {
   const durations = durationsFor(max);
   const allowed = durations.filter((d) => d <= max);
   return allowed.includes(30) ? 30 : (allowed.at(-1) ?? durations[0]!);
 }
 
-/** „HH:MM“ von heute als Unix-ms, NaN bei leerer Eingabe */
+/** „HH:MM“ of today as Unix ms, NaN for empty input */
 function todayAt(time: string): number {
   const [h, m] = time.split(":").map(Number);
   if (h === undefined || m === undefined || Number.isNaN(h) || Number.isNaN(m)) return Number.NaN;
@@ -45,7 +45,7 @@ interface BannerProps {
   onChange: (state: ReservationStateDto) => void;
 }
 
-/** Oben in der Karte, solange reserviert ist; alle Betrachter sehen es, beenden können Reservierender und Erzeuger. */
+/** At the top of the card while reserved; all viewers see it, the reserver and the producer can end it. */
 export function ReservationBanner({ state, isOwner, ownerName, now, producerId, onChange }: BannerProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,8 +100,8 @@ export function ReservationBanner({ state, isOwner, ownerName, now, producerId, 
 }
 
 /**
- * Die geplante Reservierung unter dem Knopf, für alle Betrachter. Absagen können der Planende und der Erzeuger. Der
- * Erzeuger sieht, ab wann die Wärmepumpe zurückgehalten wird; Elisa werden keine Geräte genannt (docs/elisa.md).
+ * The planned reservation below the button, for all viewers. The planner and the producer can cancel it. The
+ * producer sees from when the heat pump is held back; no appliances are named to Elisa (docs/elisa.md).
  */
 export function PlannedNote({ state, isOwner, now, producerId, onChange }: Omit<BannerProps, "ownerName">) {
   const [busy, setBusy] = useState(false);
@@ -151,8 +151,8 @@ export function PlannedNote({ state, isOwner, now, producerId, onChange }: Omit<
 }
 
 /**
- * Der gelbe Knopf unter Status und Hinweis; nur für Empfänger mit Recht. Grau, wenn weder „Jetzt“ (Gerät läuft, die geplante
- * beginnt gleich) noch „Später“ (schon eine geplant) geht.
+ * The yellow button below status and hint; only for recipients with the right. Grey if neither „Jetzt“ (an appliance
+ * is running, the planned one starts soon) nor „Später“ (one already planned) is possible.
  */
 export function ReserveButton({ state, now, onOpen }: { state: ReservationStateDto; now: number; onOpen: () => void }) {
   if (!state.canReserve || state.active) return null;
@@ -187,8 +187,8 @@ interface SheetProps {
 }
 
 /**
- * Vollbild-Blatt wie „Konto“: jetzt oder später heute, Dauer wählen und bestätigen. Eine spontane geht höchstens bis zum
- * Beginn der geplanten; „Jetzt“ ist gesperrt, solange ein Gerät läuft, „Später“, wenn schon eine geplant ist.
+ * Full-screen sheet like „Konto“: now or later today, pick a duration and confirm. A spontaneous one lasts at most
+ * until the planned one starts; „Jetzt“ is locked while an appliance runs, „Später“ when one is already planned.
  */
 export function ReserveSheet({ producerId, ownerName, state, onDone, onClose }: SheetProps) {
   const now = Date.now();
@@ -197,7 +197,7 @@ export function ReserveSheet({ producerId, ownerName, state, onDone, onClose }: 
   const canNow = !state.blockedReason && untilPlanned >= 1;
   const maxFor = (later: boolean) => (later ? left : Math.min(left, untilPlanned));
   const [later, setLater] = useState(!canNow);
-  // nächste volle halbe Stunde; die Zeitzonen-Abweichung von Wien ist eine ganze Stunde
+  // next full half hour; the time zone offset of Vienna is a whole hour
   const [time, setTime] = useState(() => formatTime(Math.ceil(now / (30 * MIN)) * 30 * MIN));
   const max = maxFor(later);
   const durations = durationsFor(max);

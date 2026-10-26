@@ -4,8 +4,8 @@ import type { LiveServerMessage, ReservationStateDto, LiveReading } from "@elma/
 export type LiveStatus = "connecting" | "open" | "closed";
 
 /**
- * Live-Werte und Stand der Reservierungen über WebSocket, mit automatischem Neuverbinden.
- * onUnauthorized: Das Backend lehnt das Token ab (4401, z. B. JWT abgelaufen); Neuverbinden hilft dann nicht.
+ * Live values and reservation state via WebSocket, with automatic reconnect.
+ * onUnauthorized: the backend rejects the token (4401, e.g. JWT expired); reconnecting does not help then.
  */
 export function useLive(
   token: string,
@@ -18,9 +18,9 @@ export function useLive(
   const [status, setStatus] = useState<LiveStatus>("connecting");
 
   useEffect(() => setReadings((prev) => ({ ...initial, ...stripNull(prev) })), [initial]);
-  // was schon über /live kam, ist neuer als die Liste der Erzeuger
+  // what already came via /live is newer than the list of producers
   useEffect(() => setReservations((prev) => ({ ...initialReservations, ...prev })), [initialReservations]);
-  /** Antwort auf eigenes Reservieren/Beenden sofort übernehmen, nicht erst auf /live warten */
+  /** apply the response to one's own reserve/end at once, without waiting for /live */
   const setReservation = (producerId: string, state: ReservationStateDto) =>
     setReservations((prev) => ({ ...prev, [producerId]: state }));
 
@@ -49,7 +49,7 @@ export function useLive(
       ws.onclose = (event) => {
         setStatus("closed");
         if (stopped) return;
-        // sonst verbände die App endlos neu und zeigte „Getrennt“, statt zur Anmeldung zu gehen
+        // otherwise the app would reconnect endlessly and show „Getrennt“ instead of going to the login
         if (event.code === 4401) {
           stopped = true;
           onUnauthorized();
@@ -60,7 +60,7 @@ export function useLive(
       };
     };
 
-    // Beim Zurückkehren in die App (Handy aus dem Standby) sofort neu verbinden
+    // Reconnect immediately when returning to the app (phone waking from standby)
     const onVisible = () => {
       if (document.visibilityState === "visible" && ws?.readyState === WebSocket.CLOSED) {
         clearTimeout(retryTimer);

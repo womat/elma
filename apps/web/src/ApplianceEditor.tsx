@@ -8,19 +8,19 @@ import { PushToggle } from "./PushToggle.tsx";
 
 interface Props {
   initial: ApplianceSettings;
-  /** darf bei einem Erzeuger reservieren: Dann kommen Reservierungs-Nachrichten auch ohne Glocke */
+  /** may reserve at a producer: then reservation notifications arrive even without a bell */
   canReserve: boolean;
   onSave: (settings: ApplianceSettings) => Promise<void>;
   onClose: () => void;
 }
 
-/** Vollbild-Dialog: Geräte aus dem Katalog an-/abwählen und eigene Geräte anlegen. */
+/** Full-screen dialog: select/deselect appliances from the catalog and create custom appliances. */
 export function ApplianceEditor({ initial, canReserve, onSave, onClose }: Props) {
   const [selected, setSelected] = useState(() => new Set(initial.selected));
   const [custom, setCustom] = useState<CustomAppliance[]>(initial.custom);
   const [notify, setNotify] = useState(() => new Set(initial.notify));
   const [icon, setIcon] = useState("plug");
-  // Solange der User kein Icon selbst gewählt hat, schlagen wir eines passend zum Namen vor
+  // As long as the user has not picked an icon, we suggest one matching the name
   const [iconPicked, setIconPicked] = useState(false);
   const [name, setName] = useState("");
   const [watts, setWatts] = useState("");
@@ -36,7 +36,7 @@ export function ApplianceEditor({ initial, canReserve, onSave, onClose }: Props)
   const toggle = (id: string) => setSelected((prev) => flip(prev, id));
   const toggleNotify = (id: string) => setNotify((prev) => flip(prev, id));
 
-  // Benachrichtigen kann man nur für Geräte, die auch ausgewählt sind
+  // Notifications are only possible for appliances that are also selected
   const chosen = resolveAppliances({ selected: [...selected], custom, notify: [] });
 
   const addCustom = (e: FormEvent) => {
@@ -58,7 +58,7 @@ export function ApplianceEditor({ initial, canReserve, onSave, onClose }: Props)
     setBusy(true);
     setError(null);
     try {
-      // Reihenfolge des Katalogs beibehalten, unbekannte IDs verwerfen
+      // Keep the catalog order, drop unknown IDs
       await onSave({
         selected: CATALOG.filter((a) => selected.has(a.id)).map((a) => a.id),
         custom,

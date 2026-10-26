@@ -7,14 +7,14 @@ import { PasskeyCancelled, passkeysSupported, registerPasskey, signInWithPasskey
 
 interface Props {
   inviteCode: string | null;
-  /** Einrichtungslink vom Betreiber (?setup=…): Passkey für ein bestehendes Konto anlegen */
+  /** setup link from the operator (?setup=…): create a passkey for an existing account */
   setupToken: string | null;
   onSignedIn: (token: string, user: MeDto) => void;
 }
 
 type Mode = "login" | "register" | "setup";
 
-/** Anmeldung nur mit Passkey: Fingerabdruck, Gesicht oder Geräte-PIN, kein Passwort. */
+/** Login only with a passkey: fingerprint, face or device PIN, no password. */
 export function AuthScreen({ inviteCode, setupToken, onSignedIn }: Props) {
   const [mode, setMode] = useState<Mode>(setupToken ? "setup" : inviteCode ? "register" : "login");
   const [email, setEmail] = useState("");
@@ -28,7 +28,7 @@ export function AuthScreen({ inviteCode, setupToken, onSignedIn }: Props) {
     setHint(null);
     try {
       const res = await action();
-      // mit bestehendem Konto angemeldet und Einladungslink geöffnet -> Einladung gleich annehmen
+      // logged in with an existing account and invite link opened -> accept the invite right away
       if (mode === "login" && inviteCode) await api.acceptInvite(inviteCode).catch(() => undefined);
       onSignedIn(res.token, res.user);
     } catch (err) {

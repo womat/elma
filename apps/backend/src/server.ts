@@ -10,7 +10,7 @@ if (!jwtSecret || jwtSecret.length < 32) {
   process.exit(1);
 }
 
-// Mit NaN würden in LiveHub nie alte Werte gelöscht (die Liste wüchse unbegrenzt) und die Glättung wäre still aus
+// With NaN, LiveHub would never drop old values (the list would grow without bound) and smoothing would silently be off
 const smoothWindowMs = process.env.SMOOTH_WINDOW_MS ? Number(process.env.SMOOTH_WINDOW_MS) : undefined;
 if (smoothWindowMs !== undefined && !(Number.isFinite(smoothWindowMs) && smoothWindowMs >= 0)) {
   console.error(`SMOOTH_WINDOW_MS muss eine Zahl ab 0 sein (Millisekunden, 0 = ohne Glättung), ist "${process.env.SMOOTH_WINDOW_MS}"`);

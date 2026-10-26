@@ -30,7 +30,7 @@ interface Props {
   reading: LiveReading | null;
   reservation: ReservationStateDto;
   onReservation: (state: ReservationStateDto) => void;
-  /** darf bei irgendeinem Erzeuger reservieren (für den Glocken-Hinweis) */
+  /** may reserve at any producer (for the bell hint) */
   canReserveAny: boolean;
   now: number;
   view: View;
@@ -56,7 +56,7 @@ const LABELS: Record<Level, string> = {
   lots: "Viel Überschuss – jetzt verbrauchen!",
 };
 
-/** Ampel: ist der Überschuss der letzten Minuten gleichmäßig? Ohne `stable` (kein Überschuss, zu wenig Daten) nichts. */
+/** Stability indicator: is the surplus of the last minutes steady? Without `stable` (no surplus, too little data) nothing. */
 function Stability({ stable }: { stable: boolean | undefined }) {
   if (stable === undefined) return null;
   return stable ? (
@@ -73,8 +73,8 @@ function Stability({ stable }: { stable: boolean | undefined }) {
 }
 
 /**
- * Akku des Erzeugers, nur wenn er lädt oder voll ist; Laden geht vor "voll". Steht oder entlädt er, erklärt er nichts
- * am Überschuss, das Kästchen fällt dann weg (Wolfgang, 23.10.2026, nach dem ersten Tag mit 0.10.0).
+ * Producer's battery, only when charging or full; charging takes precedence over "full". When idle or discharging it
+ * explains nothing about the surplus, so the box is dropped (Wolfgang, 23.10.2026, after the first day with 0.10.0).
  */
 function BatteryBox({ battery }: { battery: BatteryReading }) {
   const soc = Math.round(battery.soc);
@@ -197,7 +197,7 @@ export function ProducerCard({
             canReserve={canReserveAny}
             onEdit={onEditAppliances}
           />
-          {/* auch hier, weil manche die App in der Geräte-Ansicht offen haben */}
+          {/* here too, because some keep the app open in the appliance view */}
           <ReserveButton state={reservation} now={now} onOpen={() => setReserving(true)} />
           {planned}
           <ApplianceTimeline points={history} appliances={appliances} now={now} />

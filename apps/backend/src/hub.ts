@@ -18,16 +18,16 @@ interface MinuteBucket {
 }
 
 const MINUTE = 60_000;
-/** 5 statt 2 min (Wolfgang, 23.10.2026): ruhigere Zahl, über dasselbe Fenster läuft die Stabilitätsampel. */
+/** 5 instead of 2 min (Wolfgang, 23.10.2026): calmer number; the stability indicator uses the same window. */
 export const DEFAULT_SMOOTH_WINDOW_MS = 5 * MINUTE;
 
 /**
- * Hält den aktuellen Wert je Erzeuger im Speicher, verteilt ihn an Live-Clients
- * und schreibt Minutenmittel in die Datenbank.
+ * Keeps the current value per producer in memory, distributes it to live clients
+ * and writes per-minute averages to the database.
  *
- * Angezeigt und verteilt wird ein über `smoothWindowMs` geglätteter Wert, damit kurze Regelspitzen
- * (z. B. der Batterie) die Anzeige nicht springen lassen. Die Minutenmittel nutzen die Rohwerte.
- * Dazu kommen die Stabilitätsampel und der letzte Akkuwert; beide gehen nicht in die DB.
+ * Displayed and distributed is a value smoothed over `smoothWindowMs`, so short control spikes
+ * (e.g. from the battery) don't make the display jump. The per-minute averages use the raw values.
+ * In addition there is the stability indicator and the latest battery value; neither goes into the DB.
  */
 export class LiveHub {
   private readonly current = new Map<string, LiveReading>();
@@ -46,14 +46,14 @@ export class LiveHub {
   publish(producerId: string, raw: SurplusReading): void {
     this.aggregate(producerId, raw);
     const reading = this.smooth(producerId, raw);
-    // Kein eigener Broadcast für den Akku: Überschusswerte kommen ohnehin etwa alle 5 s.
+    // No separate broadcast for the battery: surplus values arrive about every 5 s anyway.
     const battery = this.batteries.get(producerId);
     if (battery && raw.timestamp - battery.timestamp <= BATTERY_STALE_MS) reading.battery = battery;
     this.current.set(producerId, reading);
     for (const listener of this.listeners) listener(producerId, reading);
   }
 
-  /** Merkt sich den letzten Akkuwert; er geht mit dem nächsten Überschusswert hinaus. */
+  /** Remembers the latest battery value; it goes out with the next surplus value. */
   publishBattery(producerId: string, battery: BatteryReading): void {
     this.batteries.set(producerId, battery);
   }
@@ -67,7 +67,7 @@ export class LiveHub {
     return () => this.listeners.delete(listener);
   }
 
-  /** Schreibt abgeschlossene Minuten, auch wenn seither kein neuer Wert kam (Aufruf per Timer). */
+  /** Writes completed minutes even if no new value has arrived since (called by a timer). */
   flushCompleted(now: number): void {
     const currentMinute = Math.floor(now / MINUTE) * MINUTE;
     for (const [producerId, bucket] of this.buckets) {
@@ -78,30 +78,30 @@ export class LiveHub {
     }
   }
 
-  /** Schreibt alle offenen Minuten, z. B. beim Herunterfahren. */
+  /** Writes all open minutes, e.g. on shutdown. */
   flush(): void {
     for (const [producerId, bucket] of this.buckets) this.repo.saveMinute(producerId, bucket.minute, bucket.sum / bucket.count);
     this.buckets.clear();
   }
 
   /**
-   * Zeitgewichteter Mittelwert über das Fenster vor dem neuen Wert: Jeder Wert gilt bis zum nächsten.
-   * Nötig, weil die Bridge unregelmäßig sendet (alle paar Sekunden, bei Sprüngen sofort).
-   * `stable` nur, wenn es Überschuss gibt und die Werte das ganze Fenster abdecken (nach Start oder Lücke erst nach
-   * `smoothWindowMs`). Stabil heißt zusätzlich: Auch der aktuelle Rohwert liegt noch beim Mittel. Sonst stand nach
-   * einer kurzen Spitze noch eine Minute lang "Stabil", obwohl nichts mehr da war, und nach einem Start reichten gut
-   * 2 min (Wolfgang, 26.10.2026). Das Fenster bleibt 5 min, ein längeres machte auch die Zahl träger.
+   * Time-weighted average over the window before the new value: each value holds until the next one.
+   * Needed because the bridge sends irregularly (every few seconds, immediately on jumps).
+   * `stable` only if there is surplus and the values cover the whole window (after start or a gap only after
+   * `smoothWindowMs`). Stable additionally means: the current raw value is still near the average. Otherwise "Stabil"
+   * was still shown for a minute after a short spike although nothing was left, and after a start just over 2 min
+   * sufficed (Wolfgang, 26.10.2026). The window stays 5 min; a longer one would also make the number more sluggish.
    */
   private smooth(producerId: string, raw: SurplusReading): LiveReading {
     if (this.smoothWindowMs <= 0) return { ...raw };
     let list = this.samples.get(producerId) ?? [];
     const last = list.at(-1);
-    // Lücke länger als das Fenster (z. B. Bridge war offline) oder Zeit läuft rückwärts -> neu beginnen
+    // Gap longer than the window (e.g. bridge was offline) or time runs backwards -> start over
     if (!last || raw.timestamp - last.timestamp > this.smoothWindowMs || raw.timestamp < last.timestamp) list = [];
     list.push(raw);
 
     const start = raw.timestamp - this.smoothWindowMs;
-    // den ältesten Wert behalten, der noch in das Fenster hineinreicht
+    // keep the oldest value that still reaches into the window
     while (list.length >= 2 && list[1]!.timestamp <= start) list.shift();
     this.samples.set(producerId, list);
 

@@ -9,15 +9,15 @@ import {
 } from "@elma/shared";
 import type { Repo } from "./repo.ts";
 
-/** Schickt eine Nachricht an ein Abo. Wirft bei Fehlern ein Objekt mit statusCode (wie web-push). */
+/** Sends a message to a subscription. On errors throws an object with statusCode (like web-push). */
 export type PushSender = (sub: PushSubscriptionBody, payload: PushPayload) => Promise<void>;
 
 export interface NotifierOptions {
-  /** So lange muss ein Gerät durchgehend gehen, bevor benachrichtigt wird (gegen Wolken-Flackern). */
+  /** How long an appliance must fit continuously before notifying (against cloud flicker). */
   holdMs?: number;
-  /** Mindestabstand zwischen zwei Nachrichten für dasselbe Gerät. */
+  /** Minimum interval between two messages for the same appliance. */
   cooldownMs?: number;
-  /** Eine "Phase" endet erst, wenn der Überschuss unter diesen Anteil der Geräteleistung fällt. */
+  /** A "phase" ends only when the surplus drops below this share of the appliance's power. */
   resetRatio?: number;
 }
 
@@ -28,8 +28,8 @@ interface ApplianceState {
 }
 
 /**
- * Entscheidet bei jedem neuen Messwert, ob Empfänger benachrichtigt werden, dass eines ihrer Geräte jetzt geht.
- * Zustand liegt im Speicher – nach einem Neustart wird höchstens einmal zu viel benachrichtigt.
+ * Decides on every new reading whether recipients are notified that one of their appliances can run now.
+ * State is kept in memory – after a restart at most one extra notification is sent.
  */
 export class PushNotifier {
   private readonly state = new Map<string, ApplianceState>();
@@ -47,7 +47,7 @@ export class PushNotifier {
     this.resetRatio = opts.resetRatio ?? 0.8;
   }
 
-  /** Liefert die Versprechen der gesendeten Nachrichten (für Tests); im Betrieb wird nicht darauf gewartet. */
+  /** Returns the promises of the sent messages (for tests); in production they are not awaited. */
   onReading(producerId: string, reading: LiveReading): Promise<void>[] {
     const producer = this.repo.producerById(producerId);
     if (!producer) return [];
@@ -70,18 +70,18 @@ export class PushNotifier {
     });
   }
 
-  /** Nachricht an bestimmte User, unabhängig von den Glocken, z. B. zu einer Reservierung. */
+  /** Message to specific users, regardless of the bells, e.g. about a reservation. */
   async notifyUsers(userIds: string[], payload: PushPayload): Promise<void> {
     await Promise.all([...new Set(userIds)].map((id) => this.sendToUser(id, payload)));
   }
 
-  /** true = für dieses Gerät jetzt benachrichtigen. */
+  /** true = notify for this appliance now. */
   private update(key: string, appliance: Appliance, reading: LiveReading): boolean {
     const now = reading.timestamp;
     const s = this.state.get(key) ?? { fitSince: null, notifiedThisPhase: false, lastNotifiedAt: 0 };
     this.state.set(key, s);
 
-    // Schwankt der Wert, gilt das Gerät als "passt nicht"; ohne Ampel (stable fehlt) zählt nur der Wert.
+    // If the value fluctuates, the appliance counts as "doesn't fit"; without the indicator (no stable) only watts count.
     if (reading.watts >= appliance.watts && reading.stable !== false) {
       s.fitSince ??= now;
       if (!s.notifiedThisPhase && now - s.fitSince >= this.holdMs && now - s.lastNotifiedAt >= this.cooldownMs) {
@@ -114,7 +114,7 @@ export class PushNotifier {
           await this.send(sub, payload);
         } catch (err) {
           const status = (err as { statusCode?: number }).statusCode;
-          // Abo abgelaufen oder vom Nutzer entfernt -> aufräumen
+          // Subscription expired or removed by the user -> clean up
           if (status === 404 || status === 410) this.repo.deletePushSubscription(sub.endpoint);
           else console.warn(`[push] Senden fehlgeschlagen (${status ?? "?"}): ${(err as Error).message}`);
         }
@@ -123,7 +123,7 @@ export class PushNotifier {
   }
 }
 
-/** Lädt die VAPID-Schlüssel aus der DB oder erzeugt sie beim ersten Start. */
+/** Loads the VAPID keys from the DB or generates them on first start. */
 export function loadVapidKeys(repo: Repo): { publicKey: string; privateKey: string } {
   const stored = repo.getMeta("vapid");
   if (stored) return JSON.parse(stored);
@@ -132,12 +132,12 @@ export function loadVapidKeys(repo: Repo): { publicKey: string; privateKey: stri
   return keys;
 }
 
-/** proxy: z. B. http://push-proxy:3128, wenn das Backend nur über den Push-Proxy ins Internet darf */
+/** proxy: e.g. http://push-proxy:3128, if the backend may reach the internet only via the push proxy */
 export function webPushSender(keys: { publicKey: string; privateKey: string }, subject: string, proxy?: string): PushSender {
   return async (sub, payload) => {
     await webpush.sendNotification(sub, JSON.stringify(payload), {
       vapidDetails: { subject, publicKey: keys.publicKey, privateKey: keys.privateKey },
-      TTL: 15 * 60, // nach 15 min ist die Info veraltet
+      TTL: 15 * 60, // after 15 min the info is stale
       urgency: "normal",
       ...(proxy ? { proxy } : {}),
     });

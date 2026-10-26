@@ -1,6 +1,6 @@
 /**
- * Entscheidet, ob ein neuer Wert gesendet werden soll:
- * sofort bei einer Änderung >= deltaWatts, sonst höchstens alle minIntervalMs.
+ * Decides whether a new value should be sent:
+ * immediately on a change >= deltaWatts, otherwise at most every minIntervalMs.
  */
 export class Throttle {
   private lastSentAt = 0;

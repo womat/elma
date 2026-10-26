@@ -15,7 +15,7 @@ interface Props {
 
 const date = (t: number) => new Date(t).toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-/** Vollbild-Blatt: Anzeigename ändern, eigene Passkeys ansehen, hinzufügen und löschen, abmelden. */
+/** Full-screen sheet: change display name, view, add and delete own passkeys, log out. */
 export function AccountSheet({ me, passkeys, onChange, onMeChange, onSignOut, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export function AccountSheet({ me, passkeys, onChange, onMeChange, onSignOut, on
     setNameError(null);
     setNameSaved(false);
     try {
-      // leeres Feld löscht den Namen, dann gilt wieder der Teil der E-Mail vor dem @
+      // an empty field clears the name; then the part of the e-mail before the @ applies again
       const next = await api.setDisplayName(name.trim() || null);
       onMeChange(next);
       setName(next.displayName ?? "");

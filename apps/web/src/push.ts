@@ -1,9 +1,9 @@
 import { api } from "./api.ts";
 
 export type PushState =
-  | "unsupported" // Browser kann kein Web-Push
-  | "ios-install" // iPhone: nur als installierte App (Home-Bildschirm) möglich
-  | "denied" // Nutzer hat Benachrichtigungen blockiert
+  | "unsupported" // browser does not support Web Push
+  | "ios-install" // iPhone: only possible as an installed app (home screen)
+  | "denied" // user has blocked notifications
   | "off"
   | "on";
 
@@ -34,7 +34,7 @@ function base64UrlToBytes(base64url: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-/** Fragt nach Erlaubnis, abonniert Push und meldet das Abo beim Backend an. */
+/** Asks for permission, subscribes to push and registers the subscription with the backend. */
 export async function enablePush(): Promise<PushState> {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return permission === "denied" ? "denied" : "off";
@@ -49,7 +49,7 @@ export async function enablePush(): Promise<PushState> {
   return "on";
 }
 
-/** Meldet das Abo beim Backend ab und hebt es im Browser auf (auch beim Abmelden). */
+/** Unregisters the subscription with the backend and cancels it in the browser (also on logout). */
 export async function disablePush(): Promise<PushState> {
   const reg = await registration();
   const sub = await reg?.pushManager.getSubscription();
@@ -60,7 +60,7 @@ export async function disablePush(): Promise<PushState> {
   return "off";
 }
 
-/** Abo nach dem Login erneut ans Backend melden (z. B. nach Neuinstallation oder Kontowechsel). */
+/** Re-register the subscription with the backend after login (e.g. after reinstall or account switch). */
 export async function syncPushSubscription(): Promise<void> {
   const reg = await registration();
   const sub = await reg?.pushManager.getSubscription();

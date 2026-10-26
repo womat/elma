@@ -5,7 +5,7 @@ import { AuthScreen } from "./AuthScreen.tsx";
 import { Dashboard } from "./Dashboard.tsx";
 import { disablePush } from "./push.ts";
 
-/** Parameter (z. B. ?invite=...) lesen und aus der Adresszeile entfernen. */
+/** Read a parameter (e.g. ?invite=...) and remove it from the address bar. */
 function takeFromUrl(name: "invite" | "setup"): string | null {
   const url = new URL(location.href);
   const value = url.searchParams.get(name);
@@ -29,8 +29,8 @@ export function App() {
     setMe(user);
   };
   const signOut = async () => {
-    // Push dieses Geräts abmelden, solange das JWT noch gilt – sonst bekäme das Gerät
-    // nach einem Kontowechsel weiter die Nachrichten des alten Kontos
+    // Unsubscribe this device from push while the JWT is still valid – otherwise, after an account
+    // switch, the device would keep receiving the old account's notifications
     await disablePush().catch(() => undefined);
     setToken(null);
     setTokenState(null);
@@ -44,7 +44,7 @@ export function App() {
     });
   }, [token]);
 
-  // Bereits angemeldet und Einladungslink geöffnet -> direkt annehmen
+  // Already logged in and invite link opened -> accept right away
   useEffect(() => {
     if (!me || !invite) return;
     api.acceptInvite(invite).then(
@@ -68,6 +68,6 @@ export function App() {
     );
   }
   if (!me) return <div className="center muted">Lade …</div>;
-  // Ein neuer Hinweis (z. B. „Einladung angenommen“) baut das Dashboard neu auf, damit es die Erzeuger neu lädt
+  // A new notice (e.g. „Einladung angenommen“) rebuilds the dashboard so it reloads the producers
   return <Dashboard key={notice ?? ""} token={token} me={me} notice={notice} onMeChange={setMe} onSignOut={signOut} />;
 }

@@ -1,5 +1,5 @@
 /**
- * Prüfung der Passkey-Antworten. Eigenes Modul, damit Tests die kryptografische Prüfung
- * ersetzen können (echte Signaturen gibt es nur mit einem echten Gerät).
+ * Verification of passkey responses. Separate module so tests can replace the cryptographic check
+ * (real signatures only exist with a real device).
  */
 export { verifyAuthenticationResponse, verifyRegistrationResponse } from "@simplewebauthn/server";

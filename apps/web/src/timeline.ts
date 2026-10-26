@@ -5,18 +5,18 @@ const HOUR = 3_600_000;
 export type HourLevel = "none" | "some" | "lots";
 
 export interface HourBucket {
-  /** Stundenbeginn, Unix-Millisekunden */
+  /** start of the hour, Unix milliseconds */
   start: number;
-  /** Stundenmittel in Watt, null = keine Daten */
+  /** hourly average in watts, null = no data */
   watts: number | null;
   level: HourLevel | null;
-  /** stärkstes eigenes Gerät, das in dieser Stunde gegangen wäre */
+  /** most powerful own appliance that would have run in this hour */
   biggest: Appliance | null;
 }
 
 /**
- * Stufe passend zu den eigenen Geräten:
- * keines geht -> "none", nur kleine Geräte -> "some", ein Gerät ab LEVEL_LOTS_WATTS -> "lots".
+ * Level matched to the user's own appliances:
+ * none runs -> "none", only small appliances -> "some", an appliance from LEVEL_LOTS_WATTS up -> "lots".
  */
 export function levelFor(watts: number, appliances: Appliance[]): { level: HourLevel; biggest: Appliance | null } {
   const biggest = biggestFitting(Math.max(0, watts), appliances);
@@ -24,7 +24,7 @@ export function levelFor(watts: number, appliances: Appliance[]): { level: HourL
   return { level: biggest.watts >= LEVEL_LOTS_WATTS ? "lots" : "some", biggest };
 }
 
-/** Die letzten 24 Stunden (inkl. der laufenden) als Stundenmittel der Minutenwerte. */
+/** The last 24 hours (incl. the current one) as hourly averages of the minute values. */
 export function bucketByHour(points: HistoryPoint[], now: number, appliances: Appliance[]): HourBucket[] {
   const first = Math.floor(now / HOUR) * HOUR - 23 * HOUR;
   const sums = Array.from({ length: 24 }, () => ({ sum: 0, count: 0 }));
@@ -42,7 +42,7 @@ export function bucketByHour(points: HistoryPoint[], now: number, appliances: Ap
   });
 }
 
-/** Längste zusammenhängende Spanne der höchsten erreichten Stufe – oder null, wenn nie etwas ging. */
+/** Longest contiguous span of the highest level reached – or null if nothing ever ran. */
 export function bestSpan(buckets: HourBucket[]): { from: number; to: number; level: HourLevel } | null {
   const best: HourLevel | null = buckets.some((b) => b.level === "lots")
     ? "lots"

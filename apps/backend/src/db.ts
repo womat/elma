@@ -26,7 +26,7 @@ export function openDb(path: string): Db {
       created_at        INTEGER NOT NULL
     );
 
-    -- Freigabe Erzeuger -> Empfänger. 1:1 ist heute ein Datensatz, n:m später ohne Umbau.
+    -- Share producer -> recipient. 1:1 is one row today, n:m later without restructuring.
     CREATE TABLE IF NOT EXISTS shares (
       producer_id  TEXT NOT NULL REFERENCES producers(id) ON DELETE CASCADE,
       recipient_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -41,13 +41,13 @@ export function openDb(path: string): Db {
       used_by     TEXT REFERENCES users(id)
     );
 
-    -- Persönliche Einstellungen, z. B. Geräteauswahl (JSON)
+    -- Personal settings, e.g. appliance selection (JSON)
     CREATE TABLE IF NOT EXISTS user_settings (
       user_id    TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       appliances TEXT
     );
 
-    -- Web-Push-Abos (ein User kann mehrere Geräte haben)
+    -- Web push subscriptions (a user can have several devices)
     CREATE TABLE IF NOT EXISTS push_subscriptions (
       endpoint   TEXT PRIMARY KEY,
       user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -56,13 +56,13 @@ export function openDb(path: string): Db {
       created_at INTEGER NOT NULL
     );
 
-    -- Interne Schlüssel/Werte, z. B. VAPID-Schlüssel
+    -- Internal keys/values, e.g. VAPID keys
     CREATE TABLE IF NOT EXISTS meta (
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
 
-    -- Passkeys (WebAuthn): nur der öffentliche Schlüssel, der private bleibt auf dem Gerät
+    -- Passkeys (WebAuthn): only the public key, the private one stays on the device
     CREATE TABLE IF NOT EXISTS passkeys (
       id           TEXT PRIMARY KEY,
       user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -74,7 +74,7 @@ export function openDb(path: string): Db {
       last_used_at INTEGER
     );
 
-    -- Einmal-Links zum Einrichten eines Passkeys (Umstellung, verlorenes Handy); nur als SHA-256 gespeichert
+    -- One-time links to set up a passkey (migration, lost phone); stored only as SHA-256
     CREATE TABLE IF NOT EXISTS setup_links (
       token_hash TEXT PRIMARY KEY,
       user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -82,7 +82,7 @@ export function openDb(path: string): Db {
       used_at    INTEGER
     );
 
-    -- Minutenmittel des Überschusses
+    -- Per-minute average of the surplus
     CREATE TABLE IF NOT EXISTS readings (
       producer_id TEXT NOT NULL REFERENCES producers(id) ON DELETE CASCADE,
       minute      INTEGER NOT NULL,
@@ -90,7 +90,7 @@ export function openDb(path: string): Db {
       PRIMARY KEY (producer_id, minute)
     );
 
-    -- Reservierungen (ELISA-Modus, docs/elisa.md). Beendete bleiben stehen, darüber läuft das Tagesbudget.
+    -- Reservations (ELISA mode, docs/elisa.md). Ended ones are kept, the daily budget is computed from them.
     CREATE TABLE IF NOT EXISTS reservations (
       id          TEXT PRIMARY KEY,
       producer_id TEXT NOT NULL REFERENCES producers(id) ON DELETE CASCADE,
@@ -102,7 +102,7 @@ export function openDb(path: string): Db {
     );
     CREATE INDEX IF NOT EXISTS reservations_budget ON reservations (producer_id, user_id, starts_at);
 
-    -- Steuer-Token für Node-RED (POST /api/control/status), getrennt vom Geräte-Token; nur als SHA-256 gespeichert
+    -- Control token for Node-RED (POST /api/control/status), separate from the device token; stored only as SHA-256
     CREATE TABLE IF NOT EXISTS control_tokens (
       token_hash   TEXT PRIMARY KEY,
       producer_id  TEXT NOT NULL REFERENCES producers(id) ON DELETE CASCADE,
@@ -110,21 +110,21 @@ export function openDb(path: string): Db {
       last_used_at INTEGER
     );
   `);
-  // Seit 0.5.0 nur Passkeys: alte Passwort-Hashes löschen (Platzhalter wie in Repo.createUser, Spalte ist NOT NULL)
+  // Passkeys only since 0.5.0: delete old password hashes (placeholder as in Repo.createUser, column is NOT NULL)
   db.exec("UPDATE users SET password_hash = 'passkey-only' WHERE password_hash LIKE 'scrypt:%'");
-  // 0.7.0: Anzeigename, damit in Banner und Push „Elisa“ steht statt der E-Mail (docs/elisa.md)
+  // 0.7.0: display name so banner and push show „Elisa“ instead of the email (docs/elisa.md)
   addColumn(db, "users", "display_name", "TEXT");
   addColumn(db, "invites", "display_name", "TEXT");
-  // 0.8.0: Recht zum Reservieren pro Freigabe, vergibt der Erzeuger (docs/elisa.md)
+  // 0.8.0: permission to reserve per share, granted by the producer (docs/elisa.md)
   addColumn(db, "shares", "can_reserve", "INTEGER NOT NULL DEFAULT 0");
-  // 0.11.0: Eine geplante und eine laufende Reservierung können gleichzeitig offen sein, das kann der eindeutige Index
-  // nicht ausdrücken. Zwei gleichzeitige Anfragen kommen trotzdem nicht beide durch: node:sqlite ist synchron, Prüfen und
-  // Einfügen in ReservationService.reserve laufen ohne Unterbrechung.
+  // 0.11.0: A planned and a running reservation can be open at the same time, which the unique index cannot
+  // express. Two concurrent requests still cannot both get through: node:sqlite is synchronous, checking and
+  // inserting in ReservationService.reserve run without interruption.
   db.exec("DROP INDEX IF EXISTS reservations_one_active");
   return db;
 }
 
-/** Neue Spalte in einer bestehenden DB; CREATE TABLE IF NOT EXISTS ändert vorhandene Tabellen nicht. */
+/** New column in an existing DB; CREATE TABLE IF NOT EXISTS does not change existing tables. */
 function addColumn(db: Db, table: string, column: string, definition: string): void {
   const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
   if (!columns.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);

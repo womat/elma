@@ -5,9 +5,9 @@ import { parseServerMessage } from "./reservation.ts";
 export type ReservationListener = (msg: Extract<IngestServerMessage, { type: "reservation" }>) => void;
 
 /**
- * Hält eine ausgehende WebSocket-Verbindung zum Backend offen (mit Reconnect + Backoff).
- * Solange die Verbindung weg ist, wird je Nachrichtentyp (Überschuss, Akku) nur der letzte Wert gepuffert.
- * Zurück kommt die Reservierung (beim Verbinden und bei jeder Änderung), sie geht an onReservation.
+ * Keeps an outgoing WebSocket connection to the backend open (with reconnect + backoff).
+ * While the connection is down, only the latest value per message type (surplus, battery) is buffered.
+ * The reservation comes back (on connect and on every change) and goes to onReservation.
  */
 export class BackendLink {
   private ws: WebSocket | null = null;

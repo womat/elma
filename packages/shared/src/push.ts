@@ -1,6 +1,6 @@
 /**
- * Push-Dienste der Browser. Nur diese Hosts darf das Backend für Web-Push erreichen:
- * Push-Abos mit anderer Adresse werden abgelehnt, und der Push-Proxy lässt nur Verbindungen dorthin zu.
+ * The browsers' push services. These are the only hosts the backend may reach for web push:
+ * push subscriptions with any other address are rejected, and the push proxy only allows connections to them.
  */
 export const PUSH_HOST_SUFFIXES = [
   "fcm.googleapis.com", // Chrome, Android
@@ -9,7 +9,7 @@ export const PUSH_HOST_SUFFIXES = [
   "notify.windows.com", // Edge
 ] as const;
 
-/** true, wenn der Host ein Push-Dienst ist (genau oder als Subdomain); IP-Adressen nie. */
+/** true if the host is a push service (exactly or as a subdomain); never IP addresses. */
 export function isPushHost(host: string): boolean {
   const h = host.trim().toLowerCase().replace(/\.$/, "");
   if (!h || /^[\d.]+$/.test(h) || h.includes(":")) return false;

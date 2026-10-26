@@ -1,6 +1,6 @@
 /**
- * Verwaltung per Kommandozeile, z. B. `node src/cli.ts create-user wolfgang@example.com`.
- * Alle Befehle stehen in usage() unten (Aufruf ohne Argumente).
+ * Command-line administration, e.g. `node src/cli.ts create-user wolfgang@example.com`.
+ * All commands are listed in usage() below (call without arguments).
  */
 import { resolve } from "node:path";
 import { DisplayNameBody, InviteBody } from "@elma/shared";
@@ -27,7 +27,7 @@ function usage(): never {
 }
 
 function printDeviceToken(deviceToken: string): void {
-  // eigene Zeile ohne Zusatztext, damit sie 1:1 in die .env der Bridge kopiert werden kann
+  // own line without extra text so it can be copied 1:1 into the bridge's .env
   console.log(`DEVICE_TOKEN=${deviceToken}`);
   console.log("  ↳ diese Zeile für die Bridge in die .env übernehmen");
   console.log(`Shelly-URL: ${publicUrl.replace(/^http/, "ws")}/ingest/shelly/${deviceToken}`);
@@ -69,7 +69,7 @@ switch (command) {
     const [email, name] = args;
     const user = email ? repo.userByEmail(email) : undefined;
     if (!user || name === undefined) usage();
-    // dieselben Regeln wie PUT /api/me; "" heißt löschen, wie ein leeres Feld in der App
+    // same rules as PUT /api/me; "" means delete, like an empty field in the app
     const body = DisplayNameBody.safeParse({ displayName: name.trim() || null });
     if (!body.success) throw new Error(body.error.issues[0]?.message ?? "Ungültiger Name");
     repo.setDisplayName(user.id, body.data.displayName);

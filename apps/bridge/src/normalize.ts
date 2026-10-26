@@ -4,9 +4,9 @@ import type { BridgeConfig } from "./config.ts";
 type NormalizeOptions = Pick<BridgeConfig, "payloadPath" | "payloadUnit" | "payloadInvert">;
 
 /**
- * Wandelt eine MQTT-Payload in Watt um.
- * Unterstützt reine Zahlen ("1234", "1.2") und JSON mit Pfad (z. B. PAYLOAD_PATH="data.surplus").
- * Gibt null zurück, wenn kein Zahlenwert gefunden wird.
+ * Converts an MQTT payload to watts.
+ * Supports plain numbers ("1234", "1.2") and JSON with a path (e.g. PAYLOAD_PATH="data.surplus").
+ * Returns null if no numeric value is found.
  */
 export function normalizePayload(payload: string, opts: NormalizeOptions): number | null {
   const raw = extract(payload.trim(), opts.payloadPath);
@@ -18,9 +18,9 @@ export function normalizePayload(payload: string, opts: NormalizeOptions): numbe
 }
 
 /**
- * Liest ein Telegramm von ecoflowd (`myhome/ecoflow/state`): `battery` in W (positiv = lädt), `soc` in %, `timestamp`
- * als Messzeit des Geräts (RFC 3339). Die Feldnamen sind fest, es gibt nur diese eine Quelle. Ohne gültigen
- * Zeitstempel gilt die Empfangszeit. Null, wenn kein gültiger Akkuwert drinsteht.
+ * Reads a telegram from ecoflowd (`myhome/ecoflow/state`): `battery` in W (positive = charging), `soc` in %,
+ * `timestamp` as the device's measurement time (RFC 3339). The field names are fixed, there is only this one source.
+ * Without a valid timestamp the receive time applies. Null if it contains no valid battery value.
  */
 export function parseBattery(payload: string, now: number): BatteryReading | null {
   let json: unknown;

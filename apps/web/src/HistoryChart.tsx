@@ -5,7 +5,7 @@ import { formatPower, formatTime } from "./format.ts";
 const W = 300;
 const H = 96;
 
-/** Überschuss der letzten 24 h als Flächendiagramm (Minutenmittel, nur positive Werte) mit beschrifteter Y-Achse. */
+/** Surplus of the last 24 h as an area chart (minute averages, positive values only) with a labeled Y axis. */
 export function HistoryChart({ points }: { points: HistoryPoint[] }) {
   if (points.length < 2) return <p className="muted chart-empty">Verlauf erscheint nach ein paar Minuten.</p>;
 
@@ -19,7 +19,7 @@ export function HistoryChart({ points }: { points: HistoryPoint[] }) {
   return (
     <figure className="chart">
       <div className="chart-body">
-        {/* Beschriftung als HTML, weil das SVG gestreckt wird und Text darin verzerren würde */}
+        {/* Labels as HTML, because the SVG is stretched and would distort text inside it */}
         <div className="chart-y" aria-hidden>
           {[...ticks].reverse().map((t) => (
             <span key={t}>{formatPower(t)}</span>

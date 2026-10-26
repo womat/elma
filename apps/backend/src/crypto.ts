@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-/** Geräte-Tokens werden nur als SHA-256 gespeichert. */
+/** Device tokens are stored only as SHA-256. */
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }

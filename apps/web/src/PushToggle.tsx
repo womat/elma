@@ -12,9 +12,9 @@ const HINTS: Partial<Record<PushState, string>> = {
 export const NO_BELL_RESERVE_HINT = "Ohne Glocke bekommst du nur die Nachrichten zu deinen Reservierungen.";
 
 /**
- * Push auf diesem Gerät ein-/ausschalten und testen.
- * notifyCount = Anzahl der Geräte mit Glocke (für den Hinweis, wenn keines markiert ist).
- * canReserve: Wer reservieren darf, bekommt die Nachrichten zur Reservierung auch ohne Glocke; die Warnung stimmt dann nicht.
+ * Switch push on/off on this device and test it.
+ * notifyCount = number of appliances with a bell (for the hint when none is marked).
+ * canReserve: whoever may reserve gets the reservation notifications even without a bell; the warning is then wrong.
  */
 export function PushToggle({ notifyCount, canReserve }: { notifyCount: number; canReserve: boolean }) {
   const [state, setState] = useState<PushState | null>(null);

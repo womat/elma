@@ -1,8 +1,8 @@
 /**
- * Liest den Überschuss aus einer JSON-RPC-Nachricht eines Shelly Pro 3EM (Outbound WebSocket).
- * Erwartet NotifyStatus/NotifyFullStatus mit params["em:0"]: total_act_power ist Bezug (+) bzw. Einspeisung (−),
- * daher wird das Vorzeichen gedreht, damit Überschuss positiv ist.
- * Gibt null zurück, wenn die Nachricht keinen Leistungswert enthält.
+ * Reads the surplus from a JSON-RPC message of a Shelly Pro 3EM (outbound WebSocket).
+ * Expects NotifyStatus/NotifyFullStatus with params["em:0"]: total_act_power is import (+) or export (−),
+ * so the sign is flipped to make surplus positive.
+ * Returns null if the message contains no power value.
  */
 export function parseShellyFrame(raw: string): number | null {
   let frame: unknown;
@@ -19,12 +19,12 @@ export function parseShellyFrame(raw: string): number | null {
 
   let power = num(em.total_act_power);
   if (power === null) {
-    // manche Firmware meldet in NotifyStatus nur die geänderten Phasen
+    // some firmware reports only the changed phases in NotifyStatus
     const phases = [em.a_act_power, em.b_act_power, em.c_act_power].map(num);
     if (phases.some((p) => p === null)) return null;
     power = (phases as number[]).reduce((sum, p) => sum + p, 0);
   }
-  return Math.round(-power) || 0; // || 0 vermeidet -0
+  return Math.round(-power) || 0; // || 0 avoids -0
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

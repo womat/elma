@@ -3,14 +3,14 @@ import { connect, type Socket } from "node:net";
 import { isPushHost } from "@elma/shared";
 
 export interface ProxyOptions {
-  /** Baut die Verbindung zum Ziel auf; in Tests ersetzbar. */
+  /** Opens the connection to the target; replaceable in tests. */
   dial?: (host: string, port: number) => Socket;
-  /** Verbindungen ohne Datenverkehr werden nach dieser Zeit getrennt. */
+  /** Connections without traffic are closed after this time. */
   idleMs?: number;
   log?: (msg: string) => void;
 }
 
-/** „host:port“ aus einer CONNECT-Anfrage; IPv6-Adressen und Unsinn ergeben null. */
+/** „host:port“ from a CONNECT request; IPv6 addresses and nonsense yield null. */
 export function parseTarget(authority: string | undefined): { host: string; port: number } | null {
   const m = /^([a-z0-9.-]+):(\d{1,5})$/i.exec(authority ?? "");
   if (!m) return null;
@@ -19,8 +19,8 @@ export function parseTarget(authority: string | undefined): { host: string; port
 }
 
 /**
- * Ausgangs-Proxy für das Backend: lässt nur verschlüsselte Verbindungen (CONNECT auf Port 443) zu den Push-Diensten
- * der Browser durch. Den Inhalt sieht er nicht, TLS bleibt zwischen Backend und Push-Dienst.
+ * Egress proxy for the backend: only lets encrypted connections (CONNECT on port 443) to the browsers' push services
+ * through. It does not see the content; TLS stays between backend and push service.
  */
 export function createPushProxy({ dial = (host, port) => connect({ host, port }), idleMs = 60_000, log = () => {} }: ProxyOptions = {}): Server {
   const server = createServer((_req, res) => {

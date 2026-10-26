@@ -46,7 +46,7 @@ export function Dashboard({ token, me, notice, onMeChange, onSignOut }: Props) {
     try {
       localStorage.setItem(VIEW_KEY, next);
     } catch {
-      // Ansicht wird dann nur nicht gemerkt
+      // then the view is just not remembered
     }
   };
 
@@ -54,7 +54,7 @@ export function Dashboard({ token, me, notice, onMeChange, onSignOut }: Props) {
   const [editing, setEditing] = useState(false);
   const [pushOn, setPushOn] = useState(false);
   const appliances = useMemo(() => resolveAppliances(applianceSettings), [applianceSettings]);
-  // null = noch nicht geladen; [] = Konto noch aus der Passwort-Zeit, Passkey fehlt
+  // null = not loaded yet; [] = account still from the password era, passkey missing
   const [passkeys, setPasskeys] = useState<PasskeyDto[] | null>(null);
   const [account, setAccount] = useState(false);
 
@@ -76,7 +76,7 @@ export function Dashboard({ token, me, notice, onMeChange, onSignOut }: Props) {
   const { readings, reservations, setReservation, status } = useLive(token, initial, initialReservations, onSignOut);
   const canReserveAny = Object.values(reservations).some((r) => r.canReserve);
 
-  // Tick für die Offline-Erkennung (keine neuen Werte mehr)
+  // Tick for offline detection (no new values anymore)
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 10_000);
@@ -90,7 +90,7 @@ export function Dashboard({ token, me, notice, onMeChange, onSignOut }: Props) {
           <img src="/icon.svg" alt="" width={32} height={32} />
           <strong>ELMA</strong>
         </div>
-        {/* Abmelden liegt im Konto-Blatt: selten gebraucht und so nicht aus Versehen angetippt */}
+        {/* Logout lives in the account sheet: rarely needed and so not tapped by accident */}
         <span className={`live ${status}`} role="status">
           <span className="dot" aria-hidden /> {LIVE_LABEL[status]}
         </span>
@@ -161,7 +161,7 @@ export function Dashboard({ token, me, notice, onMeChange, onSignOut }: Props) {
           onSave={saveAppliances}
           onClose={() => {
             setEditing(false);
-            // Push kann im Editor ein- oder ausgeschaltet worden sein
+            // Push may have been switched on or off in the editor
             getPushState().then((s) => setPushOn(s === "on"), () => undefined);
           }}
         />

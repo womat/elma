@@ -1,9 +1,9 @@
-// Stufen, deren Hälfte mit höchstens einer Nachkommastelle darstellbar ist (z. B. 3 kW -> 1,5 kW; nicht 2,5 -> 1,25)
+// Steps whose half can be shown with at most one decimal (e.g. 3 kW -> 1,5 kW; not 2,5 -> 1,25)
 const STEPS = [1, 1.5, 2, 3, 4, 5, 6, 8, 10];
 
 /**
- * Glatte Y-Skala für den Leistungs-Verlauf: rundet den Höchstwert auf eine glatte Stufe × 10ⁿ auf
- * (mindestens 100 W) und liefert die Teilstriche 0, Hälfte und Maximum.
+ * Round Y scale for the power history: rounds the maximum up to a round step × 10ⁿ
+ * (at least 100 W) and returns the ticks 0, half and maximum.
  */
 export function niceScale(maxWatts: number): { max: number; ticks: number[] } {
   const value = Math.max(100, maxWatts);

@@ -15,8 +15,8 @@ const client = mqtt.connect(config.mqttUrl, {
   reconnectPeriod: 5000,
 });
 
-// Reservierung (ELISA-Modus) retained für MAGGIE, nur zur Anzeige. Node-RED liest das Topic bewusst nicht, eine gefälschte
-// Nachricht auf dem offenen Broker ändert also höchstens die Ampel. Ist MQTT gerade weg, puffert mqtt.js die Nachricht.
+// Reservation (ELISA mode) retained for MAGGIE, display only. Node-RED deliberately does not read the topic, so
+// a forged message on the open broker changes at most the traffic light. If MQTT is down, mqtt.js buffers the message.
 const backend = new BackendLink(`${config.backendUrl.replace(/\/$/, "")}/ingest`, config.deviceToken, (msg) => {
   const payload = reservationPayload(msg);
   console.log(`[mqtt] ${config.reservationTopic}: ${payload}`);
@@ -38,7 +38,7 @@ client.on("offline", () => console.warn("[mqtt] offline, versuche erneut ..."));
 
 client.on("message", (topic, message) => {
   const payload = message.toString();
-  // Akkuwerte ungedrosselt: Sie kommen selten und gehen erst mit dem nächsten Überschusswert an die App.
+  // Battery values unthrottled: they come rarely and only reach the app with the next surplus value.
   if (topic === config.batteryTopic) {
     const battery = parseBattery(payload, Date.now());
     if (battery) backend.send({ type: "battery", battery });

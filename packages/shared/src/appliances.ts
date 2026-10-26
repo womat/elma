@@ -2,14 +2,14 @@ import type { ApplianceSettings } from "./index.ts";
 
 export interface Appliance {
   id: string;
-  /** Lucide-Icon-Name (z. B. "washing-machine"); ältere eigene Geräte können noch ein Emoji enthalten */
+  /** Lucide icon name (e.g. "washing-machine"); older custom appliances may still contain an emoji */
   icon: string;
   name: string;
-  /** typische Leistung im Betrieb in Watt (Richtwerte) */
+  /** typical power while running, in watts (rough values) */
   watts: number;
 }
 
-/** Standard-Katalog mit Alltagsgeräten – aufsteigend nach Leistung sortiert. */
+/** Default catalog of everyday appliances, sorted by power ascending. */
 export const CATALOG: Appliance[] = [
   { id: "phone", icon: "smartphone", name: "Handy laden", watts: 15 },
   { id: "radio", icon: "radio", name: "Radio", watts: 20 },
@@ -34,26 +34,26 @@ export const CATALOG: Appliance[] = [
   { id: "car", icon: "ev-charger", name: "E-Auto laden", watts: 3700 },
 ].sort((a, b) => a.watts - b.watts);
 
-/** Vorauswahl, solange ein User noch nichts eingestellt hat. */
+/** Preselection as long as a user has not configured anything yet. */
 export const DEFAULT_SELECTED = ["phone", "radio", "tv", "laptop", "washer", "microwave", "coffee", "iron", "stove", "kettle"];
 
 export function defaultSettings(): ApplianceSettings {
   return { selected: DEFAULT_SELECTED, custom: [], notify: [] };
 }
 
-/** Die Geräte, die ein User sehen will: ausgewählte Katalog-Geräte plus eigene, nach Leistung sortiert. */
+/** The appliances a user wants to see: selected catalog appliances plus custom ones, sorted by power. */
 export function resolveAppliances(settings: ApplianceSettings): Appliance[] {
   const selected = new Set(settings.selected);
   return [...CATALOG.filter((a) => selected.has(a.id)), ...settings.custom].sort((a, b) => a.watts - b.watts);
 }
 
-/** Die Geräte, für die ein User benachrichtigt werden will (nur solche, die er auch ausgewählt hat). */
+/** The appliances a user wants to be notified about (only those they have also selected). */
 export function notifyAppliances(settings: ApplianceSettings): Appliance[] {
   const notify = new Set(settings.notify);
   return resolveAppliances(settings).filter((a) => notify.has(a.id));
 }
 
-/** Das stärkste Gerät, das mit dem Überschuss betrieben werden kann. */
+/** The most powerful appliance that can run on the surplus. */
 export function biggestFitting(watts: number, appliances: Appliance[]): Appliance | null {
   return appliances.findLast((a) => a.watts <= watts) ?? null;
 }

@@ -4,16 +4,16 @@ import { api, type AuthResponse } from "./api.ts";
 
 export const passkeysSupported = browserSupportsWebAuthn();
 
-/** Fehler, der beim User als Hinweis statt als roter Fehler erscheint (z. B. Abbruch). */
+/** Error shown to the user as a hint instead of a red error (e.g. cancellation). */
 export class PasskeyCancelled extends Error {}
 
-/** Übersetzt Browser-Fehler in verständliche Meldungen. */
+/** Translates browser errors into understandable messages. */
 function explain(err: unknown): Error {
   if (err instanceof WebAuthnError) {
     if (err.code === "ERROR_CEREMONY_ABORTED") return new PasskeyCancelled("Abgebrochen");
     if (err.code === "ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED") return new Error("Auf diesem Gerät gibt es schon einen Passkey für dich");
   }
-  // NotAllowedError: abgebrochen, Zeit abgelaufen oder kein passender Passkey ausgewählt
+  // NotAllowedError: cancelled, timed out or no matching passkey selected
   if (err instanceof Error && (err.name === "NotAllowedError" || err.name === "AbortError")) {
     return new PasskeyCancelled("Abgebrochen oder kein Passkey ausgewählt");
   }
@@ -35,7 +35,7 @@ export function signInWithPasskey(): Promise<AuthResponse> {
   });
 }
 
-/** Neues Konto per Einladung oder neuer Passkey per Einrichtungslink. */
+/** New account via invite or new passkey via setup link. */
 export function registerPasskey(start: PasskeyRegisterStart): Promise<AuthResponse> {
   return withDevice(async () => {
     const { challengeId, options } = await api.passkeyRegisterOptions(start);
@@ -43,7 +43,7 @@ export function registerPasskey(start: PasskeyRegisterStart): Promise<AuthRespon
   });
 }
 
-/** Weiteren Passkey für das angemeldete Konto anlegen. */
+/** Create another passkey for the logged-in account. */
 export function addPasskey(): Promise<PasskeyDto[]> {
   return withDevice(async () => {
     const { challengeId, options } = await api.addPasskeyOptions();

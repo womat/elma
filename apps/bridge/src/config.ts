@@ -10,9 +10,9 @@ export interface BridgeConfig {
   deviceToken: string;
   minIntervalMs: number;
   deltaWatts: number;
-  /** retained Topic mit der Reservierung (ELISA-Modus) für MAGGIE */
+  /** retained topic with the reservation (ELISA mode) for MAGGIE */
   reservationTopic: string;
-  /** Topic mit dem Akku-Telegramm von ecoflowd; leer = kein Akku-Hinweis in der App */
+  /** topic with the battery telegram from ecoflowd; empty = no battery hint in the app */
   batteryTopic?: string;
 }
 
@@ -22,7 +22,7 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
   return value;
 }
 
-/** Leer heißt Standard. Unsinn bricht ab: Mit NaN liefe die Drossel still weiter und sendete nur noch bei Sprüngen. */
+/** Empty means default. Nonsense aborts: with NaN the throttle would silently keep running and only send on jumps. */
 function count(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
   const raw = env[name]?.trim();
   if (!raw) return fallback;

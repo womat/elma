@@ -1,6 +1,6 @@
 import { IngestServerMessage } from "@elma/shared";
 
-/** Liest eine Nachricht des Backends; null, wenn sie kein gültiges JSON oder unbekannt ist. */
+/** Reads a message from the backend; null if it is not valid JSON or unknown. */
 export function parseServerMessage(raw: string): IngestServerMessage | null {
   let json: unknown;
   try {
@@ -15,8 +15,9 @@ export function parseServerMessage(raw: string): IngestServerMessage | null {
 type ReservationMessage = Extract<IngestServerMessage, { type: "reservation" }>;
 
 /**
- * Payload für das retained Topic, das MAGGIE liest: `{"active":true,"until":<Unix-ms>,"by":"Elisa"}` bzw. `{"active":false}`.
- * MAGGIE prüft `until` selbst, eine liegengebliebene Nachricht (Bridge oder Backend weg) wirkt also nicht ewig.
+ * Payload for the retained topic that MAGGIE reads: `{"active":true,"until":<Unix-ms>,"by":"Elisa"}`
+ * or `{"active":false}`. MAGGIE checks `until` itself, so a leftover message
+ * (bridge or backend gone) does not stay in effect forever.
  */
 export function reservationPayload(msg: ReservationMessage): string {
   if (msg.until === null) return JSON.stringify({ active: false });

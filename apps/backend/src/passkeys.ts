@@ -7,7 +7,7 @@ import type { Repo, UserRow } from "./repo.ts";
 import { verifyAuthenticationResponse, verifyRegistrationResponse } from "./webauthn.ts";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
-/** Obergrenze, damit eine Flut von Anfragen den Speicher nicht füllen kann. */
+/** Upper limit so a flood of requests cannot fill memory. */
 const MAX_OPEN_CHALLENGES = 1000;
 
 type Pending =
@@ -16,7 +16,7 @@ type Pending =
   | { kind: "setup"; setupToken: string; userId: string }
   | { kind: "add"; userId: string };
 
-/** Offene Challenges im Speicher: kurzlebig, nur einmal verwendbar und in der Anzahl begrenzt. */
+/** Open challenges in memory: short-lived, single-use and limited in number. */
 export class ChallengeStore {
   private readonly items = new Map<string, Pending & { challenge: string; expiresAt: number }>();
   private readonly max: number;
@@ -30,10 +30,10 @@ export class ChallengeStore {
   }
 
   add(challenge: string, pending: Pending, now = Date.now()): string {
-    // Map hält die Einfügereihenfolge, bei gleicher Laufzeit also auch die Ablaufreihenfolge
+    // Map keeps insertion order, so with equal lifetimes also expiry order
     for (const [id, item] of this.items) {
       if (item.expiresAt > now && this.items.size < this.max) break;
-      this.items.delete(id); // abgelaufen, oder bei voller Liste die älteste
+      this.items.delete(id); // expired, or the oldest if the list is full
     }
     const id = newToken();
     this.items.set(id, { ...pending, challenge, expiresAt: now + CHALLENGE_TTL_MS });
@@ -47,7 +47,7 @@ export class ChallengeStore {
   }
 }
 
-/** Grober Gerätename für die Passkey-Liste, z. B. „iPhone“. */
+/** Rough device name for the passkey list, e.g. „iPhone“. */
 export function deviceName(userAgent: string | undefined): string {
   const ua = userAgent ?? "";
   if (/iPhone/.test(ua)) return "iPhone";
@@ -61,17 +61,17 @@ export function deviceName(userAgent: string | undefined): string {
 
 interface Options {
   repo: Repo;
-  /** Öffentliche Adresse, z. B. https://elma.example.com – daraus ergeben sich RP-ID und erwartete Origin */
+  /** Public address, e.g. https://elma.example.com – RP ID and expected origin are derived from it */
   publicUrl: string;
   authenticate: (req: FastifyRequest, reply: FastifyReply) => Promise<unknown>;
   loginResponse: (user: UserRow) => { token: string; user: MeDto };
   rateLimit: { config: { rateLimit: { max: number; timeWindow: string } } };
 }
 
-/** Anmeldung ausschließlich mit Passkeys (WebAuthn). */
+/** Login exclusively with passkeys (WebAuthn). */
 export function registerPasskeyRoutes(app: FastifyInstance, { repo, publicUrl, authenticate, loginResponse, rateLimit }: Options): void {
   const { hostname: rpID, origin } = new URL(publicUrl);
-  // lokal läuft die App auch über den Vite-Dev-Server
+  // locally the app also runs via the Vite dev server
   const expectedOrigin = rpID === "localhost" ? [origin, "http://localhost:5173"] : origin;
   const challenges = new ChallengeStore();
 
@@ -83,11 +83,11 @@ export function registerPasskeyRoutes(app: FastifyInstance, { repo, publicUrl, a
       userID: new TextEncoder().encode(user.id),
       attestationType: "none",
       excludeCredentials: repo.passkeyDescriptorsOf(user.id) as { id: string; transports?: never[] }[],
-      // auffindbarer Schlüssel: Anmelden ohne E-Mail-Eingabe
+      // discoverable credential: login without entering an email
       authenticatorSelection: { residentKey: "required", userVerification: "preferred" },
     });
 
-  /** Prüft die Antwort des Geräts auf eine Registrierung; null = abgelehnt. */
+  /** Verifies the device's response to a registration; null = rejected. */
   const verifyRegistration = async (req: FastifyRequest, challenge: string, response: unknown) => {
     try {
       const result = await verifyRegistrationResponse({
@@ -118,7 +118,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, { repo, publicUrl, a
       name: deviceName(req.headers["user-agent"]),
     });
 
-  // ---------- Anmelden ----------
+  // ---------- Login ----------
 
   app.post("/api/auth/passkey/login/options", rateLimit, async () => {
     const options = await generateAuthenticationOptions({ rpID, userVerification: "preferred" });
@@ -153,7 +153,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, { repo, publicUrl, a
     return loginResponse(user);
   });
 
-  // ---------- Neuer Passkey: per Einladung (neues Konto) oder Einrichtungslink ----------
+  // ---------- New passkey: via invite (new account) or setup link ----------
 
   app.post("/api/auth/passkey/register/options", rateLimit, async (req, reply) => {
     const body = PasskeyRegisterStart.safeParse(req.body);
@@ -192,13 +192,13 @@ export function registerPasskeyRoutes(app: FastifyInstance, { repo, publicUrl, a
     if (!credential) return reply.code(400).send({ error: "Passkey konnte nicht angelegt werden" });
 
     if (pending.kind === "invite") {
-      // erneut prüfen: Einladung oder E-Mail könnten inzwischen vergeben sein
+      // check again: invite or email may have been taken in the meantime
       if (!repo.validInvite(pending.inviteCode)) return reply.code(400).send({ error: "Einladung ungültig oder abgelaufen" });
       if (repo.userByEmail(pending.email)) return reply.code(409).send({ error: "Diese E-Mail hat schon ein Konto" });
       const user = repo.createUser(pending.email, pending.userId);
       savePasskey(req, user.id, credential);
       repo.acceptInvite(pending.inviteCode, user.id);
-      // neu lesen: acceptInvite kann den Namen aus der Einladung eingetragen haben
+      // re-read: acceptInvite may have set the name from the invite
       return loginResponse(repo.userById(user.id) ?? user);
     }
 
@@ -210,7 +210,7 @@ export function registerPasskeyRoutes(app: FastifyInstance, { repo, publicUrl, a
     return loginResponse(user);
   });
 
-  // ---------- Eigene Passkeys verwalten ----------
+  // ---------- Manage own passkeys ----------
 
   app.get("/api/me/passkeys", { preHandler: authenticate }, async (req) => repo.passkeysOf(req.user.sub));
 

@@ -69,12 +69,12 @@ import {
 
 interface IconInfo {
   Icon: LucideIcon;
-  /** deutscher Name, für Tooltip und Screenreader */
+  /** German name, for tooltip and screen reader */
   label: string;
 }
 
-/** Gruppen für die Icon-Auswahl im Editor; die Schlüssel sind Lucide-Namen und werden so gespeichert. */
-/** Farbton einer Gerätegruppe; die Farben stehen als --tone-* in styles.css. */
+/** Groups for the icon picker in the editor; the keys are Lucide names and are stored as such. */
+/** Color tone of an appliance group; the colors are defined as --tone-* in styles.css. */
 export type Tone = "kitchen" | "home" | "climate" | "media" | "garden" | "energy" | "neutral";
 
 export const ICON_GROUPS: { title: string; tone: Tone; icons: string[] }[] = [
@@ -153,7 +153,7 @@ export const ICONS: Record<string, IconInfo> = {
   "power": { Icon: Power, label: "Gerät" },
   house: { Icon: House, label: "Haus" },
 };
-/** Früher gespeicherte Emojis eigener Geräte -> passendes Icon (keine DB-Migration nötig). */
+/** Emojis formerly stored for custom appliances -> matching icon (no DB migration needed). */
 export const LEGACY_EMOJI: Record<string, string> = {
   "🔌": "plug",
   "🏊": "waves-ladder",
@@ -173,7 +173,7 @@ export const LEGACY_EMOJI: Record<string, string> = {
   "🔋": "battery-charging",
 };
 
-/** Lucide-Name zu einem gespeicherten Icon-Wert, oder null, wenn er weder ein Icon noch ein bekanntes altes Emoji ist. */
+/** Lucide name for a stored icon value, or null if it is neither an icon nor a known old emoji. */
 export function resolveIcon(icon: string): string | null {
   if (ICONS[icon]) return icon;
   return LEGACY_EMOJI[icon] ?? null;
@@ -188,7 +188,7 @@ const TONE_BY_ICON: Record<string, Tone> = Object.fromEntries(
   ICON_GROUPS.flatMap((g) => g.icons.map((i) => [i, g.tone])),
 );
 
-/** Farbton zu einem gespeicherten Icon-Wert (Gruppe des Icons), sonst "neutral". */
+/** Color tone for a stored icon value (the icon's group), otherwise "neutral". */
 export function iconTone(icon: string): Tone {
   const name = resolveIcon(icon);
   return (name && TONE_BY_ICON[name]) || "neutral";
@@ -196,13 +196,13 @@ export function iconTone(icon: string): Tone {
 
 interface ApplianceIconProps {
   icon: string;
-  /** Durchmesser des Farbkreises in px */
+  /** diameter of the color circle in px */
   size?: number;
-  /** grau statt Gruppenfarbe, z. B. wenn das Gerät gerade nicht geht */
+  /** grey instead of the group color, e.g. when the appliance cannot run right now */
   muted?: boolean;
 }
 
-/** Weißes Geräte-Icon auf einem Kreis in der Farbe seiner Gruppe; unbekannte Werte (z. B. ein Emoji) im neutralen Kreis. */
+/** White appliance icon on a circle in its group's color; unknown values (e.g. an emoji) in a neutral circle. */
 export function ApplianceIcon({ icon, size = 24, muted = false }: ApplianceIconProps) {
   const name = resolveIcon(icon);
   const tone = muted ? "muted" : iconTone(icon);

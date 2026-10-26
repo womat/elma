@@ -5,19 +5,19 @@ import { ApplianceIcon } from "./icons.tsx";
 import { NO_BELL_RESERVE_HINT } from "./PushToggle.tsx";
 
 interface Props {
-  /** aktueller Überschuss in Watt, null = keine aktuellen Daten */
+  /** current surplus in watts, null = no current data */
   watts: number | null;
   appliances: Appliance[];
-  /** IDs der Geräte mit Push-Nachricht */
+  /** IDs of the appliances with push notification */
   notify: string[];
-  /** Push ist auf diesem Gerät aktiv */
+  /** push is active on this device */
   pushOn: boolean;
-  /** darf reservieren: ohne Glocke kein Warnhinweis, sondern ein ruhiger (docs/elisa.md) */
+  /** may reserve: without a bell no warning, but a calm hint (docs/elisa.md) */
   canReserve: boolean;
   onEdit: () => void;
 }
 
-/** Zeigt anhand der eigenen Geräte, was mit dem Überschuss gerade betrieben werden kann. */
+/** Shows, based on the user's own appliances, what can be run on the surplus right now. */
 export function ApplianceGrid({ watts, appliances, notify, pushOn, canReserve, onEdit }: Props) {
   const surplus = Math.max(0, watts ?? 0);
   const fitting = appliances.filter((a) => a.watts <= surplus).length;

@@ -12,9 +12,9 @@ interface Props {
 const date = (t: number) => new Date(t).toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 /**
- * Vollbild-Blatt zum Einladen, geöffnet über das Personen-Symbol am Erzeuger.
- * Früher stand das Formular unten in jeder Erzeuger-Karte; dort nahm es bei jedem Blick Platz weg,
- * obwohl man nur selten jemanden einlädt.
+ * Full-screen sheet for inviting, opened via the person icon on the producer.
+ * The form used to sit at the bottom of every producer card; there it took up space at every glance,
+ * although one rarely invites anyone.
  */
 export function InviteSheet({ producerId, producerName, onClose }: Props) {
   const [name, setName] = useState("");
@@ -37,7 +37,7 @@ export function InviteSheet({ producerId, producerName, onClose }: Props) {
     }
   };
 
-  // Das Teilen-Fenster öffnet sich erst auf Tippen, nicht schon beim Erstellen: So sieht man vorher, dass der Link da ist
+  // The share dialog opens only on tap, not on creation: that way one sees first that the link is there
   const share = () => {
     if (!invite) return;
     navigator.share({ title: "ELMA Einladung", text: "Sieh dir meinen Stromüberschuss an:", url: invite.url }).catch(() => undefined);
@@ -124,7 +124,7 @@ export function InviteSheet({ producerId, producerName, onClose }: Props) {
   );
 }
 
-/** Wer den Erzeuger schon sieht, mit dem Schalter für das Recht zum Reservieren (ELISA-Modus). */
+/** Who already sees the producer, with the switch for the right to reserve (ELISA mode). */
 function RecipientList({ producerId }: { producerId: string }) {
   const [recipients, setRecipients] = useState<RecipientDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);

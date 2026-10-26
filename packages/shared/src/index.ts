@@ -1,32 +1,32 @@
 import { z } from "zod";
 import { isPushHost } from "./push.ts";
 
-/** Ein normalisierter Messwert: aktueller Überschuss eines Erzeugers in Watt (>= 0 heißt Überschuss). */
+/** A normalized reading: current surplus of a producer in watts (>= 0 means surplus). */
 export const SurplusReading = z.object({
   watts: z.number().finite(),
-  timestamp: z.number().int().positive(), // Unix-Millisekunden
+  timestamp: z.number().int().positive(), // Unix milliseconds
 });
 export type SurplusReading = z.infer<typeof SurplusReading>;
 
-/** Zustand des Hausakkus beim Erzeuger (bei uns aus `myhome/ecoflow/state`), nur zur Anzeige. */
+/** State of the producer's home battery (in our setup from `myhome/ecoflow/state`), display only. */
 export const BatteryReading = z.object({
-  watts: z.number().finite(), // positiv = lädt
-  soc: z.number().min(0).max(100), // Ladestand in %
-  timestamp: z.number().int().positive(), // Messzeit, Unix-Millisekunden
+  watts: z.number().finite(), // positive = charging
+  soc: z.number().min(0).max(100), // state of charge in %
+  timestamp: z.number().int().positive(), // measurement time, Unix milliseconds
 });
 export type BatteryReading = z.infer<typeof BatteryReading>;
 
 /**
- * Verteilter Live-Wert: der geglättete Überschuss, dazu, ob er in diesem Fenster stabil war, und der letzte Akkuwert.
- * `stable` fehlt, wenn es keine Ampel gibt (kein Überschuss, zu wenig Daten, Glättung aus); `battery`, wenn kein
- * aktueller Akkuwert da ist.
+ * Distributed live value: the smoothed surplus, whether it was stable within this window, and the latest battery value.
+ * `stable` is missing when there is no stability indicator (no surplus, too little data, smoothing off); `battery` when
+ * there is no current battery value.
  */
 export interface LiveReading extends SurplusReading {
   stable?: boolean;
   battery?: BatteryReading;
 }
 
-/** Nachrichten Bridge -> Backend über WS /ingest */
+/** Messages bridge -> backend over WS /ingest */
 export const IngestMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("reading"), reading: SurplusReading }),
   z.object({ type: z.literal("battery"), battery: BatteryReading }),
@@ -34,123 +34,123 @@ export const IngestMessage = z.discriminatedUnion("type", [
 export type IngestMessage = z.infer<typeof IngestMessage>;
 
 /**
- * Nachrichten Backend -> Bridge über WS /ingest. Die Reservierung (ELISA-Modus) kommt beim Verbinden und bei jeder Änderung;
- * die Bridge gibt sie nur an MAGGIE weiter (retained MQTT), geschaltet wird damit nichts (docs/elisa.md).
+ * Messages backend -> bridge over WS /ingest. The reservation (ELISA mode) comes on connect and on every change;
+ * the bridge only passes it on to MAGGIE (retained MQTT), nothing is switched by it (docs/elisa.md).
  */
 export const IngestServerMessage = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("reservation"),
-    /** Ende der laufenden Reservierung (Unix-ms, Uhr des Backends), null = nichts reserviert */
+    /** End of the running reservation (Unix ms, backend clock), null = nothing reserved */
     until: z.number().int().positive().nullable(),
-    /** Anzeigename des Reservierenden */
+    /** Display name of the person reserving */
     by: z.string().optional(),
   }),
   z.object({ type: z.literal("error"), message: z.string() }),
 ]);
 export type IngestServerMessage = z.infer<typeof IngestServerMessage>;
 
-/** Nachrichten App -> Backend über WS /live */
+/** Messages app -> backend over WS /live */
 export const LiveClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("auth"), token: z.string().min(1) }),
 ]);
 export type LiveClientMessage = z.infer<typeof LiveClientMessage>;
 
-/** Nachrichten Backend -> App über WS /live */
+/** Messages backend -> app over WS /live */
 export type LiveServerMessage =
   | { type: "ready"; producerIds: string[] }
   | { type: "reading"; producerId: string; reading: LiveReading }
-  /** Reservierung (ELISA-Modus), aus Sicht des jeweiligen Users; kommt nach ready und bei jeder Änderung */
+  /** Reservation (ELISA mode), from the respective user's point of view; comes after ready and on every change */
   | { type: "reservation"; producerId: string; state: ReservationStateDto }
   | { type: "error"; message: string };
 
 export interface ProducerDto {
   id: string;
   name: string;
-  /** Name des Erzeugers für Texte wie „Wolfgang bekommt nur eine Info“ (siehe {@link displayNameOf}) */
+  /** Producer's name for texts like „Wolfgang bekommt nur eine Info“ (see {@link displayNameOf}) */
   ownerName: string;
   isOwner: boolean;
   current: LiveReading | null;
   reservation: ReservationStateDto;
 }
 
-// ---------- Reservierung (ELISA-Modus, docs/elisa.md) ----------
+// ---------- Reservation (ELISA mode, docs/elisa.md) ----------
 
-/** So viele Minuten darf ein Empfänger pro Tag (Europe/Vienna) und Erzeuger reservieren, beliebig aufgeteilt. */
+/** Minutes a recipient may reserve per day (Europe/Vienna) and producer, split up as they like. */
 export const RESERVATION_DAILY_MINUTES = 60;
-/** Dauer-Chips im Blatt „Strom reservieren“ */
+/** Duration chips in the „Strom reservieren“ sheet */
 export const RESERVATION_DURATIONS = [15, 30, 45, 60] as const;
 /**
- * So lange vor einer geplanten Reservierung hält Node-RED die Wärmepumpe schon zurück, damit sie zum Start nicht gerade
- * läuft. Die Wallbox braucht keinen Vorlauf. Begründung: docs/elisa.md, „Vorreservieren“.
+ * How long before a planned reservation Node-RED already holds back the heat pump, so that it is not running right at
+ * the start. The wallbox needs no lead time. Rationale: docs/elisa.md, „Vorreservieren“.
  */
 export const HEATPUMP_LEAD_MINUTES = 60;
 
-/** Eine laufende Reservierung. */
+/** A running reservation. */
 export interface ReservationDto {
   producerId: string;
-  /** Anzeigename des Reservierenden, nie die E-Mail */
+  /** Display name of the person reserving, never the email */
   userName: string;
   startsAt: number;
   endsAt: number;
-  /** true = der angemeldete User hat selbst reserviert */
+  /** true = the signed-in user made the reservation */
   mine: boolean;
 }
 
-/** Warum gerade nicht reserviert werden kann: Was läuft, ist im angezeigten Überschuss schon abgezogen. */
+/** Why reserving is not possible right now: whatever is running is already subtracted from the shown surplus. */
 export type BlockedReason = "heatpump" | "wallbox";
 
-/** Text zur Sperre, als Fehlermeldung des Backends und als Hinweis in der App */
+/** Text for the block, as the backend's error message and as a hint in the app */
 export const BLOCKED_TEXT: Record<BlockedReason, string> = {
   heatpump: "Gerade nicht möglich: Wärmepumpe läuft",
   wallbox: "Gerade nicht möglich: das Auto lädt",
 };
 
-/** Stand der Reservierung eines Erzeugers aus Sicht eines Users. */
+/** A producer's reservation state from a user's point of view. */
 export interface ReservationStateDto {
   active: ReservationDto | null;
-  /** für später heute geplant (höchstens eine pro Erzeuger); zählt schon mit ihrer ganzen Dauer zum Budget */
+  /** planned for later today (at most one per producer); already counts against the budget with its full duration */
   planned: ReservationDto | null;
-  /** der User darf bei diesem Erzeuger reservieren (Recht pro Freigabe) */
+  /** the user may reserve with this producer (permission per share) */
   canReserve: boolean;
-  /** heute noch frei; eine laufende Reservierung zählt mit ihrer ganzen geplanten Dauer */
+  /** still free today; a running reservation counts with its full planned duration */
   minutesLeft: number;
-  /** Node-RED hat sich in den letzten 60 s gemeldet; sonst wirkt die Sperre nicht */
+  /** Node-RED has reported within the last 60 s; otherwise the block has no effect */
   controlConnected: boolean;
   blockedReason: BlockedReason | null;
 }
 
-/** Reservierung anfordern */
+/** Request a reservation */
 export const ReservationBody = z.object({
   minutes: z.number().int("Ganze Minuten angeben").min(1, "Mindestens 1 Minute").max(RESERVATION_DAILY_MINUTES, `Höchstens ${RESERVATION_DAILY_MINUTES} Minuten`),
-  /** Beginn (Unix-ms) einer geplanten Reservierung, nur heute; fehlt er, beginnt sie sofort */
+  /** Start (Unix ms) of a planned reservation, today only; if missing, it starts immediately */
   startsAt: z.number().int("Ungültiger Beginn").optional(),
 });
 export type ReservationBody = z.infer<typeof ReservationBody>;
 
-/** Gerätezustand, den Node-RED alle 15 s an POST /api/control/status schickt. */
+/** Device state that Node-RED sends to POST /api/control/status every 15 s. */
 export const ControlStatus = z.object({
   compressorRunning: z.boolean(),
-  /** jede Ladung: von Hand, per Preis-Freigabe oder per Abfahrtsplanung */
+  /** any charging: manual, by price release or by departure planning */
   wallboxCharging: z.boolean(),
-  /** Handbedienung aktiv; nur zur Information, ELMA entscheidet nicht danach */
+  /** manual control active; informational only, ELMA does not decide based on it */
   wallboxManual: z.boolean().default(false),
 });
 export type ControlStatus = z.infer<typeof ControlStatus>;
 
-/** Antwort an Node-RED: Ist gerade reserviert, und bis wann (Unix-ms, Uhr des Backends)? */
+/** Response to Node-RED: is a reservation running right now, and until when (Unix ms, backend clock)? */
 export interface ControlResponse {
-  /** nur die laufende Reservierung: hält die Wallbox zurück, MAGGIE zeigt sie an */
+  /** only the running reservation: holds back the wallbox, MAGGIE displays it */
   active: boolean;
   until: number | null;
   by?: string;
   /**
-   * Bis wann die Wärmepumpe zurückgehalten wird: während einer laufenden Reservierung und schon HEATPUMP_LEAD_MINUTES vor
-   * einer geplanten, jeweils bis zu deren Ende. Einen laufenden Kompressor stoppt Node-RED erst nach 60 min Laufzeit.
+   * Until when the heat pump is held back: during a running reservation and already HEATPUMP_LEAD_MINUTES before
+   * a planned one, in each case until its end. Node-RED stops a running compressor only after 60 min of runtime.
    */
   heatpumpUntil: number | null;
 }
 
-/** Empfänger eines Erzeugers, für die Liste im Blatt „Einladen“ (nur der Erzeuger sieht sie). */
+/** Recipients of a producer, for the list in the „Einladen“ sheet (only the producer sees it). */
 export interface RecipientDto {
   userId: string;
   name: string;
@@ -161,36 +161,36 @@ export interface RecipientDto {
 export const CanReserveBody = z.object({ canReserve: z.boolean() });
 
 export interface HistoryPoint {
-  /** Minutenbeginn, Unix-Millisekunden */
+  /** Start of the minute, Unix milliseconds */
   t: number;
-  /** Mittelwert der Minute in Watt */
+  /** Mean of the minute in watts */
   watts: number;
 }
 
 export interface MeDto {
   id: string;
   email: string;
-  /** selbst gewählter Name; null = nicht gesetzt, angezeigt wird dann {@link displayNameOf} */
+  /** self-chosen name; null = not set, {@link displayNameOf} is shown instead */
   displayName: string | null;
 }
 
-/** Anzeigename im Konto, z. B. „Elisa“: 1–40 Zeichen, getrimmt. */
+/** Display name in the account, e.g. „Elisa“: 1–40 characters, trimmed. */
 const DisplayName = z.string().trim().min(1, "Name darf nicht leer sein").max(40, "Name darf höchstens 40 Zeichen haben");
 
-/** Anzeigename ändern; null löscht ihn. */
+/** Change the display name; null clears it. */
 export const DisplayNameBody = z.object({ displayName: DisplayName.nullable() });
 export type DisplayNameBody = z.infer<typeof DisplayNameBody>;
 
-/** Einladung erstellen; der Name wird beim Einlösen ins Konto übernommen, wenn dort noch keiner steht. */
+/** Create an invite; on redemption the name is copied into the account if none is set there yet. */
 export const InviteBody = z.object({ displayName: DisplayName.optional() });
 export type InviteBody = z.infer<typeof InviteBody>;
 
-/** Name für Banner und Push: der gewählte Anzeigename, sonst der Teil der E-Mail vor dem @ – nie die ganze Adresse. */
+/** Name for banner and push: the chosen display name, else the email part before the @, never the full address. */
 export function displayNameOf(user: { displayName: string | null; email: string }): string {
   return user.displayName ?? user.email.split("@")[0]!;
 }
 
-/** Ein Passkey des angemeldeten Users (ohne Schlüsselmaterial). */
+/** A passkey of the signed-in user (without key material). */
 export interface PasskeyDto {
   id: string;
   name: string;
@@ -198,55 +198,55 @@ export interface PasskeyDto {
   lastUsedAt: number | null;
 }
 
-/** Passkey-Registrierung starten: neues Konto per Einladung oder bestehendes Konto per Einrichtungslink. */
+/** Start passkey registration: new account via invite or existing account via setup link. */
 export const PasskeyRegisterStart = z.union([
   z.object({ inviteCode: z.string().min(1).max(100), email: z.string().trim().toLowerCase().email("Bitte eine gültige E-Mail angeben") }),
   z.object({ setupToken: z.string().min(1).max(100) }),
 ]);
 export type PasskeyRegisterStart = z.infer<typeof PasskeyRegisterStart>;
 
-/** Antwort des Browsers auf eine Challenge; den Inhalt prüft die WebAuthn-Bibliothek. */
+/** The browser's response to a challenge; the WebAuthn library checks the content. */
 export const PasskeyFinish = z.object({
   challengeId: z.string().min(1).max(100),
   response: z.looseObject({ id: z.string().min(1).max(1000) }),
 });
 export type PasskeyFinish = z.infer<typeof PasskeyFinish>;
 
-/** Ab dieser Leistung gilt es als "etwas Überschuss" (Ampel gelb, Balken "ein wenig"). */
+/** From this power on it counts as "some surplus" (traffic light yellow, bar "ein wenig"). */
 export const LEVEL_SOME_WATTS = 50;
-/** Ab dieser Leistung gilt es als "viel Überschuss" (Ampel grün, Balken "viel"). */
+/** From this power on it counts as "lots of surplus" (traffic light green, bar "viel"). */
 export const LEVEL_LOTS_WATTS = 1000;
 
-/** Nach so vielen Millisekunden ohne neuen Wert gilt ein Erzeuger als "offline". */
+/** After this many milliseconds without a new value a producer counts as "offline". */
 export const STALE_AFTER_MS = 60_000;
 
 /**
- * Stabilitätsampel (Wolfgang, 23.10.2026): "stabil", wenn der Rohwert im Glättungsfenster mindestens
- * STABLE_TIME_SHARE der Zeit bei wenigstens STABLE_LEVEL_RATIO des angezeigten Mittelwerts lag. Ein Mittelwert allein
- * zeigt bei 0 ↔ 4 kW "2 kW" an, und genau darauf verlässt sich der Empfänger dann. Push gibt es nur bei "stabil".
- * Seit 26.10.2026 muss auch der aktuelle Rohwert bei STABLE_LEVEL_RATIO liegen, und das Fenster muss voll sein
- * (Begründung in `LiveHub.smooth`).
+ * Stability indicator (Wolfgang, 23.10.2026): "stable" if the raw value in the smoothing window was at least
+ * STABLE_LEVEL_RATIO of the displayed mean for at least STABLE_TIME_SHARE of the time. A mean alone
+ * shows "2 kW" for 0 ↔ 4 kW, and that is exactly what the recipient then relies on. Push only when "stable".
+ * Since 26.10.2026 the current raw value must also be at STABLE_LEVEL_RATIO, and the window must be full
+ * (rationale in `LiveHub.smooth`).
  */
 export const STABLE_TIME_SHARE = 0.8;
 export const STABLE_LEVEL_RATIO = 0.7;
 
-/** Ein älterer Akkuwert wird nicht mehr angezeigt: ecoflowd kann einfrieren (myhome, KONZEPT-ECOFLOW.md). */
+/** An older battery value is no longer shown: ecoflowd can freeze (myhome, KONZEPT-ECOFLOW.md). */
 export const BATTERY_STALE_MS = 5 * 60_000;
-/** Ab dieser Ladeleistung steht "Lädt"; kleines Nachladen erklärt keine Schwankung (Wolfgang, 23.10.2026). */
+/** From this charging power on "Lädt" is shown; small top-ups explain no fluctuation (Wolfgang, 23.10.2026). */
 export const BATTERY_CHARGING_WATTS = 200;
-/** Ab diesem Ladestand steht "Akku voll"; der EcoFlow erreicht oben nicht sicher 100 % (Wolfgang, 23.10.2026). */
+/** From this charge level on "Akku voll" is shown; the EcoFlow does not reliably reach 100 % (Wolfgang, 23.10.2026). */
 export const BATTERY_FULL_SOC = 98;
 
-/** Ein selbst angelegtes Gerät des Empfängers. */
+/** A custom appliance created by the recipient. */
 export const CustomAppliance = z.object({
   id: z.string().min(1).max(40),
-  icon: z.string().min(1).max(40), // Lucide-Icon-Name, ältere Einträge: Emoji
+  icon: z.string().min(1).max(40), // Lucide icon name, older entries: emoji
   name: z.string().trim().min(1).max(40),
   watts: z.number().int().min(1).max(50_000),
 });
 export type CustomAppliance = z.infer<typeof CustomAppliance>;
 
-/** Geräteauswahl eines Users: IDs aus dem Standard-Katalog plus eigene Geräte, dazu die Geräte mit Push-Nachricht. */
+/** A user's appliance selection: IDs from the default catalog plus custom appliances, and those with push messages. */
 export const ApplianceSettings = z.object({
   selected: z.array(z.string().min(1).max(40)).max(100),
   custom: z.array(CustomAppliance).max(50),
@@ -254,15 +254,15 @@ export const ApplianceSettings = z.object({
 });
 export type ApplianceSettings = z.infer<typeof ApplianceSettings>;
 
-/** Web-Push-Abo, wie es der Browser liefert (PushSubscription.toJSON()). */
+/** Web push subscription as the browser delivers it (PushSubscription.toJSON()). */
 export const PushSubscriptionBody = z.object({
-  // nur echte Push-Dienste, sonst könnte man das Backend Anfragen an beliebige Adressen (z. B. im LAN) schicken lassen
+  // only real push services, otherwise one could make the backend send requests to any address (e.g. in the LAN)
   endpoint: z
     .string()
     .url()
     .max(1000)
     .refine((u) => {
-      // läuft auch, wenn url() schon fehlgeschlagen ist; URL.parse kennen ältere iPhones noch nicht
+      // also runs if url() has already failed; older iPhones do not know URL.parse yet
       try {
         const url = new URL(u);
         return url.protocol === "https:" && isPushHost(url.hostname);
@@ -274,7 +274,7 @@ export const PushSubscriptionBody = z.object({
 });
 export type PushSubscriptionBody = z.infer<typeof PushSubscriptionBody>;
 
-/** Inhalt einer Push-Nachricht, den der Service Worker anzeigt. */
+/** Content of a push message that the service worker displays. */
 export interface PushPayload {
   title: string;
   body: string;

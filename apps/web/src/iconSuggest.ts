@@ -1,6 +1,6 @@
 /**
- * Stichwort -> Icon. Reihenfolge zählt: spezifische Begriffe zuerst
- * (z. B. "Poolpumpe" -> Pool statt Pumpe, "Handy laden" -> Handy statt Wallbox).
+ * Keyword -> icon. Order matters: specific terms first
+ * (e.g. "Poolpumpe" -> Pool instead of Pumpe, "Handy laden" -> Handy instead of Wallbox).
  */
 const KEYWORDS: [string[], string][] = [
   [["wärmepumpe", "waermepumpe", "infrarot", "heizlüfter", "heizstab", "heizung", "heiz"], "heater"],
@@ -53,7 +53,7 @@ const KEYWORDS: [string[], string][] = [
   [["lampe", "leuchte", "licht"], "lamp"],
 ];
 
-/** Passendes Icon zum Gerätenamen, oder null, wenn nichts passt. */
+/** Matching icon for the appliance name, or null if nothing matches. */
 export function suggestIcon(name: string): string | null {
   const n = name.toLowerCase();
   if (!n.trim()) return null;
