@@ -99,6 +99,12 @@ export interface ReservationDto {
 /** Warum gerade nicht reserviert werden kann: Was läuft, ist im angezeigten Überschuss schon abgezogen. */
 export type BlockedReason = "heatpump" | "wallbox";
 
+/** Text zur Sperre, als Fehlermeldung des Backends und als Hinweis in der App */
+export const BLOCKED_TEXT: Record<BlockedReason, string> = {
+  heatpump: "Gerade nicht möglich: Wärmepumpe läuft",
+  wallbox: "Gerade nicht möglich: das Auto lädt",
+};
+
 /** Stand der Reservierung eines Erzeugers aus Sicht eines Users. */
 export interface ReservationStateDto {
   active: ReservationDto | null;

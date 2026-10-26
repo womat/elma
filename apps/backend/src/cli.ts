@@ -1,12 +1,6 @@
 /**
- * Verwaltung per Kommandozeile, z. B.:
- *   node src/cli.ts create-user wolfgang@example.com        (gibt einen Link zum Einrichten des Passkeys aus)
- *   node src/cli.ts setup-link wolfgang@example.com         (neuer Einrichtungslink, z. B. wenn das Handy weg ist)
- *   node src/cli.ts set-name wolfgang@example.com Wolfgang  (Anzeigename, den sonst jeder im Konto-Blatt selbst setzt)
- *   node src/cli.ts create-producer "PV Dach" wolfgang@example.com
- *   node src/cli.ts rotate-token <producerId>                 (neues Geräte-Token, z. B. für den Shelly)
- *   node src/cli.ts control-token <producerId>                (Steuer-Token für Node-RED, ELISA-Modus)
- *   node src/cli.ts invite <producerId> Margit                (Name ist optional und landet beim Einlösen im Konto)
+ * Verwaltung per Kommandozeile, z. B. `node src/cli.ts create-user wolfgang@example.com`.
+ * Alle Befehle stehen in usage() unten (Aufruf ohne Argumente).
  */
 import { resolve } from "node:path";
 import { DisplayNameBody, InviteBody } from "@elma/shared";
@@ -124,6 +118,7 @@ switch (command) {
   case "invite": {
     const [producerId, name] = args;
     if (!producerId) usage();
+    if (!repo.producerById(producerId)) throw new Error(`Erzeuger ${producerId} nicht gefunden`);
     const body = InviteBody.safeParse({ displayName: name?.trim() || undefined });
     if (!body.success) throw new Error(body.error.issues[0]?.message ?? "Ungültiger Name");
     const { code } = repo.createInvite(producerId, body.data.displayName ?? null);

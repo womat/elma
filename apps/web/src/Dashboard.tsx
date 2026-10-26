@@ -1,11 +1,18 @@
 import { House, KeyRound, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { displayNameOf, type ApplianceSettings, type MeDto, type PasskeyDto, type ProducerDto } from "@elma/shared";
+import {
+  defaultSettings,
+  displayNameOf,
+  resolveAppliances,
+  type ApplianceSettings,
+  type MeDto,
+  type PasskeyDto,
+  type ProducerDto,
+} from "@elma/shared";
 import { api } from "./api.ts";
 import { useLive, type LiveStatus } from "./useLive.ts";
 import { ProducerCard, type View } from "./ProducerCard.tsx";
 import { ApplianceEditor } from "./ApplianceEditor.tsx";
-import { defaultSettings, resolveAppliances } from "./appliances.ts";
 import { getPushState, syncPushSubscription } from "./push.ts";
 import { Footer } from "./Footer.tsx";
 import { AccountSheet } from "./AccountSheet.tsx";

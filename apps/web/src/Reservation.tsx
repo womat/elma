@@ -1,9 +1,9 @@
 import { CalendarClock, Lock, Pause, Thermometer } from "lucide-react";
 import { useState } from "react";
 import {
+  BLOCKED_TEXT,
   HEATPUMP_LEAD_MINUTES,
   RESERVATION_DAILY_MINUTES,
-  type BlockedReason,
   type ReservationDto,
   type ReservationStateDto,
 } from "@elma/shared";
@@ -12,11 +12,6 @@ import { durationsFor } from "./durations.ts";
 import { formatTime } from "./format.ts";
 
 const MIN = 60_000;
-
-const BLOCKED: Record<BlockedReason, string> = {
-  heatpump: "Gerade nicht möglich: Wärmepumpe läuft",
-  wallbox: "Gerade nicht möglich: das Auto lädt",
-};
 
 /** Hinweis, wenn Node-RED sich nicht meldet: Dann hält im Haus des Erzeugers nichts die Geräte zurück. */
 const noLockHint = (ownerName: string) => `Die Sperre wirkt gerade nicht, ${ownerName} bekommt nur eine Info.`;
@@ -173,7 +168,7 @@ export function ReserveButton({ state, now, onOpen }: { state: ReservationStateD
       </button>
       {state.blockedReason && (
         <span className="reserve-blocked">
-          <Pause size={14} className="ui-icon" aria-hidden /> {BLOCKED[state.blockedReason]}
+          <Pause size={14} className="ui-icon" aria-hidden /> {BLOCKED_TEXT[state.blockedReason]}
         </span>
       )}
       <span className="reserve-left">
@@ -260,7 +255,7 @@ export function ReserveSheet({ producerId, ownerName, state, onDone, onClose }: 
         </div>
         {state.blockedReason && (
           <p className="muted small reserve-info">
-            <Pause size={14} className="ui-icon" aria-hidden /> {BLOCKED[state.blockedReason]}, später geht.
+            <Pause size={14} className="ui-icon" aria-hidden /> {BLOCKED_TEXT[state.blockedReason]}, später geht.
           </p>
         )}
         {later && (

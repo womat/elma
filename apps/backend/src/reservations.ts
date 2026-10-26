@@ -1,4 +1,5 @@
 import {
+  BLOCKED_TEXT,
   displayNameOf,
   HEATPUMP_LEAD_MINUTES,
   RESERVATION_DAILY_MINUTES,
@@ -16,11 +17,6 @@ const MINUTE = 60_000;
 export const TIME_ZONE = "Europe/Vienna";
 /** So lange gilt der letzte Status von Node-RED; danach wirkt die Sperre nicht und es wird nichts mehr abgelehnt. */
 export const CONTROL_STALE_MS = 60_000;
-
-const BLOCKED_TEXT: Record<BlockedReason, string> = {
-  heatpump: "Gerade nicht möglich: Wärmepumpe läuft",
-  wallbox: "Gerade nicht möglich: das Auto lädt",
-};
 
 export interface ReservationNotifier {
   notifyUsers(userIds: string[], payload: PushPayload): Promise<void>;

@@ -1,7 +1,6 @@
 import { Bell, BellOff, Check, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import type { ApplianceSettings, CustomAppliance } from "@elma/shared";
-import { CATALOG } from "./appliances.ts";
+import { CATALOG, resolveAppliances, type ApplianceSettings, type CustomAppliance } from "@elma/shared";
 import { ApplianceIcon, ICON_GROUPS, ICONS } from "./icons.tsx";
 import { suggestIcon } from "./iconSuggest.ts";
 import { formatPower } from "./format.ts";
@@ -38,7 +37,7 @@ export function ApplianceEditor({ initial, canReserve, onSave, onClose }: Props)
   const toggleNotify = (id: string) => setNotify((prev) => flip(prev, id));
 
   // Benachrichtigen kann man nur für Geräte, die auch ausgewählt sind
-  const chosen = [...CATALOG.filter((a) => selected.has(a.id)), ...custom].sort((a, b) => a.watts - b.watts);
+  const chosen = resolveAppliances({ selected: [...selected], custom, notify: [] });
 
   const addCustom = (e: FormEvent) => {
     e.preventDefault();

@@ -68,5 +68,6 @@ export function App() {
     );
   }
   if (!me) return <div className="center muted">Lade …</div>;
+  // Ein neuer Hinweis (z. B. „Einladung angenommen“) baut das Dashboard neu auf, damit es die Erzeuger neu lädt
   return <Dashboard key={notice ?? ""} token={token} me={me} notice={notice} onMeChange={setMe} onSignOut={signOut} />;
 }

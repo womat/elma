@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import {
   BATTERY_CHARGING_WATTS,
   BATTERY_FULL_SOC,
+  biggestFitting,
   LEVEL_LOTS_WATTS,
   LEVEL_SOME_WATTS,
   STALE_AFTER_MS,
+  type Appliance,
   type HistoryPoint,
   type ProducerDto,
   type BatteryReading,
@@ -20,7 +22,6 @@ import { ApplianceTimeline } from "./ApplianceTimeline.tsx";
 import { ApplianceIcon } from "./icons.tsx";
 import { InviteSheet } from "./InviteSheet.tsx";
 import { PlannedNote, ReservationBanner, ReserveButton, ReserveSheet } from "./Reservation.tsx";
-import { biggestFitting, type Appliance } from "./appliances.ts";
 
 export type View = "power" | "appliances";
 

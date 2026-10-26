@@ -1,5 +1,5 @@
 import { Bell, Check, SlidersHorizontal, TriangleAlert } from "lucide-react";
-import type { Appliance } from "./appliances.ts";
+import type { Appliance } from "@elma/shared";
 import { formatPower } from "./format.ts";
 import { ApplianceIcon } from "./icons.tsx";
 import { NO_BELL_RESERVE_HINT } from "./PushToggle.tsx";
