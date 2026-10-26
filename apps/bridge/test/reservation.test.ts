@@ -31,11 +31,24 @@ describe("reservationPayload", () => {
   });
 });
 
+const env = { MQTT_URL: "mqtt://x", MQTT_TOPIC: "t", BACKEND_URL: "ws://b", DEVICE_TOKEN: "d" };
+
 describe("RESERVATION_TOPIC", () => {
-  const env = { MQTT_URL: "mqtt://x", MQTT_TOPIC: "t", BACKEND_URL: "ws://b", DEVICE_TOKEN: "d" };
   it("hat einen Standard, auch wenn die Variable leer ist", () => {
     expect(loadConfig(env).reservationTopic).toBe("elma/reservation");
     expect(loadConfig({ ...env, RESERVATION_TOPIC: "" }).reservationTopic).toBe("elma/reservation");
     expect(loadConfig({ ...env, RESERVATION_TOPIC: "haus2/elma/reservation" }).reservationTopic).toBe("haus2/elma/reservation");
+  });
+});
+
+describe("Zahlen aus der Umgebung", () => {
+  it("bricht bei Unsinn ab, statt mit NaN still nur noch bei Sprüngen zu senden", () => {
+    expect(() => loadConfig({ ...env, MIN_INTERVAL_MS: "abc" })).toThrow(/MIN_INTERVAL_MS/);
+    expect(() => loadConfig({ ...env, DELTA_WATTS: "-5" })).toThrow(/DELTA_WATTS/);
+  });
+
+  it("nimmt gültige Werte und bei leerer Variable den Standard", () => {
+    expect(loadConfig({ ...env, MIN_INTERVAL_MS: "1000", DELTA_WATTS: "20" })).toMatchObject({ minIntervalMs: 1000, deltaWatts: 20 });
+    expect(loadConfig({ ...env, MIN_INTERVAL_MS: "", DELTA_WATTS: " " })).toMatchObject({ minIntervalMs: 5000, deltaWatts: 50 });
   });
 });

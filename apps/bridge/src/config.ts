@@ -22,6 +22,15 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
   return value;
 }
 
+/** Leer heißt Standard. Unsinn bricht ab: Mit NaN liefe die Drossel still weiter und sendete nur noch bei Sprüngen. */
+function count(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
+  const raw = env[name]?.trim();
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) throw new Error(`${name} muss eine Zahl ab 0 sein, ist "${raw}"`);
+  return value;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
   const unit = (env.PAYLOAD_UNIT ?? "W").trim();
   if (unit !== "W" && unit !== "kW") throw new Error(`PAYLOAD_UNIT muss "W" oder "kW" sein, ist "${unit}"`);
@@ -35,8 +44,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): BridgeConfig {
     payloadInvert: env.PAYLOAD_INVERT === "true",
     backendUrl: required(env, "BACKEND_URL"),
     deviceToken: required(env, "DEVICE_TOKEN"),
-    minIntervalMs: Number(env.MIN_INTERVAL_MS ?? 5000),
-    deltaWatts: Number(env.DELTA_WATTS ?? 50),
+    minIntervalMs: count(env, "MIN_INTERVAL_MS", 5000),
+    deltaWatts: count(env, "DELTA_WATTS", 50),
     reservationTopic: env.RESERVATION_TOPIC?.trim() || "elma/reservation",
     batteryTopic: env.BATTERY_TOPIC?.trim() || undefined,
   };

@@ -232,6 +232,15 @@ describe("Rate-Limit", () => {
     expect((await options({ "cf-connecting-ip": "203.0.113.8" })).statusCode).toBe(200);
   });
 
+  it("fasst IPv6-Adressen auf ihr /64 zusammen, sonst hätte jede Adresse eines Anschlusses ihr eigenes Kontingent", async () => {
+    for (let i = 1; i <= 10; i++) {
+      expect((await options({ "cf-connecting-ip": `2001:db8:1:2::${i}` })).statusCode).toBe(200);
+    }
+    expect((await options({ "cf-connecting-ip": "2001:db8:1:2::ff" })).statusCode).toBe(429);
+    // ein anderes /64 zählt für sich
+    expect((await options({ "cf-connecting-ip": "2001:db8:1:3::1" })).statusCode).toBe(200);
+  });
+
   it("clientIp nimmt CF-Connecting-IP nur, wenn es eine gültige Adresse ist", () => {
     const req = (headers: Record<string, string>) => ({ headers, ip: "10.0.0.5" }) as never;
     expect(clientIp(req({ "cf-connecting-ip": "2001:db8::1" }))).toBe("2001:db8::1");

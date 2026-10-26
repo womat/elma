@@ -71,6 +71,28 @@ describe("Einladung und Freigabe", () => {
     expect(invite.json().url).toContain("https://elma.test/?invite=");
   });
 
+  it("wer den Erzeuger schon sieht, verbraucht keine Einladung, auch der Erzeuger selbst nicht", async () => {
+    const { owner, producer } = await setup();
+    repo.createUser("empfaenger@elma.test");
+    const accept = async (code: string, email: string) =>
+      app.inject({ method: "POST", url: `/api/invites/${code}/accept`, headers: { authorization: `Bearer ${await login(email)}` } });
+
+    // der Erzeuger öffnet seinen eigenen Link, z. B. zum Ausprobieren vor dem Weiterschicken
+    const { code } = repo.createInvite(producer.id, "Margit");
+    const own = await accept(code, "erzeuger@elma.test");
+    expect(own.statusCode).toBe(409);
+    expect(own.json().error).toBe("Du siehst diesen Erzeuger schon");
+    expect(repo.recipientsOf(producer.id)).toEqual([]);
+    expect(repo.userById(owner.id)?.displayName).toBeNull();
+    expect(repo.validInvite(code)).toBeDefined();
+
+    // die Einladung geht danach noch an die Person, für die sie gedacht war
+    expect((await accept(code, "empfaenger@elma.test")).statusCode).toBe(200);
+    const second = repo.createInvite(producer.id);
+    expect((await accept(second.code, "empfaenger@elma.test")).statusCode).toBe(409);
+    expect(repo.validInvite(second.code)).toBeDefined();
+  });
+
   it("Anmeldung und Registrierung mit Passwort gibt es nicht mehr", async () => {
     const oldLogin = await app.inject({ method: "POST", url: "/api/auth/login", payload: { email: "a@elma.test", password: "x" } });
     const register = await app.inject({ method: "POST", url: "/api/auth/register", payload: {} });

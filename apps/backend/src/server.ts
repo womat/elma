@@ -10,6 +10,13 @@ if (!jwtSecret || jwtSecret.length < 32) {
   process.exit(1);
 }
 
+// Mit NaN würden in LiveHub nie alte Werte gelöscht (die Liste wüchse unbegrenzt) und die Glättung wäre still aus
+const smoothWindowMs = process.env.SMOOTH_WINDOW_MS ? Number(process.env.SMOOTH_WINDOW_MS) : undefined;
+if (smoothWindowMs !== undefined && !(Number.isFinite(smoothWindowMs) && smoothWindowMs >= 0)) {
+  console.error(`SMOOTH_WINDOW_MS muss eine Zahl ab 0 sein (Millisekunden, 0 = ohne Glättung), ist "${process.env.SMOOTH_WINDOW_MS}"`);
+  process.exit(1);
+}
+
 const db = openDb(process.env.DB_PATH ?? resolve("data/elma.db"));
 const { app, hub, repo } = await buildApp({
   db,
@@ -19,7 +26,7 @@ const { app, hub, repo } = await buildApp({
   logger: true,
   vapidSubject: process.env.VAPID_SUBJECT,
   pushProxy: process.env.PUSH_PROXY || undefined,
-  smoothWindowMs: process.env.SMOOTH_WINDOW_MS ? Number(process.env.SMOOTH_WINDOW_MS) : undefined,
+  smoothWindowMs,
   version: process.env.ELMA_VERSION,
 });
 app.log.info({ version: process.env.ELMA_VERSION ?? "dev" }, "ELMA Backend gestartet");

@@ -3,11 +3,15 @@ import type { LiveServerMessage, ReservationStateDto, LiveReading } from "@elma/
 
 export type LiveStatus = "connecting" | "open" | "closed";
 
-/** Live-Werte und Stand der Reservierungen über WebSocket, mit automatischem Neuverbinden. */
+/**
+ * Live-Werte und Stand der Reservierungen über WebSocket, mit automatischem Neuverbinden.
+ * onUnauthorized: Das Backend lehnt das Token ab (4401, z. B. JWT abgelaufen); Neuverbinden hilft dann nicht.
+ */
 export function useLive(
   token: string,
   initial: Record<string, LiveReading | null>,
   initialReservations: Record<string, ReservationStateDto>,
+  onUnauthorized: () => void,
 ) {
   const [readings, setReadings] = useState<Record<string, LiveReading | null>>(initial);
   const [reservations, setReservations] = useState<Record<string, ReservationStateDto>>(initialReservations);
@@ -42,9 +46,15 @@ export function useLive(
           setReservation(msg.producerId, msg.state);
         }
       };
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         setStatus("closed");
         if (stopped) return;
+        // sonst verbände die App endlos neu und zeigte „Getrennt“, statt zur Anmeldung zu gehen
+        if (event.code === 4401) {
+          stopped = true;
+          onUnauthorized();
+          return;
+        }
         retryTimer = setTimeout(connect, retryMs);
         retryMs = Math.min(retryMs * 2, 30_000);
       };

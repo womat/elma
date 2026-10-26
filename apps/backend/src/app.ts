@@ -1,6 +1,6 @@
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import fastifyJwt from "@fastify/jwt";
-import fastifyRateLimit from "@fastify/rate-limit";
+import fastifyRateLimit, { normalizeIP } from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
 import { existsSync } from "node:fs";
@@ -112,7 +112,9 @@ export async function buildApp(
   });
 
   await app.register(fastifyJwt, { secret: opts.jwtSecret });
-  await app.register(fastifyRateLimit, { global: false, keyGenerator: clientIp });
+  // normalizeIP fasst IPv6 auf das /64 zusammen, wie es das Plugin ohne eigenen keyGenerator tut; ein Anschluss hat
+  // meist ein ganzes /64, sonst bekäme jede seiner Adressen ein eigenes Kontingent
+  await app.register(fastifyRateLimit, { global: false, keyGenerator: (req) => normalizeIP(clientIp(req)) });
   await app.register(fastifyWebsocket);
   app.addHook("onClose", async () => reservations.stop());
 
@@ -240,6 +242,10 @@ export async function buildApp(
   });
 
   app.post<{ Params: { code: string } }>("/api/invites/:code/accept", { preHandler: authenticate }, async (req, reply) => {
+    // Öffnet der Erzeuger seinen eigenen Link (oder ein Empfänger einen zweiten), bliebe die Einladung sonst verbraucht,
+    // und der Erzeuger stünde als Empfänger bei sich selbst, mit dem Namen aus der Einladung
+    const invite = repo.validInvite(req.params.code);
+    if (invite && repo.canView(req.user.sub, invite.producer_id)) return reply.code(409).send({ error: "Du siehst diesen Erzeuger schon" });
     const producerId = repo.acceptInvite(req.params.code, req.user.sub);
     if (!producerId) return reply.code(400).send({ error: "Einladung ungültig oder abgelaufen" });
     return { producerId };

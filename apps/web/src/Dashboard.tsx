@@ -66,7 +66,7 @@ export function Dashboard({ token, me, notice, onMeChange, onSignOut }: Props) {
 
   const initial = useMemo(() => Object.fromEntries((producers ?? []).map((p) => [p.id, p.current])), [producers]);
   const initialReservations = useMemo(() => Object.fromEntries((producers ?? []).map((p) => [p.id, p.reservation])), [producers]);
-  const { readings, reservations, setReservation, status } = useLive(token, initial, initialReservations);
+  const { readings, reservations, setReservation, status } = useLive(token, initial, initialReservations, onSignOut);
   const canReserveAny = Object.values(reservations).some((r) => r.canReserve);
 
   // Tick für die Offline-Erkennung (keine neuen Werte mehr)
