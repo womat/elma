@@ -373,6 +373,11 @@ Konzept, Diagramme und Checkliste stehen in **[docs/hosting.md](docs/hosting.md)
     ohne die Spalte vorher zu leeren.
   - Ist der User Erzeuger, löscht die Kaskade auch seinen Erzeuger mit dem ganzen Verlauf. Das braucht eine Rückfrage oder
     eine Weigerung, solange er noch Erzeuger hat.
+- **Offen aus dem Review vom 26.10.2026:**
+  - Das Abmelden der App, wenn `/live` das Token ablehnt (4401, `apps/web/src/useLive.ts`), hat keinen Test.
+    Die Web-App hat keine Testumgebung für Hooks und Komponenten; ein Test bräuchte jsdom o. Ä. als neue Abhängigkeit.
+  - Der Befehl für den Quick-Tunnel (Abschnitt „Produktiv im Heimnetz“) ist nicht ausprobiert, weil er das Backend
+    öffentlich macht. Offen ist auch, ob das leere `TUNNEL_TOKEN` aus `docker-compose.yml` den Quick-Tunnel stört.
 - Android-App im Play Store über Capacitor (gleicher Code)
 - Mehrere Erzeuger/Empfänger (Energiegemeinschaft); das Datenmodell ist dafür schon vorbereitet
 
