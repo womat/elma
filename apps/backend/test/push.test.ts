@@ -168,6 +168,20 @@ describe("Push-API", () => {
     expect((await app.inject({ method: "POST", url: "/api/push/test", headers })).statusCode).toBe(400);
   });
 
+  it("ein fremdes Abo lässt sich nicht abmelden, auch wenn man den Endpoint kennt", async () => {
+    const built = await buildApp({ db: openDb(":memory:"), jwtSecret: "x".repeat(32), publicUrl: "https://elma.test", pushSender: async () => {} });
+    const { app } = built;
+    const a = built.repo.createUser("a@elma.test");
+    const b = built.repo.createUser("b@elma.test");
+    const headers = (id: string) => ({ authorization: `Bearer ${app.jwt.sign({ sub: id })}` });
+    await app.inject({ method: "POST", url: "/api/push/subscribe", headers: headers(a.id), payload: sub(1) });
+
+    const res = await app.inject({ method: "POST", url: "/api/push/unsubscribe", headers: headers(b.id), payload: { endpoint: sub(1).endpoint } });
+    expect(res.statusCode).toBe(200); // verrät nicht, ob es das Abo gibt
+    expect(built.repo.pushSubscriptions(a.id)).toHaveLength(1);
+    await app.close();
+  });
+
   it("VAPID-Schlüssel bleiben über Neustarts gleich", async () => {
     const db = openDb(":memory:");
     const a = await buildApp({ db, jwtSecret: "x".repeat(32), publicUrl: "https://elma.test" });

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 import type { FastifyInstance } from "fastify";
 import type { LiveServerMessage } from "@elma/shared";
@@ -9,11 +9,12 @@ import type { Repo } from "../src/repo.ts";
 
 let app: FastifyInstance;
 let repo: Repo;
+let hub: LiveHub;
 let baseUrl: string;
 
 beforeEach(async () => {
   // ohne Glättung, damit Live-Werte 1:1 prüfbar sind (Glättung testet hub.test.ts)
-  ({ app, repo } = await buildApp({
+  ({ app, repo, hub } = await buildApp({
     db: openDb(":memory:"),
     jwtSecret: "x".repeat(32),
     publicUrl: "https://elma.test",
@@ -91,6 +92,22 @@ describe("Einladung und Freigabe", () => {
     const second = repo.createInvite(producer.id);
     expect((await accept(second.code, "empfaenger@elma.test")).statusCode).toBe(409);
     expect(repo.validInvite(second.code)).toBeDefined();
+  });
+
+  it("eine Einladung läuft nach 7 Tagen ab", async () => {
+    const { producer } = await setup();
+    repo.createUser("empfaenger@elma.test");
+    const { code } = repo.createInvite(producer.id);
+    const headers = { authorization: `Bearer ${await login("empfaenger@elma.test")}` };
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(Date.now() + 7 * 24 * 60 * 60_000 + 1);
+      const res = await app.inject({ method: "POST", url: `/api/invites/${code}/accept`, headers });
+      expect(res.statusCode).toBe(400);
+      expect(repo.recipientsOf(producer.id)).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("Anmeldung und Registrierung mit Passwort gibt es nicht mehr", async () => {
@@ -201,6 +218,35 @@ describe("Live-Daten", () => {
   it("Live-Verbindung mit ungültigem JWT wird abgewiesen", async () => {
     const { messages } = await openLive("kein.gueltiges.jwt");
     expect(messages[0]).toEqual({ type: "error", message: "Anmeldung fehlgeschlagen" });
+  });
+
+  it("ohne Anmeldung schließt /live nach 10 s mit 4401", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const ws = new WebSocket(`ws://${baseUrl}/live`);
+      const closed = new Promise<number>((r) => ws.once("close", (code) => r(code)));
+      await new Promise((r) => ws.once("open", r));
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(ws.readyState).toBe(WebSocket.OPEN);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(await closed).toBe(4401);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("eine zweite Anmeldung auf derselben Verbindung abonniert nicht noch einmal", async () => {
+    const { producer } = await setup();
+    const live = await openLive(await login("erzeuger@elma.test"));
+    live.ws.send(JSON.stringify({ type: "auth", token: await login("erzeuger@elma.test") }));
+    // ws antwortet auf den Ping erst, nachdem es die Nachricht davor verarbeitet hat
+    await new Promise((r) => { live.ws.once("pong", r); live.ws.ping(); });
+    hub.publish(producer.id, { watts: 500, timestamp: Date.now() });
+    await waitFor(() => live.messages.some((m) => m.type === "reading"));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(live.messages.filter((m) => m.type === "reading")).toHaveLength(1);
+    expect(live.messages.filter((m) => m.type === "ready")).toHaveLength(1);
+    live.ws.close();
   });
 });
 
@@ -372,6 +418,24 @@ describe("ELISA-Modus", () => {
     await waitFor(() => reservationsSeen().length === 3);
     expect(reservationsSeen()[2]).toMatchObject({ state: { active: null } });
     owner.ws.close();
+  });
+
+  it("/live schickt Reservierungen nur zu Erzeugern, die der User sieht", async () => {
+    const { producer, elisa } = await withRecipient();
+    repo.setCanReserve(producer.id, elisa.id, true);
+    const stranger = repo.createUser("fremd@elma.test");
+    repo.createProducer("Nachbar", stranger.id);
+    const owner = await openLive(await login("erzeuger@elma.test"));
+    const other = await openLive(await login("fremd@elma.test"));
+
+    const headers = { authorization: `Bearer ${await login("elisa@elma.test")}` };
+    await app.inject({ method: "POST", url: `/api/producers/${producer.id}/reservation`, headers, payload: { minutes: 15 } });
+    // beide Verbindungen bekommen Änderungen im selben Durchlauf; ist sie beim Erzeuger da, wäre sie es auch beim Fremden
+    await waitFor(() => owner.messages.filter((m) => m.type === "reservation").length === 2);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(other.messages.filter((m) => m.type === "reservation" && m.producerId === producer.id)).toEqual([]);
+    owner.ws.close();
+    other.ws.close();
   });
 
   it("/ingest bekommt den Stand nach dem Verbinden, dann Start und Ende, Node-RED-Status aber nicht", async () => {

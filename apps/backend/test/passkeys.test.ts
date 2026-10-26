@@ -99,6 +99,19 @@ describe("Registrierung per Einladung", () => {
     expect((await registerWithInvite(invite.code, "b@elma.test", "cred-b")).statusCode).toBe(400);
   });
 
+  it("zwei gleichzeitige Registrierungen mit demselben Link legen nur ein Konto an", async () => {
+    const { producer, invite } = ownerWithInvite();
+    // beide holen sich die Optionen, bevor die erste am Gerät bestätigt ist
+    const a = await post("/api/auth/passkey/register/options", { inviteCode: invite.code, email: "a@elma.test" });
+    const b = await post("/api/auth/passkey/register/options", { inviteCode: invite.code, email: "b@elma.test" });
+    deviceRegisters("cred-a");
+    expect((await post("/api/auth/passkey/register/verify", { challengeId: a.json().challengeId, response: { id: "cred-a" } })).statusCode).toBe(200);
+    deviceRegisters("cred-b");
+    expect((await post("/api/auth/passkey/register/verify", { challengeId: b.json().challengeId, response: { id: "cred-b" } })).statusCode).toBe(400);
+    expect(repo.userByEmail("b@elma.test")).toBeUndefined();
+    expect(repo.recipientsOf(producer.id).map((r) => r.email)).toEqual(["a@elma.test"]);
+  });
+
   it("ungültige Einladung, vergebene E-Mail und abgelehnte Prüfung", async () => {
     const { invite } = ownerWithInvite();
     expect((await registerWithInvite("falsch", "x@elma.test", "c")).statusCode).toBe(400);
@@ -136,6 +149,15 @@ describe("Anmeldung", () => {
     vi.mocked(verifyAuthenticationResponse).mockResolvedValueOnce({ verified: false } as never);
     const res = await post("/api/auth/passkey/login/verify", { challengeId: start.json().challengeId, response: { id: "cred-1" } });
     expect(res.statusCode).toBe(401);
+  });
+
+  it("eine Challenge zum Registrieren gilt nicht zum Anmelden", async () => {
+    const { producer, invite } = ownerWithInvite();
+    await registerWithInvite(invite.code, "e@elma.test", "cred-1");
+    const start = await post("/api/auth/passkey/register/options", { inviteCode: repo.createInvite(producer.id).code, email: "neu@elma.test" });
+    deviceSignsIn();
+    const res = await post("/api/auth/passkey/login/verify", { challengeId: start.json().challengeId, response: { id: "cred-1" } });
+    expect(res.statusCode).toBe(400);
   });
 
   it("eine Challenge gilt nur einmal", async () => {

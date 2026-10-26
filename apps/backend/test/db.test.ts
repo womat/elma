@@ -47,3 +47,20 @@ describe("openDb", () => {
     db.close();
   });
 });
+
+describe("touchControlToken", () => {
+  it("schreibt die letzte Nutzung höchstens einmal pro Stunde", () => {
+    const db = openDb(":memory:");
+    const repo = new Repo(db);
+    const { producer } = repo.createProducer("P", repo.createUser("a@elma.test").id);
+    const token = repo.createControlToken(producer.id);
+    const lastUsed = () => (db.prepare("SELECT last_used_at AS t FROM control_tokens").get() as { t: number | null }).t;
+    const t0 = 1_800_000_000_000;
+    repo.touchControlToken(token, t0);
+    expect(lastUsed()).toBe(t0);
+    repo.touchControlToken(token, t0 + 59 * 60_000);
+    expect(lastUsed()).toBe(t0);
+    repo.touchControlToken(token, t0 + 61 * 60_000);
+    expect(lastUsed()).toBe(t0 + 61 * 60_000);
+  });
+});

@@ -52,6 +52,10 @@ describe("Glättung", () => {
     expect((await run([[0, 2000], [5, 2000], [600, 300]])).at(-1)).toBe(300);
   });
 
+  it("beginnt neu, wenn die Zeit rückwärts läuft (z. B. Uhr der Bridge gestellt)", async () => {
+    expect((await run([[0, 2000], [5, 2000], [10, 2000], [3, 300]])).at(-1)).toBe(300);
+  });
+
   it("Fenster 0 schaltet die Glättung ab", async () => {
     expect(await run([[0, 0], [5, 680], [10, 0]], 0)).toEqual([0, 680, 0]);
   });

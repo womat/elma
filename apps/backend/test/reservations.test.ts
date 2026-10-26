@@ -163,6 +163,15 @@ describe("Ende", () => {
     expect(ends.map((p) => p.userIds).flat().sort()).toEqual([elisaId, ownerId].sort());
   });
 
+  it("Entzug des Rechts für einen anderen Empfänger lässt die laufende Reservierung stehen", () => {
+    const anna = repo.createUser("anna@elma.test");
+    repo.acceptInvite(repo.createInvite(producerId).code, anna.id);
+    repo.setCanReserve(producerId, anna.id, true);
+    service.reserve(producerId, elisaId, 30);
+    service.setCanReserve(producerId, anna.id, false);
+    expect(service.stateFor(producerId, elisaId).active).toMatchObject({ userName: "Elisa", mine: true });
+  });
+
   it("läuft automatisch ab", async () => {
     service.reserve(producerId, elisaId, 15);
     vi.advanceTimersByTime(15 * MIN - 1);
