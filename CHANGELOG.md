@@ -2,7 +2,7 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
-## Unveröffentlicht
+## 0.11.1 – 2026-10-26
 
 - **Stabilitätsampel strenger.** Nach einer Spitze von wenigen Minuten stand beim Empfänger „Stabil“ (Wolfgang, 26.10.2026).
   Die Regel aus 0.10.0 hatte zwei Lücken:
@@ -15,6 +15,8 @@ Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jed
     Das ist gewollt.
   - Das 5-Minuten-Fenster bleibt. Ein längeres hätte auch die angezeigte Zahl träger gemacht, weil Mittel und Ampel über dasselbe
     Fenster laufen. Erst beobachten, ob die zwei Korrekturen reichen.
+- **zod auf 4.6.7.** Ältere Versionen können beim Prüfen übergroßer Sammlungen den Speicher volllaufen lassen
+  ([GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)). Das Backend prüft damit jede eingehende Nachricht.
 
 ## 0.11.0 – 2026-10-23
 
