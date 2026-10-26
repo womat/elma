@@ -1,6 +1,6 @@
 # Changelog
 
-> **Abgeschlossen mit 0.11.1.** Ab 0.12.0 stehen die Release-Notes in den [GitHub Releases](https://github.com/womat/elma/releases),
+> **Abgeschlossen mit 0.11.1.** Ab 0.11.2 stehen die Release-Notes in den [GitHub Releases](https://github.com/womat/elma/releases),
 > erzeugt von GoReleaser aus den Commits, wie in MAGGIE und den Go-Repos (Wolfgang, 26.10.2026). Diese Datei bleibt als Archiv,
 > weil Begründungen früherer Entscheidungen darin stehen; ergänzt wird sie nicht mehr.
 

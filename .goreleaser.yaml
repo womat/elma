@@ -1,6 +1,6 @@
 # GoReleaser nur für die GitHub Release mit Release-Notes; gebaut wird nichts, die Images baut release.yml.
 # Dieselben Changelog-Gruppen wie in MAGGIE und den Go-Repos, deshalb Commits nach Conventional Commits (CLAUDE.md).
-# Die Notizen bis 0.11.1 stehen in CHANGELOG.md, ab 0.12.0 nur noch hier (Wolfgang, 26.10.2026).
+# Die Notizen bis 0.11.1 stehen in CHANGELOG.md, ab 0.11.2 nur noch hier (Wolfgang, 26.10.2026).
 #
 # Ein Release entsteht durch einen Tag vX.Y.Z auf main; release.yml baut erst die Images und ruft dann
 # `goreleaser release --clean`. Die Notizen lokal ansehen, ohne etwas zu veröffentlichen:
