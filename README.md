@@ -179,9 +179,10 @@ Dann den Einrichtungslink öffnen (http://localhost:3000/?setup=…) und den Pas
      docker compose --profile bridge --profile tunnel up -d
      ```
 
-   Ohne eigene Domain reicht zum Ausprobieren ein Quick-Tunnel mit einer zufälligen `*.trycloudflare.com`-Adresse:
+   Ohne eigene Domain reicht zum Ausprobieren ein Quick-Tunnel mit einer zufälligen `*.trycloudflare.com`-Adresse.
+   Er läuft über den Dienst `cloudflared`, denn nur der hängt im internen Netz beim Backend und zugleich im Netz nach außen:
    ```bash
-   docker run --rm --network elma_default cloudflare/cloudflared tunnel --url http://backend:3000
+   docker compose run --rm cloudflared tunnel --no-autoupdate --url http://backend:3000
    ```
 
 ## Neue Version ausrollen
@@ -371,7 +372,8 @@ Konzept, Diagramme und Checkliste stehen in **[docs/hosting.md](docs/hosting.md)
   - `invites.used_by` hat kein `ON DELETE CASCADE`. Ein Konto, das eine Einladung eingelöst hat, lässt sich deshalb nicht löschen,
     ohne die Spalte vorher zu leeren.
   - Ist der User Erzeuger, löscht die Kaskade auch seinen Erzeuger mit dem ganzen Verlauf. Das braucht eine Rückfrage oder
-    eine Weigerung, solange er noch Erzeuger hat.- Android-App im Play Store über Capacitor (gleicher Code)
+    eine Weigerung, solange er noch Erzeuger hat.
+- Android-App im Play Store über Capacitor (gleicher Code)
 - Mehrere Erzeuger/Empfänger (Energiegemeinschaft); das Datenmodell ist dafür schon vorbereitet
 
 ## Mitmachen

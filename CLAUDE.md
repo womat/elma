@@ -38,7 +38,7 @@ Shelly Pro 3EM sendet alternativ direkt an `/ingest/shelly/:token` (`backend/src
 
 Backend (`apps/backend/src`):
 - `app.ts` `buildApp(opts)` baut die komplette Fastify-App aus Optionen ohne Umgebungsvariablen; `server.ts` liest die Env, hängt Timer (Minuten-Flush, 30-Tage-Retention) und Signale an. Tests rufen `buildApp` mit `openDb(":memory:")` und `smoothWindowMs: 0` auf und lauschen auf Port 0.
-- `hub.ts` `LiveHub`: aktueller Wert je Erzeuger im Speicher. Verteilt wird ein **geglätteter** Wert (Standard 2 min), die Minutenmittel in der DB entstehen aus den **Rohwerten**.
+- `hub.ts` `LiveHub`: aktueller Wert je Erzeuger im Speicher. Verteilt wird ein **geglätteter** Wert (Standard 5 min, `SMOOTH_WINDOW_MS`), die Minutenmittel in der DB entstehen aus den **Rohwerten**.
 - `repo.ts` kapselt alle SQL-Zugriffe (`node:sqlite`, synchron).
 - `db.ts` legt das Schema mit `CREATE TABLE IF NOT EXISTS` an. Es gibt kein Migrations-Framework: Schemaänderungen an bestehenden DBs brauchen ein eigenes idempotentes Statement in `openDb` (Beispiel: Passwort-Hashes → `'passkey-only'`, die Spalte `users.password_hash` ist ein Altbestand und bleibt NOT NULL).
 - Anmeldung nur per Passkey (`passkeys.ts`, `@simplewebauthn`), danach JWT. Konten entstehen nur über Einladungslink oder Einrichtungslink aus der CLI (`cli.ts`).
