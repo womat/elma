@@ -206,7 +206,7 @@ export class ReservationService {
     if (byOwner && !this.repo.isOwner(userId, producerId)) {
       throw new ReservationError(403, "Nur wer geplant hat und der Erzeuger können absagen");
     }
-    if (!this.close(planned, planned.startsAt, "cancelled")) return;
+    this.close(planned, planned.startsAt, "cancelled");
 
     const producer = this.repo.producerById(producerId);
     if (producer) {
