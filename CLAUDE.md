@@ -18,6 +18,8 @@ pnpm dev:backend | dev:bridge | dev:web
 pnpm audit --audit-level high                   # läuft in CI, ab "high" rot
 ```
 
+**Sicherheitsupdates nur im Lockfile:** `pnpm update --no-save <paket>`, ohne die Bereiche in `package.json` anzuheben. Dependabot rechnet mit pnpm 12 (nicht mit `packageManager`) und nimmt nur Versionen, die mindestens 3 Tage alt sind (`minimumReleaseAge`). Zeigt eine Untergrenze auf eine jüngere Version, scheitern alle npm-Updates, so geschehen vom 21. bis 26.10.2026 nach `vite ^8.3.5`. Muss eine Untergrenze doch hoch, fallen die npm-Läufe von dependabot bis dahin aus.
+
 CI (`.github/workflows/ci.yml`) = install --frozen-lockfile, audit, test, typecheck, dazu die drei Images bauen (amd64, ohne Hochladen). Vor einem Commit dieselben drei Prüfungen laufen lassen.
 Der Kopf der Workflows (nur `main`, `concurrency`, Wochenlauf Mo 05:17 UTC, `check-latest`, Rechte je Job, `persist-credentials: false`) ist derselbe wie in den Go-Repos und MAGGIE (`~/dev/privat/CLAUDE.md`, „CI und Release“). Release wie dort: ein Tag `vX.Y.Z` auf `main` startet `release.yml` (drei Images, dann GitHub Release per GoReleaser, `.goreleaser.yaml`); docs/hosting.md, „Images veröffentlichen“.
 
@@ -53,7 +55,8 @@ Ein `Dockerfile` mit Zielen `backend`, `bridge`, `push-proxy`. `docker-compose.y
 
 ## Konventionen
 
-- Code-Kommentare, UI-Texte, Fehlermeldungen und Doku auf Deutsch. Bezeichner englisch.
+- **Sprache** (Wolfgang, 26.10.2026): Bezeichner, Code-Kommentare (auch in Tests und Konfiguration) und Commits englisch. UI-Texte, Fehlermeldungen, Log-Ausgaben und Doku deutsch.
+  Die Doku bleibt **bewusst deutsch**, obwohl das Repo öffentlich ist (Abweichung von `~/dev/privat/CLAUDE.md`, „Sprache der Dokumentation“). `README.en.md` ist die englische Zusammenfassung und zieht bei Änderungen an der README mit. Deutsche Testnamen und Kommentare in Tests und Konfiguration von vor dem 26.10.2026 werden übersetzt, wenn die Stelle ohnehin angefasst wird.
 - **Commits englisch nach Conventional Commits** (`feat:`, `fix:`, `docu:` — nicht `docs:` —, `chore:`, `refactor:`, Scope optional), wie MAGGIE und die Go-Repos; GoReleaser gruppiert die Release-Notes danach, ein Betreff ohne Typ landet unter „Other“. Seit 26.10.2026 (Wolfgang: einheitliche Repos sind wichtiger als die bisherige Historie); ältere Commits stehen im Stil `Bereich: Was`.
 - Neue Funktionen mit Vitest-Tests. `CHANGELOG.md` ist mit 0.11.1 abgeschlossen und wird nicht mehr ergänzt; was eine Änderung begründet, gehört in den Commit-Text und, wenn es länger gilt, an den Code oder nach docs/.
 - Begründungen für Entscheidungen stehen als Kommentar am Code bzw. in docs/ (bis 0.11.1 auch im CHANGELOG). Dort auch neue Entscheidungen festhalten.

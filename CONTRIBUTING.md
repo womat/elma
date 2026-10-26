@@ -22,7 +22,7 @@ pnpm test
 pnpm typecheck
 ```
 
-- Code, Kommentare und Texte in der App sind auf Deutsch.
+- Texte in der App, Fehlermeldungen und Doku sind auf Deutsch; Bezeichner und Kommentare im Code auf Englisch.
 - Neue Funktionen bitte mit Tests (Vitest).
 - Commit-Betreff englisch nach [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docu:`, `chore:`, `refactor:`).
   Daraus entstehen die Release-Notes; [CHANGELOG.md](CHANGELOG.md) wird seit 0.11.1 nicht mehr ergänzt.
