@@ -24,7 +24,8 @@ pnpm typecheck
 
 - Code, Kommentare und Texte in der App sind auf Deutsch.
 - Neue Funktionen bitte mit Tests (Vitest).
-- Größere Änderungen bitte mit einem Eintrag in [CHANGELOG.md](CHANGELOG.md).
+- Commit-Betreff englisch nach [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docu:`, `chore:`, `refactor:`).
+  Daraus entstehen die Release-Notes; [CHANGELOG.md](CHANGELOG.md) wird seit 0.11.1 nicht mehr ergänzt.
 
 ## Rechte an Beiträgen
 

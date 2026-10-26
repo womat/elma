@@ -73,7 +73,7 @@ Open the printed setup link, create a passkey (works on `localhost` without HTTP
 ## Documentation
 
 The detailed documentation is in German:
-[production setup](README.md#produktiv-im-heimnetz), [Cloudflare Tunnel](docs/cloudflare.md), [hosting for others / ELMA box](docs/hosting.md), [changelog](CHANGELOG.md).
+[production setup](README.md#produktiv-im-heimnetz), [Cloudflare Tunnel](docs/cloudflare.md), [hosting for others / ELMA box](docs/hosting.md), [release notes](https://github.com/womat/elma/releases) (up to 0.11.1: [changelog](CHANGELOG.md)).
 Questions in English are welcome as [issues](https://github.com/womat/elma/issues).
 
 ## License

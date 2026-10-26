@@ -1,33 +1,41 @@
-# Baut fertige Images für die ELMA-Box:
-#   ghcr.io/womat/elma-backend, ghcr.io/womat/elma-bridge und ghcr.io/womat/elma-push-proxy, jeweils für amd64 und arm64.
-# Auf einem Pi Zero 2 W wäre ein Build vor Ort zu langsam und bräuchte zu viel Speicher.
-# Läuft nur von Hand: GitHub → Actions → release → "Run workflow", dabei unter "Use workflow from"
-# den Versions-Tag (z. B. v0.4.0) wählen – dann bekommen die Images diesen Tag und "latest".
-# Zum Ausprobieren das Häkchen "Images hochladen" entfernen: Dann wird alles gebaut, aber nichts veröffentlicht.
+# Ein Tag vX.Y.Z auf main baut die Images für die ELMA-Box:
+#   ghcr.io/womat/elma-backend, ghcr.io/womat/elma-bridge und ghcr.io/womat/elma-push-proxy, jeweils für amd64 und arm64,
+# veröffentlicht sie mit den Tags vX.Y.Z und latest, danach legt GoReleaser die GitHub Release mit Release-Notes an
+# (.goreleaser.yaml). Auf einem Pi Zero 2 W wäre ein Build vor Ort zu langsam und bräuchte zu viel Speicher.
+# Nur durch einen Tag, wie in MAGGIE und den Go-Repos (Wolfgang, 26.10.2026); ob das Dockerfile baut, zeigt die CI bei
+# jedem Push. Den eigenen Pi rollt weiter scripts/deploy.sh aus dem Quellcode aus.
+# Schreibrecht auf die Images hat nur der Job images, auf die Release nur der Job release; im Job test laufen die
+# Install-Skripte der Pakete.
 # Actions sind auf den Commit-SHA ihres Releases festgenagelt (Version im Kommentar): ein Tag wie @v5
 # lässt sich auf anderen Code umbiegen, ein SHA nicht. Updates schlägt dependabot vor (.github/dependabot.yml).
 name: release
 
 on:
-  workflow_dispatch:
-    inputs:
-      push:
-        description: "Images hochladen (ohne Häkchen: nur testen, nichts wird veröffentlicht)"
-        type: boolean
-        default: true
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # die ganze Historie samt origin/main für die Prüfung unten; so braucht sie keinen Token
+          fetch-depth: 0
+          persist-credentials: false
+      # Releases nur von main. Ein Tag auf einem Commit, der nie auf main war, wird nicht veröffentlicht.
+      - name: Tag liegt auf main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_REF_NAME zeigt auf einen Commit, der nicht auf main liegt. Erst nach main pushen, dann neu taggen."
+            exit 1
+          fi
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         # kein automatischer pnpm-Cache: pnpm kommt erst im nächsten Schritt über corepack
-        with: { node-version: 24, package-manager-cache: false }
+        with: { node-version: 24, check-latest: true, package-manager-cache: false }
       - run: corepack enable && pnpm install --frozen-lockfile
       # Bekannte Sicherheitslücken in den npm-Paketen (ab "high") lassen den Lauf scheitern.
       - run: pnpm audit --audit-level high
@@ -37,15 +45,19 @@ jobs:
   images:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         target: [backend, bridge, push-proxy]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # docker login bekommt seinen eigenen Token
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - if: inputs.push
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -56,16 +68,34 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/elma-${{ matrix.target }}
           tags: |
             type=semver,pattern=v{{version}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-            type=ref,event=branch
+            type=raw,value=latest
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           target: ${{ matrix.target }}
           platforms: linux/amd64,linux/arm64
-          push: ${{ inputs.push }}
+          push: true
           build-args: ELMA_VERSION=${{ github.ref_name }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.target }}
           cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+
+  # GitHub Release mit Release-Notes aus den Commits, gruppiert wie in den Go-Repos und MAGGIE (.goreleaser.yaml). Erst
+  # wenn alle drei Images veröffentlicht sind, damit die Notiz nicht auf ein fehlendes Image zeigt.
+  release:
+    needs: images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # GoReleaser legt die Release an
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # GoReleaser braucht die Historie bis zum vorigen Tag für die Notizen
+          persist-credentials: false # GoReleaser bekommt seinen Token über GITHUB_TOKEN
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

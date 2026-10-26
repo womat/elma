@@ -188,7 +188,7 @@ Dann den Einrichtungslink öffnen (http://localhost:3000/?setup=…) und den Pas
 
 Die Version steht in der Root-`package.json` (SemVer). Zu jedem Release gehört ein Git-Tag.
 
-1. In `package.json` (und den Paketen unter `apps/*`, `packages/*`) die Version erhöhen und `CHANGELOG.md` ergänzen.
+1. In `package.json` (und den Paketen unter `apps/*`, `packages/*`) die Version erhöhen.
 2. Committen und taggen, mit `-a` und Beschreibung, denn nur solche Tags überträgt `git push --follow-tags`:
    ```bash
    git tag -a vX.Y.Z -m "ELMA vX.Y.Z"
@@ -197,6 +197,8 @@ Die Version steht in der Root-`package.json` (SemVer). Zu jedem Release gehört 
    ```bash
    git push --follow-tags
    ```
+   Der Tag startet `release.yml`: Images für die ELMA-Box und die GitHub Release mit Release-Notes aus den Commits
+   (siehe [docs/hosting.md](docs/hosting.md), „Images veröffentlichen“). Die Notizen bis 0.11.1 stehen in [CHANGELOG.md](CHANGELOG.md).
 4. Auf den Pi ausrollen:
    ```bash
    scripts/deploy.sh

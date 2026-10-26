@@ -293,12 +293,14 @@ flowchart LR
    ```
 
 ### Images veröffentlichen (Entwickler)
-Der Workflow `.github/workflows/release.yml` läuft **nur von Hand**, damit normale Releases keine Actions-Minuten kosten.
-Start: GitHub → Actions → release → „Run workflow“, dabei unter „Use workflow from“ den Versions-Tag wählen, z. B. `vX.Y.Z`.
+Der Workflow `.github/workflows/release.yml` startet durch einen Tag `vX.Y.Z` auf `main` (`git push --follow-tags`).
 Er testet zuerst und baut dann `ghcr.io/womat/elma-backend`, `ghcr.io/womat/elma-bridge` und `ghcr.io/womat/elma-push-proxy` für amd64 und arm64.
-Getaggt wird mit `vX.Y.Z` und `latest`.
+Getaggt wird mit `vX.Y.Z` und `latest`. Danach legt GoReleaser die GitHub Release mit Release-Notes aus den Commits an (`.goreleaser.yaml`).
+Ein Tag, dessen Commit nicht auf `main` liegt, bricht vor dem Bau ab. Ob das Dockerfile baut, prüft die CI bei jedem Push (nur amd64, ohne Hochladen).
 
-Ohne das Häkchen „Images hochladen“ wird nur getestet und gebaut, aber nichts veröffentlicht.
+So wie in MAGGIE und den Go-Repos (Wolfgang, 26.10.2026: einheitliche Repos sind wichtiger als die bisherige Historie).
+Bis dahin lief das Release von Hand, damit es keine Actions-Minuten kostet; für das öffentliche Repo sind sie aber kostenlos.
+Die Release-Notes bis 0.11.1 stehen in `CHANGELOG.md`, die seither nicht mehr fortgeschrieben wird.
 
 Die drei Pakete sind bereits öffentlich.
 Kommt einmal ein **neues** Paket dazu, ist es auf ghcr.io zunächst privat.

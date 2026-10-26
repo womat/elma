@@ -1,11 +1,15 @@
-# Hält die npm-Pakete (pnpm-Lockfile), die Basis-Images im Dockerfile und die auf SHA festgenagelten
-# GitHub Actions aktuell: einmal pro Woche ein PR pro Bereich.
+# Hält die npm-Pakete (pnpm-Lockfile), die Basis-Images im Dockerfile, die Images in den Compose-Dateien (Digest) und die
+# auf SHA festgenagelten GitHub Actions aktuell: einmal pro Woche ein PR pro Bereich.
+# Betreff nach Conventional Commits wie in MAGGIE und den Go-Repos: chore(deps) für alles, was ins Image geht,
+# chore(ci) für Actions. GoReleaser sortiert sie in den Release-Notes unter "Maintenance" (.goreleaser.yaml).
 
 version: 2
 
 updates:
   - package-ecosystem: npm
     directory: /
+    commit-message:
+      prefix: "chore(deps)"
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
@@ -17,11 +21,23 @@ updates:
 
   - package-ecosystem: docker
     directory: /
+    commit-message:
+      prefix: "chore(deps)"
+    schedule:
+      interval: weekly
+
+  # cloudflared und Mosquitto, auf Version und Digest festgenagelt
+  - package-ecosystem: docker-compose
+    directories: ["/", "/deploy/box"]
+    commit-message:
+      prefix: "chore(deps)"
     schedule:
       interval: weekly
 
   - package-ecosystem: github-actions
     directory: /
+    commit-message:
+      prefix: "chore(ci)"
     schedule:
       interval: weekly
     groups:

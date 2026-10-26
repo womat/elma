@@ -1,25 +1,62 @@
-# Tests und Typprüfung bei jedem Push und Pull Request (gleiche Schritte wie der Job "test" in release.yml).
+# Tests, Typprüfung und Audit bei jedem Push auf main und jedem Pull Request dagegen (gleiche Schritte wie der Job "test"
+# in release.yml). Der Kopf ist derselbe wie in den Go-Repos und in MAGGIE (~/dev/privat/CLAUDE.md, "CI und Release"),
+# angeglichen am 26.10.2026 nach dem Review; nur die Prüfschritte sind die von Node.
 # Actions sind auf den Commit-SHA ihres Releases festgenagelt (Version im Kommentar): ein Tag wie @v5
 # lässt sich auf anderen Code umbiegen, ein SHA nicht. Updates schlägt dependabot vor (.github/dependabot.yml).
 name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
+  # Wöchentlich ohne Commit: eine neue Meldung zu einem npm-Paket oder zu Node fällt so auch auf, wenn sich hier
+  # nichts ändert. check-latest holt dafür den neuesten Node 24.
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+# Ein neuer Push auf denselben Ref ersetzt einen Lauf, der noch läuft.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         # kein automatischer pnpm-Cache: pnpm kommt erst im nächsten Schritt über corepack
-        with: { node-version: 24, package-manager-cache: false }
+        with: { node-version: 24, check-latest: true, package-manager-cache: false }
       - run: corepack enable && pnpm install --frozen-lockfile
       # Bekannte Sicherheitslücken in den npm-Paketen (ab "high") lassen den Lauf scheitern.
       - run: pnpm audit --audit-level high
       - run: pnpm test
       - run: pnpm typecheck
+
+  # Images nur bauen (amd64, ohne Hochladen), damit ein kaputtes Dockerfile nicht erst beim Release auffällt.
+  # Nur amd64: arm64 über QEMU dauert ein Vielfaches, und das Dockerfile ist für beide dasselbe.
+  images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [backend, bridge, push-proxy]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          push: false
+          # derselbe Cache wie in release.yml, so profitieren beide voneinander
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}

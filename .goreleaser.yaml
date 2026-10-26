@@ -1,0 +1,50 @@
+# GoReleaser nur für die GitHub Release mit Release-Notes; gebaut wird nichts, die Images baut release.yml.
+# Dieselben Changelog-Gruppen wie in MAGGIE und den Go-Repos, deshalb Commits nach Conventional Commits (CLAUDE.md).
+# Die Notizen bis 0.11.1 stehen in CHANGELOG.md, ab 0.12.0 nur noch hier (Wolfgang, 26.10.2026).
+#
+# Ein Release entsteht durch einen Tag vX.Y.Z auf main; release.yml baut erst die Images und ruft dann
+# `goreleaser release --clean`. Die Notizen lokal ansehen, ohne etwas zu veröffentlichen:
+#
+#   goreleaser release --snapshot --clean && cat dist/CHANGELOG.md
+version: 2
+
+project_name: elma
+
+builds:
+  - skip: true
+
+checksum:
+  disable: true
+
+changelog:
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - "^Merge branch"
+      - "^Merge pull request"
+  groups:
+    - title: Features
+      regexp: '(?i)^feat(\(.*\))?[:(]'
+      order: 0
+    - title: Bug fixes
+      regexp: '(?i)^(fix|bugfix)(\(.*\))?[:(]'
+      order: 1
+    - title: Documentation
+      regexp: '(?i)^(docu|docs)(\(.*\))?[:(]'
+      order: 2
+    - title: Maintenance
+      regexp: '(?i)^(chore|refactor)(\(.*\))?[:(]'
+      order: 3
+    - title: Other
+      order: 99
+
+release:
+  draft: false
+  prerelease: auto
+  footer: |
+    ## Docker
+
+    `ghcr.io/womat/elma-backend`, `ghcr.io/womat/elma-bridge` und `ghcr.io/womat/elma-push-proxy`, jeweils `{{ .Tag }}`
+    für `linux/amd64` und `linux/arm64`. Update einer ELMA-Box: `docker compose pull && docker compose up -d` in
+    `deploy/box` (feste Version mit `ELMA_VERSION={{ .Tag }}` in der `.env`), siehe docs/hosting.md.

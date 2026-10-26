@@ -9,15 +9,17 @@ Betrieb und Deployment stehen im [README](README.md); Hosting-Konzept in [docs/h
 
 ```bash
 pnpm install
-pnpm test                                       # vitest, alle Pakete (Root-vitest.config.ts)
+pnpm test                                       # vitest, alle Pakete (Root-vitest.config.mts)
 pnpm vitest run apps/backend/test/hub.test.ts   # eine Testdatei
 pnpm vitest run -t "Teil des Testnamens"        # einzelner Test
+pnpm vitest run --coverage                      # Abdeckung je Datei, auch Dateien ohne Test
 pnpm typecheck                                  # tsc je App, kein Emit
 pnpm dev:backend | dev:bridge | dev:web
 pnpm audit --audit-level high                   # läuft in CI, ab "high" rot
 ```
 
-CI (`.github/workflows/ci.yml`) = install --frozen-lockfile, audit, test, typecheck. Vor einem Commit dieselben drei Prüfungen laufen lassen.
+CI (`.github/workflows/ci.yml`) = install --frozen-lockfile, audit, test, typecheck, dazu die drei Images bauen (amd64, ohne Hochladen). Vor einem Commit dieselben drei Prüfungen laufen lassen.
+Der Kopf der Workflows (nur `main`, `concurrency`, Wochenlauf Mo 05:17 UTC, `check-latest`, Rechte je Job, `persist-credentials: false`) ist derselbe wie in den Go-Repos und MAGGIE (`~/dev/privat/CLAUDE.md`, „CI und Release“). Release wie dort: ein Tag `vX.Y.Z` auf `main` startet `release.yml` (drei Images, dann GitHub Release per GoReleaser, `.goreleaser.yaml`); docs/hosting.md, „Images veröffentlichen“.
 
 ## Kein Build-Schritt für Node-Code
 
@@ -51,9 +53,9 @@ Ein `Dockerfile` mit Zielen `backend`, `bridge`, `push-proxy`. `docker-compose.y
 
 ## Konventionen
 
-- Code-Kommentare, UI-Texte, Fehlermeldungen, Doku und Commit-Messages auf Deutsch. Bezeichner englisch.
-- Commit-Messages im Stil `Bereich: Was` (z. B. `Doku: …`, `CI: …`), Releases als `Release X.Y.Z: Kurzfassung`.
-- Neue Funktionen mit Vitest-Tests; größere Änderungen mit Eintrag in `CHANGELOG.md` (erklärend formuliert, nicht nur Stichworte).
-- Begründungen für Entscheidungen stehen als Kommentar am Code bzw. in CHANGELOG/docs. Dort auch neue Entscheidungen festhalten.
-- Release: Version in **allen** `package.json` (Root, `apps/*`, `packages/*`) erhöhen, CHANGELOG ergänzen, annotierten Tag `git tag -a vX.Y.Z` anlegen (ohne `-a` überträgt `--follow-tags` ihn nicht). Ablauf siehe README „Neue Version ausrollen“.
+- Code-Kommentare, UI-Texte, Fehlermeldungen und Doku auf Deutsch. Bezeichner englisch.
+- **Commits englisch nach Conventional Commits** (`feat:`, `fix:`, `docu:` — nicht `docs:` —, `chore:`, `refactor:`, Scope optional), wie MAGGIE und die Go-Repos; GoReleaser gruppiert die Release-Notes danach, ein Betreff ohne Typ landet unter „Other“. Seit 26.10.2026 (Wolfgang: einheitliche Repos sind wichtiger als die bisherige Historie); ältere Commits stehen im Stil `Bereich: Was`.
+- Neue Funktionen mit Vitest-Tests. `CHANGELOG.md` ist mit 0.11.1 abgeschlossen und wird nicht mehr ergänzt; was eine Änderung begründet, gehört in den Commit-Text und, wenn es länger gilt, an den Code oder nach docs/.
+- Begründungen für Entscheidungen stehen als Kommentar am Code bzw. in docs/ (bis 0.11.1 auch im CHANGELOG). Dort auch neue Entscheidungen festhalten.
+- Release: Version in **allen** `package.json` (Root, `apps/*`, `packages/*`) erhöhen, annotierten Tag `git tag -a vX.Y.Z` anlegen (ohne `-a` überträgt `--follow-tags` ihn nicht). Ablauf siehe README „Neue Version ausrollen“.
 - GitHub Actions sind auf Commit-SHAs festgenagelt (Version im Kommentar). Bei Änderungen so beibehalten.
