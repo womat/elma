@@ -2,6 +2,20 @@
 
 Alle Versionen folgen [Semantic Versioning](https://semver.org/lang/de/). Zu jeder Version gibt es einen Git-Tag `vX.Y.Z`.
 
+## Unveröffentlicht
+
+- **Stabilitätsampel strenger.** Nach einer Spitze von wenigen Minuten stand beim Empfänger „Stabil“ (Wolfgang, 26.10.2026).
+  Die Regel aus 0.10.0 hatte zwei Lücken:
+  - Sie schaute nur zurück. Nach 4 min mit 3 kW und dann 0 W lagen noch eine Minute lang 80 % des Fensters über 70 % des Mittels,
+    also blieb „Stabil“ stehen, obwohl nichts mehr da war. **Jetzt muss auch der aktuelle Rohwert bei wenigstens 70 % des Mittels
+    liegen**, sonst steht sofort „Schwankt stark“.
+  - Nach dem Start oder einer Lücke reichte ein halbes Fenster an Daten, also gut 2 Minuten. **Jetzt gibt es die Ampel erst, wenn die
+    Werte die vollen 5 Minuten abdecken.**
+  - Ein kurzer Einbruch genau jetzt zeigt dadurch für diese Sekunden „Schwankt stark“, und die 2 Minuten Wartezeit der Push beginnen neu.
+    Das ist gewollt.
+  - Das 5-Minuten-Fenster bleibt. Ein längeres hätte auch die angezeigte Zahl träger gemacht, weil Mittel und Ampel über dasselbe
+    Fenster laufen. Erst beobachten, ob die zwei Korrekturen reichen.
+
 ## 0.11.0 – 2026-10-23
 
 - **Vorreservieren im ELISA-Modus.** Elisa wollte nicht nur spontan reservieren, sondern z. B. „heute um 12:00 für 30 min“.

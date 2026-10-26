@@ -218,6 +218,8 @@ export const STALE_AFTER_MS = 60_000;
  * Stabilitätsampel (Wolfgang, 23.10.2026): "stabil", wenn der Rohwert im Glättungsfenster mindestens
  * STABLE_TIME_SHARE der Zeit bei wenigstens STABLE_LEVEL_RATIO des angezeigten Mittelwerts lag. Ein Mittelwert allein
  * zeigt bei 0 ↔ 4 kW "2 kW" an, und genau darauf verlässt sich der Empfänger dann. Push gibt es nur bei "stabil".
+ * Seit 26.10.2026 muss auch der aktuelle Rohwert bei STABLE_LEVEL_RATIO liegen, und das Fenster muss voll sein
+ * (Begründung in `LiveHub.smooth`).
  */
 export const STABLE_TIME_SHARE = 0.8;
 export const STABLE_LEVEL_RATIO = 0.7;

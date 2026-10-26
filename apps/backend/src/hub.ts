@@ -87,7 +87,10 @@ export class LiveHub {
   /**
    * Zeitgewichteter Mittelwert über das Fenster vor dem neuen Wert: Jeder Wert gilt bis zum nächsten.
    * Nötig, weil die Bridge unregelmäßig sendet (alle paar Sekunden, bei Sprüngen sofort).
-   * `stable` nur, wenn es Überschuss gibt und die Werte mindestens das halbe Fenster abdecken (nach Start oder Lücke).
+   * `stable` nur, wenn es Überschuss gibt und die Werte das ganze Fenster abdecken (nach Start oder Lücke erst nach
+   * `smoothWindowMs`). Stabil heißt zusätzlich: Auch der aktuelle Rohwert liegt noch beim Mittel. Sonst stand nach
+   * einer kurzen Spitze noch eine Minute lang "Stabil", obwohl nichts mehr da war, und nach einem Start reichten gut
+   * 2 min (Wolfgang, 26.10.2026). Das Fenster bleibt 5 min, ein längeres machte auch die Zahl träger.
    */
   private smooth(producerId: string, raw: SurplusReading): LiveReading {
     if (this.smoothWindowMs <= 0) return { ...raw };
@@ -114,14 +117,14 @@ export class LiveHub {
     }
     const watts = duration > 0 ? Math.round(sum / duration) : raw.watts;
     const reading: LiveReading = { watts, timestamp: raw.timestamp };
-    if (watts <= LEVEL_SOME_WATTS || duration < this.smoothWindowMs / 2) return reading;
+    if (watts <= LEVEL_SOME_WATTS || duration < this.smoothWindowMs) return reading;
 
     let steady = 0;
     for (let i = 0; i < list.length - 1; i++) {
       if (list[i]!.watts < watts * STABLE_LEVEL_RATIO) continue;
       steady += Math.max(0, list[i + 1]!.timestamp - Math.max(list[i]!.timestamp, start));
     }
-    reading.stable = steady >= duration * STABLE_TIME_SHARE;
+    reading.stable = raw.watts >= watts * STABLE_LEVEL_RATIO && steady >= duration * STABLE_TIME_SHARE;
     return reading;
   }
 

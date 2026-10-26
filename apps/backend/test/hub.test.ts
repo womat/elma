@@ -96,9 +96,15 @@ describe("Stabilitätsampel", () => {
     expect(runFull(every(120, 5, () => 30)).at(-1)!.stable).toBeUndefined();
   });
 
-  it("deckt die Historie weniger als das halbe Fenster ab, gibt es keine Ampel", () => {
-    expect(runFull(every(50, 5, () => 1000)).at(-1)!.stable).toBeUndefined();
-    expect(runFull(every(60, 5, () => 1000)).at(-1)!.stable).toBe(true);
+  it("deckt die Historie nicht das ganze Fenster ab, gibt es keine Ampel", () => {
+    expect(runFull(every(110, 5, () => 1000)).at(-1)!.stable).toBeUndefined();
+    expect(runFull(every(120, 5, () => 1000)).at(-1)!.stable).toBe(true);
+  });
+
+  it("ist die Spitze gerade vorbei, schwankt er, auch wenn sie den Großteil des Fensters ausmachte", () => {
+    const samples = every(120, 5, (s) => (s < 100 ? 2000 : 0));
+    // 100 von 120 s über 70 % des Mittels, aber der aktuelle Wert ist 0
+    expect(runFull(samples).at(-1)!.stable).toBe(false);
   });
 
   it("Fenster 0 schaltet auch die Ampel ab", () => {
