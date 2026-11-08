@@ -323,6 +323,8 @@ Nur für Quellen ohne Shelly-Direktverbindung (Smartfox, Shelly Gen1 …):
 - **Abgeschottetes Backend:** Das Backend hängt nur im internen Docker-Netz und erreicht weder das LAN noch das Internet.
   Push-Nachrichten gehen über den Push-Proxy, der nur die Push-Dienste von Google, Apple, Mozilla und Microsoft durchlässt.
   Falls jemand über die Anmeldung eindringt, kommt er so nicht an andere Geräte im Heimnetz.
+- **Gehärtete Container:** backend, bridge, push-proxy und cloudflared laufen ohne Root, mit `read_only`, `cap_drop: [ALL]`
+  und `no-new-privileges`. Beschreibbar ist nur das Volume `/data` des Backends. Mosquitto ist ausgenommen (Startskript braucht root).
 - **Mosquitto** ist nur im LAN erreichbar und nur mit Passwort.
 - **Empfänger** kommen nur über einen Einladungslink hinein: Er ist 7 Tage gültig und nur einmal verwendbar.
 

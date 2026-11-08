@@ -5,10 +5,18 @@
 # Netze: Das Backend hängt nur im internen Netz und erreicht weder das LAN noch das Internet.
 # Falls jemand über die Anmeldung eindringt, kommt er so nicht an andere Geräte im Heimnetz.
 # Hinaus dürfen nur cloudflared (Tunnel, Pflicht), die Bridge (MQTT) und der Push-Proxy (nur Push-Dienste).
+#
+# Hardening as in MAGGIE: every ELMA container runs read-only, without capabilities and with
+# no-new-privileges. Nothing writes outside the volume /data (SQLite, backup of scripts/deploy.sh),
+# so no tmpfs is needed.
+# mosquitto is left out: its entrypoint chowns as root and then drops to the mosquitto user.
 services:
   backend:
     image: ghcr.io/womat/elma-backend:${ELMA_VERSION:-latest}
     restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     environment:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET in .env setzen (./setup.sh)}
       PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL in .env setzen}
@@ -24,6 +32,9 @@ services:
   push-proxy:
     image: ghcr.io/womat/elma-push-proxy:${ELMA_VERSION:-latest}
     restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     networks: [intern, extern]
     mem_limit: 48m
 
@@ -31,6 +42,9 @@ services:
     image: cloudflare/cloudflared:2026.10.1@sha256:a15a3b50b8dabd57ac2090e9484c0247dba9dfa1f0df4d298d4317f9d69eb2d5
     restart: unless-stopped
     command: tunnel --no-autoupdate run
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN in .env setzen (./setup.sh)}
     depends_on: [backend]
@@ -52,6 +66,9 @@ services:
   bridge:
     image: ghcr.io/womat/elma-bridge:${ELMA_VERSION:-latest}
     restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     depends_on: [backend, mosquitto]
     networks: [intern, extern]
     environment:

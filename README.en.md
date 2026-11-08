@@ -42,6 +42,7 @@ ELMA does not do any billing. That stays with the energy community or the grid o
 - **Runs at home** on a Raspberry Pi and reads the energy manager (e.g. Smartfox) via MQTT, or a Shelly Pro 3EM.
   It is reachable through a Cloudflare Tunnel, so there are no cloud costs and no open ports.
   The backend sits in an internal Docker network with no access to your home network or the internet.
+  All ELMA containers run as non-root with a read-only file system, no capabilities and `no-new-privileges`.
 
 ## Architecture
 

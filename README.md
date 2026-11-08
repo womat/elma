@@ -111,6 +111,10 @@ Falls jemand über die Anmeldung eindringt, kommt er so nicht weiter ins Heimnet
   Er lässt nur verschlüsselte Verbindungen zu den Push-Diensten von Google, Apple, Mozilla und Microsoft durch.
   Push-Abos mit anderen Adressen nimmt das Backend gar nicht erst an.
 - Die Verwaltung per CLI geht weiterhin mit `docker compose exec backend …`.
+- **Gehärtete Container** wie bei MAGGIE: Alle ELMA-Container (backend, bridge, push-proxy, cloudflared) laufen ohne Root,
+  mit schreibgeschütztem Dateisystem (`read_only`), ohne Linux-Capabilities (`cap_drop: [ALL]`) und mit `no-new-privileges`.
+  Schreiben darf nur das Backend, und nur ins Volume `/data` (Datenbank, Sicherung von `scripts/deploy.sh`).
+  Ausnahme: Mosquitto der ELMA-Box, weil sein Startskript als root die Rechte der Dateien setzt und dann zum Benutzer `mosquitto` wechselt.
 
 ## Lokal testen (ohne echten Broker)
 
